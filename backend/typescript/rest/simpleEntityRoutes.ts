@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { isAuthorizedByRole } from "../middlewares/auth";
+// import { isAuthorizedByRole } from "../middlewares/auth";
 import { simpleEntityRequestDtoValidator } from "../middlewares/validators/simpleEntityValidators";
 import SimpleEntityService from "../services/implementations/simpleEntityService";
 import {
@@ -10,7 +10,7 @@ import { getErrorMessage } from "../utilities/errorUtils";
 import { sendResponseByMimeType } from "../utilities/responseUtil";
 
 const simpleEntityRouter: Router = Router();
-simpleEntityRouter.use(isAuthorizedByRole(new Set(["User", "Admin"])));
+// simpleEntityRouter.use(isAuthorizedByRole(new Set(["User", "Admin"])));
 
 const simpleEntityService: ISimpleEntityService = new SimpleEntityService();
 
