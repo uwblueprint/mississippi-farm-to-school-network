@@ -1,6 +1,6 @@
 import { Response } from "express";
 import { Readable } from "stream";
-import { generateCSV } from "./CSVUtils";
+import { generateCSV } from "@/utilities/CSVUtils";
 
 /* eslint-disable-next-line import/prefer-default-export */
 export const sendResponseByMimeType = async <T>(

@@ -1,17 +1,17 @@
 import { Router } from "express";
 import fs from "fs";
 import multer from "multer";
-// import { isAuthorizedByRole } from "../middlewares/auth";
-import { entityRequestDtoValidator } from "../middlewares/validators/entityValidators";
-import EntityService from "../services/implementations/entityService";
-// import FileStorageService from "../services/implementations/fileStorageService";
-// import IFileStorageService from "../services/interfaces/fileStorageService";
+// import { isAuthorizedByRole } from "@/middlewares/auth";
+import { entityRequestDtoValidator } from "@/middlewares/validators/entityValidators";
+import EntityService from "@/services/implementations/entityService";
+// import FileStorageService from "@/services/implementations/fileStorageService";
+// import { IFileStorageService } from "@/services/interfaces/IFileStorageService";
 import {
   EntityResponseDTO,
   IEntityService,
-} from "../services/interfaces/IEntityService";
-import { getErrorMessage } from "../utilities/errorUtils";
-import { sendResponseByMimeType } from "../utilities/responseUtil";
+} from "@/services/interfaces/IEntityService";
+import { getErrorMessage } from "@/utilities/errorUtils";
+import { sendResponseByMimeType } from "@/utilities/responseUtil";
 
 const upload = multer({ dest: "uploads/" });
 

@@ -5,11 +5,11 @@ import * as firebaseAdmin from "firebase-admin";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";
 
-import { sequelize } from "./models";
-// import authRouter from "./rest/authRoutes";
-import entityRouter from "./rest/entityRoutes";
-import simpleEntityRouter from "./rest/simpleEntityRoutes";
-// import userRouter from "./rest/userRoutes";
+import { sequelize } from "@/models";
+// import authRouter from "@/rest/authRoutes";
+import entityRouter from "@/rest/entityRoutes";
+import simpleEntityRouter from "@/rest/simpleEntityRoutes";
+// import userRouter from "@/rest/userRoutes";
 
 const CORS_ALLOW_LIST = [
   "http://localhost:3000",
