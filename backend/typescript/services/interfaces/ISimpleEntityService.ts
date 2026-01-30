@@ -38,7 +38,9 @@ export interface ISimpleEntityService {
    * @returns the created SimpleEntity
    * @throws Error if creation fails
    */
-  createEntity(entity: SimpleEntityRequestDTO): Promise<SimpleEntityResponseDTO>;
+  createEntity(
+    entity: SimpleEntityRequestDTO,
+  ): Promise<SimpleEntityResponseDTO>;
 
   /**
    * update the SimpleEntity with the given id with fields in the DTO, return updated SimpleEntity

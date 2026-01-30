@@ -21,7 +21,7 @@ export const up: Migration = async ({ context: sequelize }) => {
       allowNull: false,
     },
     enum_field: {
-      type: DataType.ENUM('A', 'B', 'C', 'D'),
+      type: DataType.ENUM("A", "B", "C", "D"),
       allowNull: false,
     },
     string_array_field: {

@@ -19,4 +19,3 @@ export default class SimpleEntity extends Model {
   @Column
   bool_field!: boolean;
 }
-

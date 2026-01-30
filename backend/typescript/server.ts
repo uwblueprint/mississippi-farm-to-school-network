@@ -1,6 +1,8 @@
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import express from "express";
+// Used when Firebase auth is uncommented below
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import * as firebaseAdmin from "firebase-admin";
 import swaggerUi from "swagger-ui-express";
 import YAML from "yamljs";

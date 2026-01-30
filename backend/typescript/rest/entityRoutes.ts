@@ -3,7 +3,7 @@ import fs from "fs";
 import multer from "multer";
 // import { isAuthorizedByRole } from "@/middlewares/auth";
 import { entityRequestDtoValidator } from "@/middlewares/validators/entityValidators";
-import EntityService from "@/services/implementations/entityService";
+// import EntityService from "@/services/implementations/entityService";
 // import FileStorageService from "@/services/implementations/fileStorageService";
 // import { IFileStorageService } from "@/services/interfaces/IFileStorageService";
 import {
@@ -18,6 +18,8 @@ const upload = multer({ dest: "uploads/" });
 const entityRouter: Router = Router();
 // entityRouter.use(isAuthorizedByRole(new Set(["User", "Admin"])));
 
+// Used when FileStorageService is uncommented
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || "";
 // const fileStorageService: IFileStorageService = new FileStorageService(
 //   defaultBucket,
@@ -25,7 +27,7 @@ const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || "";
 // const entityService: IEntityService = new EntityService(fileStorageService);
 
 // Mock Service
-let memoryStore: any = {};
+let memoryStore: Record<string, unknown> = {};
 const entityService: IEntityService = {
   createEntity: async (entity) => {
     memoryStore = { id: "1", ...entity };
@@ -35,6 +37,7 @@ const entityService: IEntityService = {
     memoryStore = { id, ...entity };
     return memoryStore;
   },
+  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
   getEntity: async (id) => {
     return memoryStore;
   },
@@ -146,6 +149,7 @@ entityRouter.delete("/:id", async (req, res) => {
 
 /* Get file associated with entity by fileUUID */
 entityRouter.get("/files/:fileUUID", async (req, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fileUUID } = req.params;
   try {
     const fileURL = "http://fake-storage.com/dummy.txt";

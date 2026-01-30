@@ -139,4 +139,3 @@ class SimpleEntityService implements ISimpleEntityService {
 }
 
 export default SimpleEntityService;
-
