@@ -126,7 +126,9 @@ const DisplayTableContainer: React.FC = (): React.ReactElement | null => {
   const downloadEntitiesCSV = async () => {
     if (entities) {
       const csvString = await EntityAPIClient.getCSV();
-      downloadCSV(csvString, "export.csv");
+      if (csvString) {
+        downloadCSV(csvString, "export.csv");
+      }
       // Use the following lines to download CSV using frontend CSV generation instead of API
       // const csvString = await generateCSV<EntityData>({ data: entities });
       // downloadCSV(csvString, "export.csv");

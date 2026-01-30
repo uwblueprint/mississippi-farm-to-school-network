@@ -38,9 +38,9 @@ const Default = (): React.ReactElement => {
     <div style={{ textAlign: "center", paddingTop: "20px" }}>
       <h1>Default Page</h1>
       <div className="btn-group" style={{ paddingRight: "10px" }}>
-        <Logout />
-        <RefreshCredentials />
-        <ResetPassword />
+        {/* <Logout /> */}
+        {/* <RefreshCredentials /> */}
+        {/* <ResetPassword /> */}
         <Button text="Create Entity" path={Routes.CREATE_ENTITY_PAGE} />
         <Button text="Update Entity" path={Routes.UPDATE_ENTITY_PAGE} />
         <Button text="Display Entities" path={Routes.DISPLAY_ENTITY_PAGE} />

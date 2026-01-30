@@ -2,9 +2,25 @@ import { createContext } from "react";
 import { SampleContextType } from "../types/SampleContextTypes";
 
 export const DEFAULT_SAMPLE_CONTEXT = {
-  teamName: "Internal Tools",
-  numTerms: 3,
-  members: ["Sherry", "Alex", "Carelynn", "Bruce", "Richard", "Raveen", "Xin"],
+  teamName: "Mississippi Farm to School Network",
+  numTerms: 1,
+  members: [
+    "Erica",
+    "Tony",
+    "Kylie",
+    "Lucas",
+    "Michelle",
+    "Daniel",
+    "Fiona",
+    "Jadiha",
+    "Jane",
+    "Lucas",
+    "Patrick",
+    "Tina",
+    "Vidu",
+    "Winston",
+    "Sherry",
+  ],
   isActive: true,
 };
 

@@ -2,15 +2,15 @@ import { DataType } from "sequelize-typescript";
 
 import { Migration } from "@/umzug";
 
-const TABLE_NAME = "entities";
+const TABLE_NAME = "simple_entities";
 
 export const up: Migration = async ({ context: sequelize }) => {
   await sequelize.getQueryInterface().createTable(TABLE_NAME, {
     id: {
-      type: DataType.INTEGER,
       allowNull: false,
-      primaryKey: true,
       autoIncrement: true,
+      primaryKey: true,
+      type: DataType.INTEGER,
     },
     string_field: {
       type: DataType.STRING,
@@ -30,10 +30,6 @@ export const up: Migration = async ({ context: sequelize }) => {
     },
     bool_field: {
       type: DataType.BOOLEAN,
-      allowNull: false,
-    },
-    file_name: {
-      type: DataType.STRING,
       allowNull: false,
     },
     createdAt: DataType.DATE,

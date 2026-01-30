@@ -1,28 +1,29 @@
 import { Router } from "express";
 import fs from "fs";
 import multer from "multer";
-import { isAuthorizedByRole } from "../middlewares/auth";
-import { entityRequestDtoValidator } from "../middlewares/validators/entityValidators";
-import EntityService from "../services/implementations/entityService";
-import FileStorageService from "../services/implementations/fileStorageService";
-import IFileStorageService from "../services/interfaces/fileStorageService";
-import {
-  EntityResponseDTO,
-  IEntityService,
-} from "../services/interfaces/IEntityService";
-import { getErrorMessage } from "../utilities/errorUtils";
-import { sendResponseByMimeType } from "../utilities/responseUtil";
+// import { isAuthorizedByRole } from "@/middlewares/auth";
+import { entityRequestDtoValidator } from "@/middlewares/validators/entityValidators";
+// import EntityService from "@/services/implementations/entityService";
+import entityServiceMock from "@/services/implementations/entityServiceMock";
+// import FileStorageService from "@/services/implementations/fileStorageService";
+// import { IFileStorageService } from "@/services/interfaces/IFileStorageService";
+import { EntityResponseDTO } from "@/services/interfaces/IEntityService";
+import { getErrorMessage } from "@/utilities/errorUtils";
+import { sendResponseByMimeType } from "@/utilities/responseUtil";
 
 const upload = multer({ dest: "uploads/" });
 
 const entityRouter: Router = Router();
-entityRouter.use(isAuthorizedByRole(new Set(["User", "Admin"])));
+// entityRouter.use(isAuthorizedByRole(new Set(["User", "Admin"])));
 
+// Used when FileStorageService is uncommented
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || "";
-const fileStorageService: IFileStorageService = new FileStorageService(
-  defaultBucket,
-);
-const entityService: IEntityService = new EntityService(fileStorageService);
+// const fileStorageService: IFileStorageService = new FileStorageService(
+//   defaultBucket,
+// );
+// const entityService: IEntityService = new EntityService(fileStorageService);
+const entityService = entityServiceMock;
 
 /* Create entity */
 entityRouter.post(
@@ -125,9 +126,10 @@ entityRouter.delete("/:id", async (req, res) => {
 
 /* Get file associated with entity by fileUUID */
 entityRouter.get("/files/:fileUUID", async (req, res) => {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { fileUUID } = req.params;
   try {
-    const fileURL = await fileStorageService.getFile(fileUUID);
+    const fileURL = "http://fake-storage.com/dummy.txt";
     res.status(200).json({ fileURL });
   } catch (e: unknown) {
     res.status(500).send(getErrorMessage(e));

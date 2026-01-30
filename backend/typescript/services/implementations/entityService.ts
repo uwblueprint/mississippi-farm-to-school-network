@@ -1,14 +1,14 @@
 import { v4 as uuidv4 } from "uuid";
 
-import PgEntity from "../../models/entity.model";
+import PgEntity from "@/models/entity.model";
 import {
   IEntityService,
   EntityRequestDTO,
   EntityResponseDTO,
-} from "../interfaces/IEntityService";
-import IFileStorageService from "../interfaces/fileStorageService";
-import { getErrorMessage } from "../../utilities/errorUtils";
-import logger from "../../utilities/logger";
+} from "@/services/interfaces/IEntityService";
+import { IFileStorageService } from "@/services/interfaces/IFileStorageService";
+import { getErrorMessage } from "@/utilities/errorUtils";
+import logger from "@/utilities/logger";
 
 const Logger = logger(__filename);
 
@@ -187,4 +187,3 @@ class EntityService implements IEntityService {
 }
 
 export default EntityService;
-

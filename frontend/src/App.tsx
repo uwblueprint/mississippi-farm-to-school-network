@@ -5,11 +5,11 @@ import { BrowserRouter as Router, Route, Switch } from "react-router-dom";
 import CreatePage from "./components/pages/CreatePage";
 import Default from "./components/pages/Default";
 import DisplayPage from "./components/pages/DisplayPage";
-import SimpleEntityCreatePage from "./components/pages/SimpleEntityCreatePage";
-import SimpleEntityDisplayPage from "./components/pages/SimpleEntityDisplayPage";
+// import SimpleEntityCreatePage from "./components/pages/SimpleEntityCreatePage";
+// import SimpleEntityDisplayPage from "./components/pages/SimpleEntityDisplayPage";
 import NotFound from "./components/pages/NotFound";
 import UpdatePage from "./components/pages/UpdatePage";
-import SimpleEntityUpdatePage from "./components/pages/SimpleEntityUpdatePage";
+// import SimpleEntityUpdatePage from "./components/pages/SimpleEntityUpdatePage";
 import * as Routes from "./constants/Routes";
 import SampleContext, {
   DEFAULT_SAMPLE_CONTEXT,

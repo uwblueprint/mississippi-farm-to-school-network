@@ -11,4 +11,3 @@ const DATABASE_URL =
 export const sequelize = new Sequelize(DATABASE_URL, {
   models: [path.join(__dirname, "/*.model.ts")],
 });
-

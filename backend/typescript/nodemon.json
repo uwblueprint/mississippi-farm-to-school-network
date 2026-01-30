@@ -1,4 +1,4 @@
 {
     "ext": "ts,js,json",
-    "exec": "ts-node -r dotenv/config server"
+    "exec": "ts-node -r dotenv/config -r tsconfig-paths/register server"
 }

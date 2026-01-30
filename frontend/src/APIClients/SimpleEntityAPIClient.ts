@@ -41,7 +41,7 @@ const create = async ({
     });
     return data;
   } catch (error) {
-    return error;
+    return error as any;
   }
 };
 
@@ -56,7 +56,7 @@ const get = async (): Promise<SimpleEntityResponse[]> => {
     });
     return data;
   } catch (error) {
-    return error;
+    return error as any;
   }
 };
 
@@ -74,7 +74,7 @@ const getCSV = async (): Promise<string> => {
     });
     return data;
   } catch (error) {
-    return error;
+    return error as any;
   }
 };
 
@@ -100,7 +100,7 @@ const update = async (
     );
     return data;
   } catch (error) {
-    return error;
+    return error as any;
   }
 };
 
