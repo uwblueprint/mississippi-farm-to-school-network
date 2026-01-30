@@ -14,7 +14,7 @@ export const DEFAULT_SAMPLE_CONTEXT = {
     "Fiona",
     "Jadiha",
     "Jane",
-    "Lucas",
+    "Lukas",
     "Patrick",
     "Tina",
     "Vidu",
