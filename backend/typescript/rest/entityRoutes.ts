@@ -4,12 +4,10 @@ import multer from "multer";
 // import { isAuthorizedByRole } from "@/middlewares/auth";
 import { entityRequestDtoValidator } from "@/middlewares/validators/entityValidators";
 // import EntityService from "@/services/implementations/entityService";
+import entityServiceMock from "@/services/implementations/entityServiceMock";
 // import FileStorageService from "@/services/implementations/fileStorageService";
 // import { IFileStorageService } from "@/services/interfaces/IFileStorageService";
-import {
-  EntityResponseDTO,
-  IEntityService,
-} from "@/services/interfaces/IEntityService";
+import { EntityResponseDTO } from "@/services/interfaces/IEntityService";
 import { getErrorMessage } from "@/utilities/errorUtils";
 import { sendResponseByMimeType } from "@/utilities/responseUtil";
 
@@ -25,28 +23,7 @@ const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || "";
 //   defaultBucket,
 // );
 // const entityService: IEntityService = new EntityService(fileStorageService);
-
-// Mock Service
-let memoryStore: Record<string, unknown> = {};
-const entityService: IEntityService = {
-  createEntity: async (entity) => {
-    memoryStore = { id: "1", ...entity };
-    return memoryStore;
-  },
-  updateEntity: async (id, entity) => {
-    memoryStore = { id, ...entity };
-    return memoryStore;
-  },
-  /* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-  getEntity: async (id) => {
-    return memoryStore;
-  },
-  getEntities: async () => [memoryStore],
-  deleteEntity: async (id) => {
-    memoryStore = {};
-    return id;
-  },
-};
+const entityService = entityServiceMock;
 
 /* Create entity */
 entityRouter.post(
