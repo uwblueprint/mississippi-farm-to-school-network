@@ -28,17 +28,18 @@ code blocks for commands
 
 ## Help
 
-Any advise for common problems or issues.
+* You may encounter an error when trying to run `docker-compose up` that states that the backend is missing an env file
+  * You can solve this by creating a new env file (and filling it with the necessary values):
+```bash
+cd ./backend
+touch .env
 ```
-command to run if program contains helper info
-```
+
 
 ## Authors
 
-Contributors names and contact info
-
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+Lucas Jin
+[@LucasHJin](https://x.com/lucashjin)
 
 ## Version History
 
