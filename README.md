@@ -4,7 +4,7 @@ Simple overview of use/purpose.
 
 ## Description
 
-An in-depth paragraph about your project and overview of use.
+Mississippi Farm to SChool Network (MSFN) is a statewide nonprofit organization focused on increasing access to fresh, local produce for schools and other organizations. 
 
 ## Getting Started
 
@@ -37,6 +37,8 @@ command to run if program contains helper info
 ## Authors
 
 Contributors names and contact info
+
+Tina Xia @tinazxia@gmail.com
 
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
