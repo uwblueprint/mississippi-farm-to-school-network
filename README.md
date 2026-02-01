@@ -10,9 +10,10 @@ An in-depth paragraph about your project and overview of use.
 
 ### Dependencies
 
-* Git
-* Node.js
-* Docker
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org/) (LTS version)
+* Your preferred code editor (either VSCode or Cursor is fine)
+* [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
 ### Installing
 
@@ -41,6 +42,7 @@ Contributors names and contact info
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
 
+Lukas Li
 Vidu Widyalankara  
 [vidsterbroyo](https://vidsterbroyo.com)
 
