@@ -41,7 +41,7 @@ Contributors names and contact info
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
 
-Vidu Widyalankara
+Vidu Widyalankara  
 [vidsterbroyo](https://vidsterbroyo.com)
 
 ## Version History
