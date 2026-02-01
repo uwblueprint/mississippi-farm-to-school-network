@@ -40,7 +40,7 @@ Contributors names and contact info
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
 
-[@patrick-zx-wei] (patrickzx.wei@gmail.com)
+[@patrick-zx-wei](patrickzx.wei@gmail.com)
 ## Version History
 
 * 0.2
