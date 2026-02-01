@@ -38,8 +38,8 @@ command to run if program contains helper info
 
 Contributors names and contact info
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+Sherry Tse 
+[stse3] https://github.com/stse3
 
 ## Version History
 
