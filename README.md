@@ -16,8 +16,8 @@ An in-depth paragraph about your project and overview of use.
 
 ### Installing
 
-* How/where to download your program
-* Any modifications needed to be made to files/folders
+Detailed instructions can be found here
+https://www.notion.so/uwblueprintexecs/Technical-Onboarding-2f710f3fb1dc80be8520d8eab6367860
 
 ### Executing program
 
@@ -43,6 +43,9 @@ ex. [@DomPizzie](https://twitter.com/dompizzie)
 
 Vidu Widyalankara  
 [vidsterbroyo](https://vidsterbroyo.com)
+
+Patrick Wei
+[github](https://github.com/patrick-zx-wei)
 
 ## Version History
 
