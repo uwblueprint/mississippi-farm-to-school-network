@@ -2,9 +2,10 @@
 
 Simple overview of use/purpose.
 
-## Description
+## Who are the Mississippi Farm to School Network?
 
-An in-depth paragraph about your project and overview of use.
+The Mississippi Farm to School Network (MFSN) platform facilitates connections between local farms and schools across Mississippi. This web application helps schools find local agricultural producers, manage farm-to-school programs, and promotes agricultural education while supporting local farmers and providing fresh, healthy food options for students.
+
 
 ## Getting Started
 
