@@ -45,6 +45,8 @@ Tina Xia @tinazxia@gmail.com
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
 
+* Daniel Cheng - [dcheng6775@gmail.com]
+
 Vidu Widyalankara  
 [vidsterbroyo](https://vidsterbroyo.com)
 
