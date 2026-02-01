@@ -39,7 +39,7 @@ command to run if program contains helper info
 Contributors names and contact info
 
 Sherry Tse 
-[stse3] https://github.com/stse3
+[stse3](https://github.com/stse3)
 
 ## Version History
 
