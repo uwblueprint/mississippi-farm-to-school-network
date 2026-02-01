@@ -1,11 +1,56 @@
+# Dependencies
 **/node_modules
-**/.env
-**/build
 **/venv
-**/__pycache__
-**/*.log
-**/firebaseServiceAccount.json
-**/.DS_Store
-.vscode
-**/*.cache
 **/*.egg-info
+
+# Environment variables
+**/.env
+**/.env.local
+**/.env.*.local
+
+# Build outputs
+**/build
+**/dist
+**/.next
+**/.svelte-kit
+
+# Logs
+**/*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+**/.DS_Store
+Thumbs.db
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# Cache
+**/*.cache
+**/.npm
+**/.eslintcache
+
+# Python
+**/__pycache__
+*.pyc
+*.pyo
+
+# Firebase
+**/firebaseServiceAccount.json
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.sqlite
+*.db
+
+# Coverage reports
+**/coverage
+**/.nyc_output

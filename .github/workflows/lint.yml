@@ -6,22 +6,20 @@ on:
       - main
     paths:
       - "frontend/**"
-      - "backend/typescript/**"
-      - "backend/python/**"
+      - "backend/**"
   pull_request:
     branches:
       - main
     paths:
       - "frontend/**"
-      - "backend/typescript/**"
-      - "backend/python/**"
+      - "backend/**"
 
 jobs:
   run-lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       
       - name: Filter changed files
         uses: dorny/paths-filter@v2
@@ -30,36 +28,40 @@ jobs:
           filters: |
             frontend:
               - "frontend/**"
-            typescript-backend:
-              - "backend/typescript/**"
-            python-backend:
-              - "backend/python/**"
+            backend:
+              - "backend/**"
       
       - name: Set up Node.js
-        if: steps.changes.outputs.frontend == 'true' || steps.changes.outputs.typescript-backend == 'true'
+        if: steps.changes.outputs.frontend == 'true' || steps.changes.outputs.backend == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "yarn"
+          cache: "npm"
           cache-dependency-path: |
-            frontend/yarn.lock
-            backend/typescript/yarn.lock
+            frontend/package-lock.json
+            backend/package-lock.json
 
-      - name: Install Node.js dependencies
-        if: steps.changes.outputs.frontend == 'true' || steps.changes.outputs.typescript-backend == 'true'
-        run: yarn --cwd ./frontend --prefer-offline && yarn --cwd ./backend/typescript --prefer-offline
+      - name: Install frontend dependencies
+        if: steps.changes.outputs.frontend == 'true'
+        working-directory: ./frontend
+        run: npm ci
 
       - name: Lint frontend
         if: steps.changes.outputs.frontend == 'true'
         working-directory: ./frontend
-        run: yarn lint
+        run: npm run lint
 
-      - name: Lint TypeScript backend
-        if: steps.changes.outputs.typescript-backend == 'true'
-        working-directory: ./backend/typescript
-        run: yarn lint
-      
-      - name: Lint Python backend
-        if: steps.changes.outputs.python-backend == 'true'
-        working-directory: ./backend/python
-        run: pip install black && python -m black --check .
+      - name: Check frontend formatting
+        if: steps.changes.outputs.frontend == 'true'
+        working-directory: ./frontend
+        run: npm run format:check
+
+      - name: Install backend dependencies
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: ./backend
+        run: npm ci
+
+      - name: Lint backend
+        if: steps.changes.outputs.backend == 'true'
+        working-directory: ./backend
+        run: npm run lint

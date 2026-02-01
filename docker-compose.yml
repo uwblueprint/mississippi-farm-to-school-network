@@ -1,57 +1,58 @@
-version: "3.7"
-
 services:
   frontend:
-    # TODO: rename container for your project
-    container_name: scv2_frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    container_name: mfsn-frontend
+    ports:
+      - "5173:5173"  # Vite default port for SvelteKit
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    ports:
-      - 3000:3000
     environment:
-      - CHOKIDAR_USEPOLLING=true
-    env_file:
-      - ./frontend/.env
-  ts-backend:
-    # TODO: rename container for your project
-    container_name: scv2_ts_backend
+      - NODE_ENV=development
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - mfsn-network
+
+  backend:
     build:
-      context: ./backend/typescript
+      context: ./backend
       dockerfile: Dockerfile
+    container_name: mfsn-backend
+    ports:
+      - "3000:3000"  # Express default port
     volumes:
-      - ./backend/typescript:/app
+      - ./backend:/app
       - /app/node_modules
-    ports:
-      - 8080:8080
-    dns:
-      - 8.8.8.8
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - ./.env
-  db:
-    # TODO: rename container for your project
-    container_name: scv2_db
-    image: postgres:12-alpine
-    ports:
-      - 5432:5432
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-      - ./db-init:/docker-entrypoint-initdb.d
-    env_file:
-      - ./.env
     environment:
-      - POSTGRES_MULTIPLE_DATABASES=${POSTGRES_DB_DEV},${POSTGRES_DB_TEST}
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      - NODE_ENV=development
+      - PORT=3000
+    env_file:
+      - ./backend/.env
+    command: npm run dev
+    networks:
+      - mfsn-network
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15-alpine
+    container_name: mfsn-db
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=mfsn_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - mfsn-network
+
+networks:
+  mfsn-network:
+    driver: bridge
 
 volumes:
   postgres_data:
