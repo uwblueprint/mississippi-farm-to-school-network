@@ -4,7 +4,7 @@ Simple overview of use/purpose.
 
 ## Description
 
-An in-depth paragraph about your project and overview of use.
+This is a fullstack (svelte + express + postgres) application for the Mississippi Farm to School Network (MFSN). MFSN is a statewide nonprofit helping schools access fresh produce from local farms. In more detail, their focus is helping schools and farmers navigate procurement processes and strengthening local food systems across Mississippi.
 
 ## Getting Started
 
@@ -46,6 +46,9 @@ Vidu Widyalankara
 
 Patrick Wei
 [github](https://github.com/patrick-zx-wei)
+
+Tony Qiu
+[tony_q04](https://www.instagram.com/tony_q04/)
 
 ## Version History
 
