@@ -4,19 +4,20 @@ Simple overview of use/purpose.
 
 ## Description
 
-An in-depth paragraph about your project and overview of use.
+Mississippi Farm to SChool Network (MSFN) is a statewide nonprofit organization focused on increasing access to fresh, local produce for schools and other organizations. 
 
 ## Getting Started
 
 ### Dependencies
 
-* Describe any prerequisites, libraries, OS version, etc., needed before installing program.
-* ex. Windows 10
+* Git
+* Node.js
+* Docker
 
 ### Installing
 
-* How/where to download your program
-* Any modifications needed to be made to files/folders
+Detailed instructions can be found here
+https://www.notion.so/uwblueprintexecs/Technical-Onboarding-2f710f3fb1dc80be8520d8eab6367860
 
 ### Executing program
 
@@ -37,10 +38,18 @@ command to run if program contains helper info
 
 Contributors names and contact info
 
+Tina Xia @tinazxia@gmail.com
+
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
 
 * Daniel Cheng - [dcheng6775@gmail.com]
+
+Vidu Widyalankara  
+[vidsterbroyo](https://vidsterbroyo.com)
+
+Patrick Wei
+[github](https://github.com/patrick-zx-wei)
 
 ## Version History
 
