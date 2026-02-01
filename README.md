@@ -1,4 +1,4 @@
-# Project Title
+# Mississippi Farm to School Network
 
 Simple overview of use/purpose.
 
@@ -39,6 +39,8 @@ Contributors names and contact info
 
 ex. Dominique Pizzie  
 ex. [@DomPizzie](https://twitter.com/dompizzie)
+
+* Daniel Cheng - [dcheng6775@gmail.com]
 
 ## Version History
 
