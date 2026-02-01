@@ -1,4 +1,4 @@
-# Project Title
+# Mississippi Farm to School Network
 
 Simple overview of use/purpose.
 
