@@ -1,8 +1,10 @@
-# Project Title
+# Mississippi Farm to School Network
 
 Simple overview of use/purpose.
 
 ## Description
+
+Mississippi Farm to SChool Network (MSFN) is a statewide nonprofit organization focused on increasing access to fresh, local produce for schools and other organizations. 
 
 This is a fullstack (svelte + express + postgres) application for the Mississippi Farm to School Network (MFSN). MFSN is a statewide nonprofit helping schools access fresh produce from local farms. In more detail, their focus is helping schools and farmers navigate procurement processes and strengthening local food systems across Mississippi.
 
@@ -29,17 +31,23 @@ code blocks for commands
 
 ## Help
 
-Any advise for common problems or issues.
+* You may encounter an error when trying to run `docker-compose up` that states that the backend is missing an env file
+  * You can solve this by creating a new env file (and filling it with the necessary values):
+```bash
+cd ./backend
+touch .env
 ```
-command to run if program contains helper info
-```
+
 
 ## Authors
+[@fiona-cai](https://x.com/fcaiona)
 
-Contributors names and contact info
+Tina Xia @tinazxia@gmail.com
 
-ex. Dominique Pizzie  
-ex. [@DomPizzie](https://twitter.com/dompizzie)
+* Daniel Cheng - [dcheng6775@gmail.com]
+
+Lucas Jin
+[@LucasHJin](https://x.com/lucashjin)
 
 Vidu Widyalankara  
 [vidsterbroyo](https://vidsterbroyo.com)
