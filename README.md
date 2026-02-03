@@ -43,6 +43,7 @@ touch .env
 ## Authors
 [@fiona-cai](https://x.com/fcaiona)
 Sherry Tse 
+
 [stse3](https://github.com/stse3)
 
 Tina Xia @tinazxia@gmail.com
