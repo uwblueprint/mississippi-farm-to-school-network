@@ -2,7 +2,9 @@
 
 Simple overview of use/purpose.
 
-## Description
+## Who are the Mississippi Farm to School Network?
+
+The Mississippi Farm to School Network (MFSN) platform facilitates connections between local farms and schools across Mississippi. This web application helps schools find local agricultural producers, manage farm-to-school programs, and promotes agricultural education while supporting local farmers and providing fresh, healthy food options for students.
 
 Mississippi Farm to SChool Network (MSFN) is a statewide nonprofit organization focused on increasing access to fresh, local produce for schools and other organizations. 
 
@@ -39,8 +41,12 @@ touch .env
 ```
 
 
+
 ## Authors
 [@fiona-cai](https://x.com/fcaiona)
+Sherry Tse 
+
+[stse3](https://github.com/stse3)
 
 Tina Xia @tinazxia@gmail.com
 
