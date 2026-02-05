@@ -14,9 +14,10 @@ This is a fullstack (svelte + express + postgres) application for the Mississipp
 
 ### Dependencies
 
-* Git
-* Node.js
-* Docker
+* [Git](https://git-scm.com/)
+* [Node.js](https://nodejs.org/) (LTS version)
+* Your preferred code editor (either VSCode or Cursor is fine)
+* [Docker Desktop](https://www.docker.com/products/docker-desktop)
 
 ### Installing
 
@@ -49,6 +50,12 @@ Sherry Tse
 [stse3](https://github.com/stse3)
 
 Tina Xia @tinazxia@gmail.com
+
+ex. Dominique Pizzie  
+ex. [@DomPizzie](https://twitter.com/dompizzie)
+
+Lukas Li
+[github](https://github.com/eatingfood142434)
 
 * Daniel Cheng - [dcheng6775@gmail.com]
 
