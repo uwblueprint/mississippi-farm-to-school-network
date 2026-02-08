@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/no-var-requires */
-require("dotenv").config();
-require("ts-node/register");
+/* eslint-disable @typescript-eslint/no-require-imports */
+require('dotenv').config();
+require('ts-node/register');
 
-require("./umzug").migrator.runAsCLI();
+require('./umzug').migrator.runAsCLI();
