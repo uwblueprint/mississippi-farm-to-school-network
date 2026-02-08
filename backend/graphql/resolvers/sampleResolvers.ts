@@ -1,49 +1,34 @@
-import SampleService from "../../services/implementations/sampleService";
-import ISampleService from "../../services/interfaces/sampleService";
-import { SampleDTO, CreateSampleDTO } from "../../types";
+import SampleService from '../../services/implementations/sampleService';
+import ISampleService from '../../services/interfaces/sampleService';
 
 const sampleService: ISampleService = new SampleService();
 
 const sampleResolvers = {
-	Query: {
-		sampleById: async (
-			_parent: undefined,
-			{ id }: { id: string },
-		): Promise<SampleDTO> => {
-			const sample = await sampleService.getSampleById(id);
-			return sample;
-		},
-		samples: async (
-			_parent: undefined,
-			_args: undefined,
-		): Promise<SampleDTO[]> => {
-			const samples = await sampleService.getAllSamples();
-			return samples;
-		},
-	},
-	Mutation: {
-		createSample: async (
-			_parent: undefined,
-			{ sample }: { sample: CreateSampleDTO },
-		): Promise<SampleDTO> => {
-			const newSample = await sampleService.createSample(sample);
-			return newSample;
-		},
-		updateSample: async (
-			_parent: undefined,
-			{ id, sample }: { id: string; sample: CreateSampleDTO },
-		): Promise<SampleDTO> => {
-			const updatedSample = await sampleService.updateSample(id, sample);
-			return updatedSample;
-		},
-		deleteSampleById: async (
-			_parent: undefined,
-			{ id }: { id: string },
-		): Promise<SampleDTO> => {
-			const deletedSample = await sampleService.deleteSampleById(id);
-			return deletedSample;
-		},
-	},
+  Query: {
+    sampleById: async (_: unknown, { id }: { id: string }) => {
+      return sampleService.getSampleById(id);
+    },
+    samples: async () => {
+      return sampleService.getAllSamples();
+    },
+  },
+  Mutation: {
+    createSample: async (
+      _: unknown,
+      { sample }: { sample: { name: string; description: string } }
+    ) => {
+      return sampleService.createSample(sample);
+    },
+    updateSample: async (
+      _: unknown,
+      { id, sample }: { id: string; sample: { name: string; description: string } }
+    ) => {
+      return sampleService.updateSample(id, sample);
+    },
+    deleteSampleById: async (_: unknown, { id }: { id: string }) => {
+      return sampleService.deleteSampleById(id);
+    },
+  },
 };
 
 export default sampleResolvers;

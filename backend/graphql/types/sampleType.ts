@@ -1,29 +1,29 @@
-import { gql } from "apollo-server-express";
+import { gql } from 'apollo-server-express';
 
 const sampleType = gql`
-	type SampleDTO {
-		id: String!
-		name: String!
-		description: String!
-		createdAt: String!
-		updatedAt: String!
-	}
+  type SampleDTO {
+    id: String!
+    name: String!
+    description: String!
+    createdAt: String!
+    updatedAt: String!
+  }
 
-	input CreateSampleDTO {
-		name: String!
-		description: String!
-	}
+  input CreateSampleDTO {
+    name: String!
+    description: String!
+  }
 
-	extend type Query {
-		sampleById(id: String!): SampleDTO!
-		samples: [SampleDTO!]!
-	}
+  extend type Query {
+    sampleById(id: String!): SampleDTO!
+    samples: [SampleDTO!]!
+  }
 
-	extend type Mutation {
-		createSample(sample: CreateSampleDTO!): SampleDTO!
-		updateSample(id: String!, sample: CreateSampleDTO!): SampleDTO!
-		deleteSampleById(id: String!): SampleDTO!
-	}
+  extend type Mutation {
+    createSample(sample: CreateSampleDTO!): SampleDTO!
+    updateSample(id: String!, sample: CreateSampleDTO!): SampleDTO!
+    deleteSampleById(id: String!): SampleDTO!
+  }
 `;
 
 export default sampleType;
