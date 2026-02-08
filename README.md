@@ -33,6 +33,9 @@ Detailed instructions can be found here: [Technical Onboarding](https://www.noti
     touch .env
     ```
 
+## Creating Migration
+```node migrate create --name my-migration.ts --folder migrations```
+
 ## Authors
 
 Erica Han  
