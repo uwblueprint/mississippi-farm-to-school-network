@@ -1,0 +1,14 @@
+// Sample-related types for backend sample service, resolvers, and GraphQL
+
+export type SampleDTO = {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string; // ISO string for GraphQL compatibility
+  updatedAt: string; // ISO string for GraphQL compatibility
+};
+
+export type CreateSampleDTO = {
+  name: string;
+  description: string;
+};
