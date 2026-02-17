@@ -8,11 +8,7 @@ const emailResolvers = {
   Mutation: {
     sendEmail: async (
       _: unknown,
-      {
-        to,
-        subject,
-        htmlBody,
-      }: { to: string; subject: string; htmlBody: string }
+      { to, subject, htmlBody }: { to: string; subject: string; htmlBody: string }
     ) => {
       await emailService.sendEmail(to, subject, htmlBody);
       return true;

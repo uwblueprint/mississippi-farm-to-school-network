@@ -2,7 +2,7 @@ import type { MigrationFn } from 'umzug';
 import type { Sequelize } from 'sequelize-typescript';
 import { DataTypes } from 'sequelize';
 
-export const up: MigrationFn = async params => {
+export const up: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
 
@@ -28,7 +28,7 @@ export const up: MigrationFn = async params => {
   });
 };
 
-export const down: MigrationFn = async params => {
+export const down: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
 
