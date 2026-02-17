@@ -1,6 +1,7 @@
 import * as path from 'path';
 
-import { Umzug, SequelizeStorage } from 'umzug';
+import { Umzug } from 'umzug/lib/umzug';
+import { SequelizeStorage } from 'umzug/lib/storage/sequelize';
 import { Sequelize } from 'sequelize-typescript';
 
 const DATABASE_URL =
