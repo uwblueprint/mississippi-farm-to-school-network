@@ -1,5 +1,5 @@
-import SampleService from '../../services/implementations/sampleService';
-import ISampleService from '../../services/interfaces/sampleService';
+import SampleService from '@/services/implementations/sampleService';
+import ISampleService from '@/services/interfaces/sampleService';
 
 const sampleService: ISampleService = new SampleService();
 

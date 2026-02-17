@@ -1,21 +1,16 @@
-import express from 'express';
+import dotenv from 'dotenv';
+import { ApolloServer } from 'apollo-server';
 
-const app = express();
+import executableSchema from '@/graphql';
+
+dotenv.config();
+
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(express.json());
-
-// Routes
-app.get('/', (req, res) => {
-  res.json({ message: 'Backend is running!' });
+const server = new ApolloServer({
+  schema: executableSchema,
 });
 
-app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Start server
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on port ${PORT}`);
+server.listen({ port: Number(PORT) }).then(({ url }: { url: string }) => {
+  console.log(`🚀 Server is running at ${url}`);
 });

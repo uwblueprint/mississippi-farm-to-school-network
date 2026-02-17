@@ -1,4 +1,4 @@
-import { SampleDTO, CreateSampleDTO } from '../../types';
+import { SampleDTO, CreateSampleDTO } from '@/types';
 
 interface ISampleService {
   getAllSamples(): Promise<SampleDTO[]>;
