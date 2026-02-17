@@ -1,6 +1,6 @@
-import { SampleDTO, CreateSampleDTO } from '../../types';
-import Sample from '../../models/sample.model';
-import ISampleService from '../interfaces/sampleService';
+import { SampleDTO, CreateSampleDTO } from '@/types';
+import Sample from '@/models/sample.model';
+import ISampleService from '@/services/interfaces/sampleService';
 
 const grabSample = async (sampleId: string): Promise<Sample> => {
   const sample = await Sample.findByPk(sampleId);

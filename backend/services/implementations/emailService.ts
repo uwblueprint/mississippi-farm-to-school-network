@@ -1,6 +1,6 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import IEmailService from '../interfaces/emailService';
-import { NodemailerConfig } from '../../types';
+import IEmailService from '@/services/interfaces/emailService';
+import { NodemailerConfig } from '@/types';
 
 class EmailService implements IEmailService {
   transporter: Transporter;

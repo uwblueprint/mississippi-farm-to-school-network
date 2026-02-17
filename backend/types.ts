@@ -1,5 +1,3 @@
-// Sample-related types for backend sample service, resolvers, and GraphQL
-
 export type SampleDTO = {
   id: string;
   name: string;

@@ -1,25 +1,19 @@
-import { gql } from 'apollo-server-express';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { merge } from 'lodash';
 
-import sampleResolvers from './resolvers/sampleResolvers';
-import sampleType from './types/sampleType';
-
-const query = gql`
-  type Query {
-    _empty: String
-  }
-`;
-
-const mutation = gql`
-  type Mutation {
-    _empty: String
-  }
-`;
+import emailResolvers from '@/graphql/resolvers/emailResolvers';
+import sampleResolvers from '@/graphql/resolvers/sampleResolvers';
+import emailType from '@/graphql/types/emailType';
+import sampleType from '@/graphql/types/sampleType';
 
 const executableSchema = makeExecutableSchema({
-  typeDefs: [query, mutation, sampleType],
-  resolvers: merge(sampleResolvers),
+  typeDefs: [sampleType, emailType],
+  resolvers: {
+    Query: { ...sampleResolvers.Query },
+    Mutation: {
+      ...sampleResolvers.Mutation,
+      ...emailResolvers.Mutation,
+    },
+  },
 });
 
 export default executableSchema;
