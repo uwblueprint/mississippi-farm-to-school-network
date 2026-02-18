@@ -2,7 +2,7 @@ import { SampleDTO, CreateSampleDTO } from '@/types';
 import Sample from '@/models/sample.model';
 import ISampleService from '@/services/interfaces/sampleService';
 
-const grabSample = async (sampleId: string): Promise<Sample> => {
+const grabSample = async (sampleId: number): Promise<Sample> => {
   const sample = await Sample.findByPk(sampleId);
   if (!sample) {
     throw new Error(`SampleId ${sampleId} not found.`);
@@ -22,7 +22,7 @@ class SampleService implements ISampleService {
     }));
   }
 
-  async getSampleById(id: string): Promise<SampleDTO> {
+  async getSampleById(id: number): Promise<SampleDTO> {
     const sample = await grabSample(id);
     return {
       id: sample.id,
@@ -49,7 +49,7 @@ class SampleService implements ISampleService {
     };
   }
 
-  async updateSample(id: string, content: CreateSampleDTO): Promise<SampleDTO> {
+  async updateSample(id: number, content: CreateSampleDTO): Promise<SampleDTO> {
     const sample = await grabSample(id);
     sample.name = content.name;
     sample.description = content.description;
@@ -64,7 +64,7 @@ class SampleService implements ISampleService {
     };
   }
 
-  async deleteSampleById(id: string): Promise<SampleDTO> {
+  async deleteSampleById(id: number): Promise<SampleDTO> {
     const sample = await grabSample(id);
     await sample.destroy();
     return {

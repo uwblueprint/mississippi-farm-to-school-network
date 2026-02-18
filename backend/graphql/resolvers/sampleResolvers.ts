@@ -5,7 +5,7 @@ const sampleService: ISampleService = new SampleService();
 
 const sampleResolvers = {
   Query: {
-    sampleById: async (_: unknown, { id }: { id: string }) => {
+    sampleById: async (_: unknown, { id }: { id: number }) => {
       return sampleService.getSampleById(id);
     },
     samples: async () => {
@@ -21,11 +21,11 @@ const sampleResolvers = {
     },
     updateSample: async (
       _: unknown,
-      { id, sample }: { id: string; sample: { name: string; description: string } }
+      { id, sample }: { id: number; sample: { name: string; description: string } }
     ) => {
       return sampleService.updateSample(id, sample);
     },
-    deleteSampleById: async (_: unknown, { id }: { id: string }) => {
+    deleteSampleById: async (_: unknown, { id }: { id: number }) => {
       return sampleService.deleteSampleById(id);
     },
   },

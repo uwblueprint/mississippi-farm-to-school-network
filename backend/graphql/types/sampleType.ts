@@ -2,18 +2,18 @@ import { gql } from 'apollo-server';
 
 const sampleType = gql`
   type Query {
-    sampleById(id: String!): SampleDTO!
+    sampleById(id: Int!): SampleDTO!
     samples: [SampleDTO!]!
   }
 
   type Mutation {
     createSample(sample: CreateSampleDTO!): SampleDTO!
-    updateSample(id: String!, sample: CreateSampleDTO!): SampleDTO!
-    deleteSampleById(id: String!): SampleDTO!
+    updateSample(id: Int!, sample: CreateSampleDTO!): SampleDTO!
+    deleteSampleById(id: Int!): SampleDTO!
   }
 
   type SampleDTO {
-    id: String!
+    id: Int!
     name: String!
     description: String!
     createdAt: String!

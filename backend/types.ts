@@ -1,5 +1,5 @@
 export type SampleDTO = {
-  id: string;
+  id: number;
   name: string;
   description: string;
   createdAt: string; // ISO string for GraphQL compatibility

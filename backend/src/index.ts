@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import { ApolloServer } from 'apollo-server';
 
+import '@/models';
 import executableSchema from '@/graphql';
 
 dotenv.config();
