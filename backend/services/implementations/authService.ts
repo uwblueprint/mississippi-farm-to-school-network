@@ -112,7 +112,7 @@ class AuthService implements IAuthService {
       <br><br>
       <a href=${resetLink}>Reset Password</a>`;
 
-      this.emailService.sendEmail(email, 'Your Password Reset Link', emailBody);
+      await this.emailService.sendEmail(email, 'Your Password Reset Link', emailBody);
     } catch (error) {
       Logger.error(`Failed to generate password reset link for user with email ${email}`);
       throw error;
@@ -137,7 +137,7 @@ class AuthService implements IAuthService {
       <br><br>
       <a href=${emailVerificationLink}>Verify email</a>`;
 
-      this.emailService.sendEmail(email, 'Verify your email', emailBody);
+      await this.emailService.sendEmail(email, 'Verify your email', emailBody);
     } catch (error) {
       Logger.error(
         `Failed to generate email verification link for user with email ${email} ${error}`
