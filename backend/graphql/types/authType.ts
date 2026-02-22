@@ -18,17 +18,15 @@ const authType = gql`
 
   type AuthDTO {
     id: ID!
-    firstName: String!
-    lastName: String!
+    firebase_uid: String!
     email: String!
     role: Role!
+    is_verified: Boolean!
     accessToken: String!
     refreshToken: String!
   }
 
   input RegisterUserDTO {
-    firstName: String!
-    lastName: String!
     email: String!
     password: String!
   }
