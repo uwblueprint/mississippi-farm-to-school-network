@@ -10,7 +10,7 @@ const DATABASE_URL =
     : `postgres://${process.env.POSTGRES_USER}:${process.env.POSTGRES_PASSWORD}@${process.env.DB_HOST}:5432/${process.env.POSTGRES_DB_DEV}`;
 
 const sequelize = new Sequelize(DATABASE_URL, {
-  models: [path.join(__dirname, '/*.model.ts')],
+  models: [path.join(__dirname, 'models', '*.model.ts')],
 });
 
 export const migrator = new Umzug({
@@ -25,3 +25,5 @@ export const migrator = new Umzug({
 });
 
 export type Migration = typeof migrator._types.migration;
+
+export { sequelize };

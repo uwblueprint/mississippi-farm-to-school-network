@@ -12,8 +12,13 @@
     "sequelize": "ts-node ./node_modules/.bin/sequelize-cli"
   },
   "dependencies": {
+    "@graphql-tools/schema": "^10.0.0",
     "apollo-server": "^3.13.0",
     "dotenv": "^17.2.3",
+    "firebase-admin": "^12.0.0",
+    "graphql": "^16.9.0",
+    "lodash": "^4.17.21",
+    "node-fetch": "^2.7.0",
     "nodemailer": "^8.0.1",
     "pg": "^8.18.0",
     "sequelize": "^6.37.7",
@@ -23,7 +28,9 @@
   },
   "devDependencies": {
     "@types/dotenv": "^6.1.1",
+    "@types/lodash": "^4.17.0",
     "@types/node": "^25.1.0",
+    "@types/node-fetch": "^2.6.11",
     "@types/nodemailer": "^7.0.9",
     "@types/pg": "^8.16.0",
     "@types/umzug": "^2.3.9",
