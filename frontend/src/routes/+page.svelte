@@ -45,9 +45,9 @@
 				<Button class="preset-outlined-surface-300-700">Outlined Neutral</Button>
 			</div>
 			<div class="mt-3 flex flex-wrap items-center gap-3">
-				<Button class="btn-sm preset-filled-primary-500">Small</Button>
-				<Button class="btn-base preset-filled-primary-500">Base</Button>
-				<Button class="btn-lg preset-filled-primary-500">Large</Button>
+				<Button class="preset-filled-primary-500 btn-sm">Small</Button>
+				<Button class="preset-filled-primary-500 btn-base">Base</Button>
+				<Button class="preset-filled-primary-500 btn-lg">Large</Button>
 			</div>
 		</Card>
 
@@ -72,7 +72,9 @@
 
 		<!-- Form: Switch + FileUpload are Skeleton Svelte components -->
 		<Card class="preset-outlined-surface-200-800 p-6">
-			<h2 class="mb-6 text-xl font-semibold text-surface-950-50">Form (Switch &amp; FileUpload components)</h2>
+			<h2 class="mb-6 text-xl font-semibold text-surface-950-50">
+				Form (Switch &amp; FileUpload components)
+			</h2>
 			<form
 				class="w-full max-w-xl space-y-4"
 				onsubmit={(e) => {
@@ -83,12 +85,7 @@
 				<fieldset class="space-y-4">
 					<label class="label block">
 						<span class="label-text">Name</span>
-						<input
-							class="input w-full"
-							type="text"
-							placeholder="Your name"
-							bind:value={name}
-						/>
+						<input class="input w-full" type="text" placeholder="Your name" bind:value={name} />
 					</label>
 					<label class="label block">
 						<span class="label-text">Email</span>
@@ -117,10 +114,7 @@
 						></textarea>
 					</label>
 					<div class="flex items-center justify-between gap-2 rounded-container p-2">
-						<Switch
-							checked={subscribe}
-							onCheckedChange={(d) => (subscribe = d.checked)}
-						>
+						<Switch checked={subscribe} onCheckedChange={(d) => (subscribe = d.checked)}>
 							<Switch.Label class="text-surface-950-50">Subscribe to updates</Switch.Label>
 							<Switch.Control
 								class="preset-filled-surface-200-800 data-[state=checked]:preset-filled-primary-500"
@@ -134,15 +128,33 @@
 						<span class="label-text block">Priority</span>
 						<div class="flex flex-wrap gap-4">
 							<label class="flex items-center gap-2">
-								<input class="radio" type="radio" name="priority" value="low" bind:group={priority} />
+								<input
+									class="radio"
+									type="radio"
+									name="priority"
+									value="low"
+									bind:group={priority}
+								/>
 								<span class="text-surface-950-50">Low</span>
 							</label>
 							<label class="flex items-center gap-2">
-								<input class="radio" type="radio" name="priority" value="normal" bind:group={priority} />
+								<input
+									class="radio"
+									type="radio"
+									name="priority"
+									value="normal"
+									bind:group={priority}
+								/>
 								<span class="text-surface-950-50">Normal</span>
 							</label>
 							<label class="flex items-center gap-2">
-								<input class="radio" type="radio" name="priority" value="high" bind:group={priority} />
+								<input
+									class="radio"
+									type="radio"
+									name="priority"
+									value="high"
+									bind:group={priority}
+								/>
 								<span class="text-surface-950-50">High</span>
 							</label>
 						</div>
@@ -152,7 +164,7 @@
 						<FileUpload
 							accept="image/*"
 							maxFiles={10}
-							acceptedFiles={acceptedFiles}
+							{acceptedFiles}
 							onFileChange={(d) => (acceptedFiles = d.acceptedFiles)}
 							class="w-full"
 						>
@@ -179,7 +191,7 @@
 													{formatSize(file.size)}
 												</FileUpload.ItemSizeText>
 												<FileUpload.ItemDeleteTrigger
-													class="btn btn-sm preset-tonal-error ml-1"
+													class="ml-1 btn preset-tonal-error btn-sm"
 													aria-label="Remove file"
 												>
 													×
@@ -192,7 +204,9 @@
 							<FileUpload.Context>
 								{#snippet children(fu)}
 									{#if fu().acceptedFiles.length > 0}
-										<FileUpload.ClearTrigger class="btn btn-sm preset-outlined-surface-300-700 mt-2">
+										<FileUpload.ClearTrigger
+											class="mt-2 btn preset-outlined-surface-300-700 btn-sm"
+										>
 											Clear all
 										</FileUpload.ClearTrigger>
 									{/if}
@@ -213,7 +227,9 @@
 			<h2 class="mb-4 text-xl font-semibold text-surface-950-50">Progress</h2>
 			<div class="space-y-4">
 				<Progress value={65} max={100} class="w-full max-w-xs">
-					<Progress.Label class="label-text text-surface-950-50">Upload progress (65%)</Progress.Label>
+					<Progress.Label class="label-text text-surface-950-50"
+						>Upload progress (65%)</Progress.Label
+					>
 					<Progress.Track class="h-2 w-full overflow-hidden rounded-full bg-surface-200-800">
 						<Progress.Range
 							class="h-full rounded-full bg-primary-500 transition-all duration-300"

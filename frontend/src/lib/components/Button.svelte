@@ -10,10 +10,14 @@
 		[name: string]: unknown;
 	}
 
-	let { children, class: className = 'preset-filled-primary-500', type = 'button', ...rest }: Props =
-		$props();
+	let {
+		children,
+		class: className = 'preset-filled-primary-500',
+		type = 'button',
+		...rest
+	}: Props = $props();
 </script>
 
-<button type={type} class="btn {className}" {...rest}>
+<button {type} class="btn {className}" {...rest}>
 	{@render children?.()}
 </button>

@@ -15,6 +15,10 @@ export default [
 				ecmaVersion: 2022,
 				sourceType: 'module',
 				extraFileExtensions: ['.svelte']
+			},
+			globals: {
+				File: 'readonly',
+				console: 'readonly'
 			}
 		},
 		plugins: {
