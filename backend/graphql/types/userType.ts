@@ -15,29 +15,25 @@ const userType = gql`
   }
 
   enum Role {
-    User
-    Admin
+    ADMIN
+    FARMER
   }
 
   type UserDTO {
     id: ID!
-    firstName: String!
-    lastName: String!
+    firebase_uid: String!
     email: String!
     role: Role!
+    is_verified: Boolean!
   }
 
   input CreateUserDTO {
-    firstName: String!
-    lastName: String!
     email: String!
     role: Role!
     password: String
   }
 
   input UpdateUserDTO {
-    firstName: String!
-    lastName: String!
     email: String!
     role: Role!
   }
