@@ -13,10 +13,10 @@ export const up: MigrationFn = async (params) => {
       defaultValue: DataTypes.UUIDV4,
       allowNull: false,
     },
-    firebase_uid: { 
-      type: DataTypes.STRING, 
+    firebase_uid: {
+      type: DataTypes.STRING,
       unique: true,
-      allowNull: false 
+      allowNull: false,
     },
     role: {
       type: DataTypes.ENUM('ADMIN', 'FARMER'),
@@ -40,7 +40,7 @@ export const up: MigrationFn = async (params) => {
     updated_at: {
       type: DataTypes.DATE,
       allowNull: false,
-      defaultValue: SequelizeStatic.fn('now'), 
+      defaultValue: SequelizeStatic.fn('now'),
     },
   });
 };
