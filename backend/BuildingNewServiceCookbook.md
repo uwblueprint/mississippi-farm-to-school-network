@@ -69,6 +69,7 @@ export type CreateFarmerDTO = {
 ```
 
 **Conventions:**
+
 - `{Feature}DTO` for the read/response type (dates as ISO strings for GraphQL compatibility)
 - `Create{Feature}DTO` for the creation input (omit `id`, `createdAt`, `updatedAt`)
 - Add `Update{Feature}DTO` if your update payload differs from create
@@ -198,6 +199,7 @@ export default class Farmer extends Model {
 ```
 
 **Conventions:**
+
 - File named `{feature}.model.ts` in `models/`
 - Class name is the singular PascalCase entity name
 - `@Table` decorator with explicit `tableName`
@@ -266,6 +268,7 @@ export default IFarmerService;
 ```
 
 **Conventions:**
+
 - File named `{feature}Service.ts` in `services/interfaces/`
 - Interface name prefixed with `I` (e.g., `IFarmerService`)
 - All methods return `Promise<DTO>`
@@ -417,6 +420,7 @@ export default FarmerService;
 ```
 
 **Conventions:**
+
 - File named `{feature}Service.ts` in `services/implementations/`
 - Class implements the corresponding `I{Feature}Service` interface
 - Helper `grab{Feature}` function for findByPk + not-found error pattern
@@ -483,6 +487,7 @@ export default farmerType;
 ```
 
 **Conventions:**
+
 - File named `{feature}Type.ts` in `graphql/types/`
 - Extend `type Query` and `type Mutation` (GraphQL merges these across type defs)
 - Output types match `{Feature}DTO` from `types.ts`
@@ -522,10 +527,7 @@ const farmerResolvers = {
     createFarmer: async (_: unknown, { farmer }: { farmer: CreateFarmerDTO }) => {
       return farmerService.createFarmer(farmer);
     },
-    updateFarmer: async (
-      _: unknown,
-      { id, farmer }: { id: number; farmer: CreateFarmerDTO }
-    ) => {
+    updateFarmer: async (_: unknown, { id, farmer }: { id: number; farmer: CreateFarmerDTO }) => {
       return farmerService.updateFarmer(id, farmer);
     },
     deleteFarmerById: async (_: unknown, { id }: { id: number }) => {
@@ -538,6 +540,7 @@ export default farmerResolvers;
 ```
 
 **Conventions:**
+
 - File named `{feature}Resolvers.ts` in `graphql/resolvers/`
 - Instantiate services at module level, typed against the interface
 - First resolver arg is `_: unknown` (unused parent)
@@ -563,21 +566,21 @@ import emailResolvers from '@/graphql/resolvers/emailResolvers';
 import sampleResolvers from '@/graphql/resolvers/sampleResolvers';
 import userResolvers from '@/graphql/resolvers/userResolvers';
 import authResolvers from '@/graphql/resolvers/authResolvers';
-import farmerResolvers from '@/graphql/resolvers/farmerResolvers';     // +++ ADD
+import farmerResolvers from '@/graphql/resolvers/farmerResolvers'; // +++ ADD
 import emailType from '@/graphql/types/emailType';
 import sampleType from '@/graphql/types/sampleType';
 import userType from '@/graphql/types/userType';
 import authType from '@/graphql/types/authType';
-import farmerType from '@/graphql/types/farmerType';                   // +++ ADD
+import farmerType from '@/graphql/types/farmerType'; // +++ ADD
 
 const executableSchema = makeExecutableSchema({
-  typeDefs: [sampleType, emailType, userType, authType, farmerType],   // +++ ADD farmerType
+  typeDefs: [sampleType, emailType, userType, authType, farmerType], // +++ ADD farmerType
   resolvers: merge(
     sampleResolvers,
     emailResolvers,
     userResolvers,
     authResolvers,
-    farmerResolvers,                                                   // +++ ADD farmerResolvers
+    farmerResolvers // +++ ADD farmerResolvers
   ),
 });
 
@@ -616,17 +619,19 @@ query {
 
 # Test mutation
 mutation {
-  createFarmer(farmer: {
-    farmName: "Green Acres Farm"
-    firstName: "John"
-    lastName: "Smith"
-    address: "123 Farm Road"
-    city: "Jackson"
-    state: "MS"
-    zipCode: "39201"
-    phoneNumber: "601-555-0123"
-    email: "john@greenacres.com"
-  }) {
+  createFarmer(
+    farmer: {
+      farmName: "Green Acres Farm"
+      firstName: "John"
+      lastName: "Smith"
+      address: "123 Farm Road"
+      city: "Jackson"
+      state: "MS"
+      zipCode: "39201"
+      phoneNumber: "601-555-0123"
+      email: "john@greenacres.com"
+    }
+  ) {
     id
     farmName
     email
@@ -638,17 +643,17 @@ mutation {
 
 ## Quick Reference: Files to Create/Edit
 
-| Step | Action | Path |
-|------|--------|------|
-| 1 | Design | [dbdiagram.io schema](https://dbdiagram.io/d/Untitled-Diagram-698b5088bd82f5fce247c1e1) |
-| 2 | Edit | `types.ts` |
-| 3 | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts` |
-| 4 | Create | `models/{feature}.model.ts` |
-| 5 | Create | `services/interfaces/{feature}Service.ts` |
-| 6 | Create | `services/implementations/{feature}Service.ts` |
-| 7 | Create | `graphql/types/{feature}Type.ts` |
-| 8 | Create | `graphql/resolvers/{feature}Resolvers.ts` |
-| 9 | Edit | `graphql/index.ts` |
+| Step | Action | Path                                                                                    |
+| ---- | ------ | --------------------------------------------------------------------------------------- |
+| 1    | Design | [dbdiagram.io schema](https://dbdiagram.io/d/Untitled-Diagram-698b5088bd82f5fce247c1e1) |
+| 2    | Edit   | `types.ts`                                                                              |
+| 3    | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts`                                    |
+| 4    | Create | `models/{feature}.model.ts`                                                             |
+| 5    | Create | `services/interfaces/{feature}Service.ts`                                               |
+| 6    | Create | `services/implementations/{feature}Service.ts`                                          |
+| 7    | Create | `graphql/types/{feature}Type.ts`                                                        |
+| 8    | Create | `graphql/resolvers/{feature}Resolvers.ts`                                               |
+| 9    | Edit   | `graphql/index.ts`                                                                      |
 
 ## Quick Reference: CLI Commands
 
