@@ -22,6 +22,12 @@ export type NodemailerConfig = {
   };
 };
 
+export enum FarmStatus {
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}
+
 export enum Role {
   ADMIN = 'ADMIN',
   FARMER = 'FARMER',
