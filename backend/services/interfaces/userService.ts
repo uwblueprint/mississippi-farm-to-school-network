@@ -81,6 +81,13 @@ interface IUserService {
    * @throws Error if user deletion fails
    */
   deleteUserByEmail(email: string): Promise<void>;
+
+  /**
+   * 
+   * @param email user's email
+   * @param token time limited verification token
+   */
+  verifyUserEmail(email: string, token: string): Promise<UserDTO>
 }
 
 export default IUserService;
