@@ -149,9 +149,7 @@ export const up: MigrationFn = async (params) => {
 
 export const down: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
-  const queryInterface = sequelize.getQueryInterface();
 
-  await queryInterface.dropTable('farms');
-  await queryInterface.sequelize.query('DROP TYPE IF EXISTS \"enum_farms_status\";');
+  await sequelize.query('DROP TABLE IF EXISTS "farms";');
+  await sequelize.query('DROP TYPE IF EXISTS "enum_farms_status";');
 };
-
