@@ -38,10 +38,12 @@ services:
     networks:
       - mfsn-network
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   db:
-    image: postgres:15-alpine
+    image: postgis/postgis:15-3.5-alpine
+    platform: linux/amd64
     container_name: mfsn-db
     ports:
       - "5432:5432"
@@ -51,6 +53,11 @@ services:
       - POSTGRES_DB=mfsn_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d mfsn_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     networks:
       - mfsn-network
 
