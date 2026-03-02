@@ -12,5 +12,5 @@ export const down: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
 
-  await queryInterface.sequelize.query('DROP EXTENSION IF EXISTS postgis;');
+  await queryInterface.sequelize.query('DROP EXTENSION IF EXISTS postgis CASCADE;');
 };
