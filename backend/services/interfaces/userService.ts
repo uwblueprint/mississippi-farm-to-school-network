@@ -83,11 +83,12 @@ interface IUserService {
   deleteUserByEmail(email: string): Promise<void>;
 
   /**
-   * 
+   * Sync Postgres is_verified to true after frontend has completed Firebase email verification.
    * @param email user's email
-   * @param token time limited verification token
+   * @returns updated UserDTO
+   * @throws Error if user not found or already verified
    */
-  verifyUserEmail(email: string, token: string): Promise<UserDTO>
+  verifyUserEmail(email: string): Promise<UserDTO>;
 }
 
 export default IUserService;

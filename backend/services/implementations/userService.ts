@@ -51,27 +51,28 @@ class UserService implements IUserService {
     }
   }
 
-  async verifyUserEmail(email: string, token: string): Promise<UserDTO> {
+  async verifyUserEmail(email: string): Promise<UserDTO> {
     try {
-      await firebaseAdmin.auth().verifyIdToken(token);
-      
       const user = await User.findOne({
         where: { email },
       });
 
       if (!user) {
         throw new Error(`user with email ${email} not found.`);
-      } else {
-        await user.update({ is_verified: true });
-        
-        return {
-          id: user.id,
-          firebase_uid: user.firebase_uid,
-          email: user.email,
-          role: user.role,
-          is_verified: user.is_verified,
-        };
       }
+      if (user.is_verified) {
+        throw new Error(`user with email ${email} is already verified.`);
+      }
+
+      await user.update({ is_verified: true });
+
+      return {
+        id: user.id,
+        firebase_uid: user.firebase_uid,
+        email: user.email,
+        role: user.role,
+        is_verified: true,
+      };
     } catch (error: unknown) {
       Logger.error(`Failed to verify user. Reason = ${getErrorMessage(error)}`);
       throw error;

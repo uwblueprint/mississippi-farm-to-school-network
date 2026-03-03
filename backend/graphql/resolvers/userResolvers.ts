@@ -46,8 +46,8 @@ const userResolvers = {
       await userService.deleteUserByEmail(email);
       return true;
     },
-    verifyUserEmail: async (_parent: undefined, { email, token }: { email: string, token: string }): Promise<UserDTO> => {
-      const user = await userService.verifyUserEmail(email, token);
+    verifyUserEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
+      const user = await userService.verifyUserEmail(email);
       return user;
     }
   },
