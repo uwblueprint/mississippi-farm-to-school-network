@@ -57,7 +57,7 @@ const authResolvers = {
       const newUser = await userService.createUser(
         {
           ...user,
-          role: Role.User, // Default role for registration
+          role: Role.FARMER, // Default role for registration
         },
         undefined,
         SignUpMethod.PASSWORD

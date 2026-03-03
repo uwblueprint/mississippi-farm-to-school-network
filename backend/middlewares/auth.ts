@@ -10,7 +10,6 @@ export type GraphQLContext = { req: IncomingMessage };
 
 const authService: IAuthService = new AuthService(new UserService(), null);
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
 export const getAccessToken = (req: IncomingMessage): string | null => {
   const authHeaderParts = req.headers.authorization?.split(' ');
   if (

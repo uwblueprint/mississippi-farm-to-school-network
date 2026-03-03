@@ -51,9 +51,7 @@ class AuthService implements IAuthService {
       const user = await this.userService.createUser(
         {
           email: googleUser.email,
-          firstName: googleUser.firstName || 'Unknown',
-          lastName: googleUser.lastName || 'User',
-          role: Role.User,
+          role: Role.FARMER,
         },
         googleUser.localId,
         SignUpMethod.GOOGLE

@@ -23,8 +23,8 @@ export type NodemailerConfig = {
 };
 
 export enum Role {
-  User = 'User',
-  Admin = 'Admin',
+  ADMIN = 'ADMIN',
+  FARMER = 'FARMER',
 }
 
 export type Token = {
@@ -34,19 +34,27 @@ export type Token = {
 
 export type UserDTO = {
   id: string;
-  firstName: string;
-  lastName: string;
+  firebase_uid: string;
+  email: string;
+  role: Role;
+  is_verified: boolean;
+};
+
+export type CreateUserDTO = {
+  email: string;
+  role: Role;
+  password?: string;
+};
+
+export type UpdateUserDTO = {
   email: string;
   role: Role;
 };
 
-export type CreateUserDTO = Omit<UserDTO, 'id'> & {
-  password?: string;
+export type RegisterUserDTO = {
+  email: string;
+  password: string;
 };
-
-export type UpdateUserDTO = Omit<UserDTO, 'id'>;
-
-export type RegisterUserDTO = Omit<CreateUserDTO, 'role'>;
 
 export type AuthDTO = Token & UserDTO;
 
