@@ -1,6 +1,6 @@
 {
 	"hosting": {
-		"public": "dist",
+		"public": ".svelte-kit/output/client",
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
 		"rewrites": [
 			{
