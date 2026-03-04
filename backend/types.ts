@@ -1,16 +1,3 @@
-export type SampleDTO = {
-  id: number;
-  name: string;
-  description: string;
-  createdAt: string; // ISO string for GraphQL compatibility
-  updatedAt: string; // ISO string for GraphQL compatibility
-};
-
-export type CreateSampleDTO = {
-  name: string;
-  description: string;
-};
-
 export type NodemailerConfig = {
   service: 'gmail';
   auth: {
