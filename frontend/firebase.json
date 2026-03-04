@@ -1,0 +1,12 @@
+{
+	"hosting": {
+		"public": ".svelte-kit/output/client",
+		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+		"rewrites": [
+			{
+				"source": "**",
+				"destination": "/index.html"
+			}
+		]
+	}
+}
