@@ -69,6 +69,8 @@ export enum SignUpMethod {
   GOOGLE = 'GOOGLE',
 }
 
+export type GeoPoint = { type: 'Point'; coordinates: [number, number] };
+
 export type FarmDTO = {
   id: string;
   owner_user_id: string;
@@ -82,7 +84,7 @@ export type FarmDTO = {
   farm_address: string;
   counties_served: string[];
   cities_served: string[];
-  location: unknown;
+  location: GeoPoint;
   food_categories: string[];
   market_sales_data: { market: string; times: string }[] | null;
   bipoc_owned: boolean;
@@ -96,6 +98,6 @@ export type FarmDTO = {
   f2s_experience: boolean;
   interested_in_f2s: boolean;
   status: FarmStatus;
-  createdAt: string;
-  updatedAt: string;
+  createdAt: string; // ISO string for GraphQL compatibility
+  updatedAt: string; // ISO string for GraphQL compatibility
 };
