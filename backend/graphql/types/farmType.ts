@@ -1,8 +1,20 @@
 import { gql } from 'apollo-server';
 
 const farmType = gql`
+  scalar JSON
+
   type Query {
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
+  }
+
+  type GeoPoint {
+    type: String!
+    coordinates: [Float!]!
+  }
+
+  type MarketSalesEntry {
+    market: String!
+    times: String!
   }
 
   enum FarmStatus {
@@ -20,13 +32,13 @@ const farmType = gql`
     primary_phone: String!
     primary_email: String!
     website: String
-    social_media: String
+    social_media: JSON
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
-    location: String!
+    location: GeoPoint!
     food_categories: [String!]!
-    market_sales_data: String
+    market_sales_data: [MarketSalesEntry]
     bipoc_owned: Boolean!
     gap_certified: Boolean!
     food_safety_plan: Boolean!

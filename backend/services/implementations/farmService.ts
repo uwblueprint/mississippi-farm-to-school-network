@@ -11,8 +11,11 @@ class FarmService implements IFarmService {
   async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
     
     try {
-      const farms = await Farm.sequelize!.query(
-        `SELECT * FROM farms
+      const { sequelize } = Farm;
+      if (!sequelize) throw new Error('Database connection not initialized');
+
+      const farms = await sequelize.query(
+        `SELECT *, ST_AsGeoJSON(location)::json AS location FROM farms
          WHERE ST_DWithin(
            location,
            ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
