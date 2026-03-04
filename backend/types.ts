@@ -68,3 +68,34 @@ export enum SignUpMethod {
   PASSWORD = 'PASSWORD',
   GOOGLE = 'GOOGLE',
 }
+
+export type FarmDTO = {
+  id: string;
+  owner_user_id: string;
+  usda_farm_id: number;
+  farm_name: string;
+  description: string;
+  primary_phone: string;
+  primary_email: string;
+  website: string | null;
+  social_media: Record<string, unknown> | null;
+  farm_address: string;
+  counties_served: string[];
+  cities_served: string[];
+  location: unknown;
+  food_categories: string[];
+  market_sales_data: { market: string; times: string }[] | null;
+  bipoc_owned: boolean;
+  gap_certified: boolean;
+  food_safety_plan: boolean;
+  agritourism: boolean;
+  sells_at_markets: boolean;
+  csa_boxes: boolean;
+  online_sales: boolean;
+  delivery: boolean;
+  f2s_experience: boolean;
+  interested_in_f2s: boolean;
+  status: FarmStatus;
+  createdAt: string;
+  updatedAt: string;
+};
