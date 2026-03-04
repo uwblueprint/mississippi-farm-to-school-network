@@ -38,4 +38,5 @@ export const down: MigrationFn = async (params) => {
   const queryInterface = sequelize.getQueryInterface();
 
   await queryInterface.dropTable('emails');
+  await queryInterface.dropTable('samples');
 };
