@@ -8,7 +8,7 @@ A step-by-step guide for adding a new backend service/feature, following establi
 
 ## Step 1: Design Your Schema
 
-Before writing any code, design your table in the shared [dbdiagram.io schema](https://dbdiagram.io/d/Untitled-Diagram-698b5088bd82f5fce247c1e1). This is the source of truth for our database design.
+Before writing any code, design your table in the **MFSN Architecture Design Document**. That document will be the long‑term source of truth for our database design. (For now, it may still be incomplete or a stub until the architecture work is finalized.)
 
 For our Farmer example, the table would look something like:
 
@@ -643,17 +643,17 @@ mutation {
 
 ## Quick Reference: Files to Create/Edit
 
-| Step | Action | Path                                                                                    |
-| ---- | ------ | --------------------------------------------------------------------------------------- |
-| 1    | Design | [dbdiagram.io schema](https://dbdiagram.io/d/Untitled-Diagram-698b5088bd82f5fce247c1e1) |
-| 2    | Edit   | `types.ts`                                                                              |
-| 3    | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts`                                    |
-| 4    | Create | `models/{feature}.model.ts`                                                             |
-| 5    | Create | `services/interfaces/{feature}Service.ts`                                               |
-| 6    | Create | `services/implementations/{feature}Service.ts`                                          |
-| 7    | Create | `graphql/types/{feature}Type.ts`                                                        |
-| 8    | Create | `graphql/resolvers/{feature}Resolvers.ts`                                               |
-| 9    | Edit   | `graphql/index.ts`                                                                      |
+| Step | Action | Path                                                                                   |
+| ---- | ------ | -------------------------------------------------------------------------------------- |
+| 1    | Design | MFSN Architecture Design Document (database section)                                   |
+| 2    | Edit   | `types.ts`                                                                             |
+| 3    | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts`                                   |
+| 4    | Create | `models/{feature}.model.ts`                                                            |
+| 5    | Create | `services/interfaces/{feature}Service.ts`                                              |
+| 6    | Create | `services/implementations/{feature}Service.ts`                                         |
+| 7    | Create | `graphql/types/{feature}Type.ts`                                                       |
+| 8    | Create | `graphql/resolvers/{feature}Resolvers.ts`                                              |
+| 9    | Edit   | `graphql/index.ts`                                                                     |
 
 ## Quick Reference: CLI Commands
 
