@@ -1,0 +1,4 @@
+# Build output (not in repo; Prettier would check it if present locally)
+build/
+node_modules/
+firebaseServiceAccount.json
