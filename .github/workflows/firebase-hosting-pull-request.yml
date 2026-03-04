@@ -16,6 +16,10 @@ jobs:
   build_and_preview:
     if: ${{ github.actor != 'dependabot[bot]' && github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      pull-requests: write
+      contents: read
     steps:
       - uses: actions/checkout@v2
       - run: echo "REACT_APP_BACKEND_URL=${{ secrets.PREVIEW_BACKEND_URL }}" > .env
