@@ -8,7 +8,7 @@ A step-by-step guide for adding a new backend service/feature, following establi
 
 ## Step 1: Design Your Schema
 
-Before writing any code, design your table in the **MFSN Architecture Design Document**. That document will be the long‑term source of truth for our database design. (For now, it may still be incomplete or a stub until the architecture work is finalized.)
+Before writing any code, design your table in the [**MFSN Architecture Design Document**](https://www.notion.so/uwblueprintexecs/MFSN-Architecture-Design-Document-30b10f3fb1dc80049a14f1998cd107ce?pvs=25). That document is the source of truth for our database design. (It may still be incomplete or a stub until the architecture work is finalized.)
 
 For our Farmer example, the table would look something like:
 
@@ -563,20 +563,17 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import merge from 'lodash/merge';
 
 import emailResolvers from '@/graphql/resolvers/emailResolvers';
-import sampleResolvers from '@/graphql/resolvers/sampleResolvers';
 import userResolvers from '@/graphql/resolvers/userResolvers';
 import authResolvers from '@/graphql/resolvers/authResolvers';
 import farmerResolvers from '@/graphql/resolvers/farmerResolvers'; // +++ ADD
 import emailType from '@/graphql/types/emailType';
-import sampleType from '@/graphql/types/sampleType';
 import userType from '@/graphql/types/userType';
 import authType from '@/graphql/types/authType';
 import farmerType from '@/graphql/types/farmerType'; // +++ ADD
 
 const executableSchema = makeExecutableSchema({
-  typeDefs: [sampleType, emailType, userType, authType, farmerType], // +++ ADD farmerType
+  typeDefs: [emailType, userType, authType, farmerType], // +++ ADD farmerType
   resolvers: merge(
-    sampleResolvers,
     emailResolvers,
     userResolvers,
     authResolvers,
@@ -643,17 +640,17 @@ mutation {
 
 ## Quick Reference: Files to Create/Edit
 
-| Step | Action | Path                                                                                   |
-| ---- | ------ | -------------------------------------------------------------------------------------- |
-| 1    | Design | MFSN Architecture Design Document (database section)                                   |
-| 2    | Edit   | `types.ts`                                                                             |
-| 3    | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts`                                   |
-| 4    | Create | `models/{feature}.model.ts`                                                            |
-| 5    | Create | `services/interfaces/{feature}Service.ts`                                              |
-| 6    | Create | `services/implementations/{feature}Service.ts`                                         |
-| 7    | Create | `graphql/types/{feature}Type.ts`                                                       |
-| 8    | Create | `graphql/resolvers/{feature}Resolvers.ts`                                              |
-| 9    | Edit   | `graphql/index.ts`                                                                     |
+| Step | Action | Path                                                                                                                                                                     |
+| ---- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1    | Design | [MFSN Architecture Design Document](https://www.notion.so/uwblueprintexecs/MFSN-Architecture-Design-Document-30b10f3fb1dc80049a14f1998cd107ce?pvs=25) (database section) |
+| 2    | Edit   | `types.ts`                                                                                                                                                               |
+| 3    | Create | `migrations/YYYY.MM.DDTHH.MM.SS.create-{feature}.ts`                                                                                                                     |
+| 4    | Create | `models/{feature}.model.ts`                                                                                                                                              |
+| 5    | Create | `services/interfaces/{feature}Service.ts`                                                                                                                                |
+| 6    | Create | `services/implementations/{feature}Service.ts`                                                                                                                           |
+| 7    | Create | `graphql/types/{feature}Type.ts`                                                                                                                                         |
+| 8    | Create | `graphql/resolvers/{feature}Resolvers.ts`                                                                                                                                |
+| 9    | Edit   | `graphql/index.ts`                                                                                                                                                       |
 
 ## Quick Reference: CLI Commands
 

@@ -5,7 +5,12 @@ import { DataTypes } from 'sequelize';
 export const up: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
+  await queryInterface.dropTable('samples');
+};
 
+export const down: MigrationFn = async (params) => {
+  const sequelize = params.context as Sequelize;
+  const queryInterface = sequelize.getQueryInterface();
   await queryInterface.createTable('samples', {
     id: {
       type: DataTypes.INTEGER,
@@ -18,24 +23,4 @@ export const up: MigrationFn = async (params) => {
     createdAt: { type: DataTypes.DATE, allowNull: false },
     updatedAt: { type: DataTypes.DATE, allowNull: false },
   });
-
-  await queryInterface.createTable('emails', {
-    id: {
-      type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV4,
-      primaryKey: true,
-    },
-    to: { type: DataTypes.STRING, allowNull: false },
-    subject: { type: DataTypes.STRING, allowNull: false },
-    htmlBody: { type: DataTypes.TEXT, allowNull: false },
-    createdAt: { type: DataTypes.DATE, allowNull: false },
-    updatedAt: { type: DataTypes.DATE, allowNull: false },
-  });
-};
-
-export const down: MigrationFn = async (params) => {
-  const sequelize = params.context as Sequelize;
-  const queryInterface = sequelize.getQueryInterface();
-
-  await queryInterface.dropTable('emails');
 };
