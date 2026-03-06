@@ -42,6 +42,14 @@ interface IUserService {
   getAuthIdById(userId: string): Promise<string>;
 
   /**
+   * Get current user information
+   * @param firebaseUid user's firebase uid
+   * @returns a UserDTO with user's information
+   * @throws Error if user retrieval fails
+   */
+  getCurrentUser(firebaseUid: string): Promise<UserDTO>;
+
+  /**
    * Get all user information (possibly paginated in the future)
    * @returns array of UserDTOs
    * @throws Error if user retrieval fails

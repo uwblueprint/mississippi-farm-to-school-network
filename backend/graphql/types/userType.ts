@@ -5,6 +5,7 @@ const userType = gql`
     userById(id: ID!): UserDTO!
     userByEmail(email: String!): UserDTO!
     users: [UserDTO!]!
+    me: UserDTO!
   }
 
   type Mutation {

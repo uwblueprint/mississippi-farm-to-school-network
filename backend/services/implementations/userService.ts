@@ -122,6 +122,27 @@ class UserService implements IUserService {
     }
   }
 
+  async getCurrentUser(firebaseUid: string): Promise<UserDTO> {
+    try {
+      const user = await User.findOne({
+        where: { firebase_uid: firebaseUid },
+      });
+      if (!user) {
+        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+      }
+      return {
+        id: user.id,
+        firebase_uid: user.firebase_uid,
+        email: user.email,
+        role: user.role,
+        is_verified: user.is_verified,
+      };
+    } catch (error: unknown) {
+      Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   async getUsers(): Promise<Array<UserDTO>> {
     try {
       const users = await User.findAll();
