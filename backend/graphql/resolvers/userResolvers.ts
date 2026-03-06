@@ -8,6 +8,8 @@ import IUserService from '@/services/interfaces/userService';
 import { CreateUserDTO, UpdateUserDTO, UserDTO } from '@/types';
 import { AuthenticationError } from 'apollo-server-express';
 
+import Farm from '@/models/farm.model';
+
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 const authService: IAuthService = new AuthService(userService, emailService);
@@ -66,6 +68,11 @@ const userResolvers = {
       return user;
     },
   },
+  UserDTO: {
+    farms: async(user: UserDTO) => {
+      return Farm.findAll({where: {owner_user_id: user.id}});
+    }
+  }
 };
 
 export default userResolvers;

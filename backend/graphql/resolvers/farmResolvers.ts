@@ -7,6 +7,8 @@ import IUserService from '@/services/interfaces/userService';
 import { CreateFarmInput, FarmDTO } from '@/types';
 import { getAccessToken, GraphQLContext } from '@/middlewares/auth';
 
+import User from '@/models/user.model';
+
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 
@@ -32,6 +34,12 @@ const farmResolvers = {
       return await farmService.createFarm(ownerUserId, input);
     },
   },
+
+  FarmDTO: {
+    owner: async(farm: FarmDTO) => {
+      return User.findByPk(farm.owner_user_id);
+    }
+  }
 };
 
 export default farmResolvers;
