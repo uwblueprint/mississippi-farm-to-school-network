@@ -54,3 +54,51 @@ export enum SignUpMethod {
   PASSWORD = 'PASSWORD',
   GOOGLE = 'GOOGLE',
 }
+
+// Farm Types
+export type FarmDTO = {
+  id: string;
+  farmName: string;
+  ownerFirstName: string;
+  ownerLastName: string;
+  email: string;
+  phoneNumber: string;
+  address: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  countiesServed: string[];
+  foodCategories: string[];
+  certifications: string[];
+  description?: string;
+  website?: string;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  ownerUserId: string;
+  createdAt: string; // ISO string for GraphQL compatibility
+  updatedAt: string; // ISO string for GraphQL compatibility
+};
+
+export type UpdateFarmInput = {
+  farmName?: string;
+  ownerFirstName?: string;
+  ownerLastName?: string;
+  email?: string;
+  phoneNumber?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  countiesServed?: string[];
+  foodCategories?: string[];
+  certifications?: string[];
+  description?: string;
+  website?: string;
+};
+
+// Farm Filter
+export interface FarmFilter {
+  status?: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+  countiesServed?: string[];
+  foodCategories?: string[];
+  approved?: boolean; // maps to status === 'APPROVED'
+}
