@@ -1,4 +1,11 @@
-import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize-typescript';
+import {
+  BelongsTo,
+  Column,
+  DataType,
+  ForeignKey,
+  Model,
+  Table,
+} from 'sequelize-typescript';
 
 import User from './user.model';
 import { FarmStatus } from '@/types';
@@ -97,3 +104,4 @@ export default class Farm extends Model {
   @Column({ type: DataType.DATE, allowNull: false })
   updatedAt!: Date;
 }
+
