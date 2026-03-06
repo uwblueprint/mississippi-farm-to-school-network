@@ -13,6 +13,7 @@ const userType = gql`
     updateUser(id: ID!, user: UpdateUserDTO!): UserDTO!
     deleteUserById(id: ID!): Boolean!
     deleteUserByEmail(email: String!): Boolean!
+    verifyUserEmail(email: String!): UserDTO!
   }
 
   enum Role {

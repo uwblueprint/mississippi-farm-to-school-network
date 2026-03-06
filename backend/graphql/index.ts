@@ -4,15 +4,15 @@ import merge from 'lodash/merge';
 import emailResolvers from '@/graphql/resolvers/emailResolvers';
 import userResolvers from '@/graphql/resolvers/userResolvers';
 import authResolvers from '@/graphql/resolvers/authResolvers';
-import farmResolvers from '@/graphql/resolvers/farmResolvers';
+import fileStorageResolvers from '@/graphql/resolvers/fileStorageResolvers';
 import emailType from '@/graphql/types/emailType';
 import userType from '@/graphql/types/userType';
 import authType from '@/graphql/types/authType';
-import farmType from '@/graphql/types/farmType';
+import fileStorageType from '@/graphql/types/fileStorageType';
 
 const executableSchema = makeExecutableSchema({
-  typeDefs: [sampleType, emailType, userType, authType, farmType],
-  resolvers: merge(sampleResolvers, emailResolvers, userResolvers, authResolvers, farmResolvers),
+  typeDefs: [emailType, userType, authType, fileStorageType],
+  resolvers: merge(emailResolvers, userResolvers, authResolvers, fileStorageResolvers),
 });
 
 export default executableSchema;
