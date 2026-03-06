@@ -47,7 +47,6 @@ export const up: MigrationFn = async (params) => {
 
 export const down: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
-  const queryInterface = sequelize.getQueryInterface();
 
-  await queryInterface.dropTable('users');
+  await sequelize.query('DROP TABLE IF EXISTS "users" CASCADE;');
 };
