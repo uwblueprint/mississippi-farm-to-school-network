@@ -5,6 +5,7 @@ const userType = gql`
     userById(id: ID!): UserDTO!
     userByEmail(email: String!): UserDTO!
     users: [UserDTO!]!
+    me: UserDTO!
   }
 
   type Mutation {
@@ -12,6 +13,7 @@ const userType = gql`
     updateUser(id: ID!, user: UpdateUserDTO!): UserDTO!
     deleteUserById(id: ID!): Boolean!
     deleteUserByEmail(email: String!): Boolean!
+    verifyUserEmail(email: String!): UserDTO!
   }
 
   enum Role {

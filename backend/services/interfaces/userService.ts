@@ -42,6 +42,14 @@ interface IUserService {
   getAuthIdById(userId: string): Promise<string>;
 
   /**
+   * Get current user information
+   * @param firebaseUid user's firebase uid
+   * @returns a UserDTO with user's information
+   * @throws Error if user retrieval fails
+   */
+  getCurrentUser(firebaseUid: string): Promise<UserDTO>;
+
+  /**
    * Get all user information (possibly paginated in the future)
    * @returns array of UserDTOs
    * @throws Error if user retrieval fails
@@ -81,6 +89,14 @@ interface IUserService {
    * @throws Error if user deletion fails
    */
   deleteUserByEmail(email: string): Promise<void>;
+
+  /**
+   * Sync Postgres is_verified to true after frontend has completed Firebase email verification.
+   * @param email user's email
+   * @returns updated UserDTO
+   * @throws Error if user not found or already verified
+   */
+  verifyUserEmail(email: string): Promise<UserDTO>;
 }
 
 export default IUserService;
