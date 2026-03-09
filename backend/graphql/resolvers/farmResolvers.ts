@@ -18,6 +18,8 @@ const farmResolvers = {
         _parent: undefined,
         { input }: { input: CreateFarmInput },
         context: GraphQLContext,
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars -- required by GraphQL resolver signature
+        _info: GraphQLResolveInfo
       ): Promise<FarmDTO> => {
         const accessToken = getAccessToken(context.req);
         if (!accessToken) throw new AuthenticationError('You must be logged in to create a farm');
