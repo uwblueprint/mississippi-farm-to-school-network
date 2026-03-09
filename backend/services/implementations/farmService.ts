@@ -26,7 +26,7 @@ class FarmService implements IFarmService {
         `SELECT *, ST_AsGeoJSON(location)::json as location FROM farms WHERE id = :id`,
         { replacements: { id: farm.id } }
       );
-      const reloaded = results[0] as FarmDTO;
+      const reloaded = results[0] as FarmDTO & { created_at: string; updated_at: string };
       if (!reloaded) throw new Error('Farm was created but could not be retrieved');
 
       return {
@@ -56,8 +56,8 @@ class FarmService implements IFarmService {
         f2s_experience: reloaded.f2s_experience,
         interested_in_f2s: reloaded.interested_in_f2s,
         status: reloaded.status,
-        createdAt: new Date(reloaded.createdAt).toISOString(),
-        updatedAt: new Date(reloaded.updatedAt).toISOString(),
+        createdAt: new Date(reloaded.created_at).toISOString(),
+        updatedAt: new Date(reloaded.updated_at).toISOString(),
       };
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
