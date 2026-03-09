@@ -1,7 +1,6 @@
 import { gql } from 'apollo-server';
 
 const farmType = gql`
-
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
   }
