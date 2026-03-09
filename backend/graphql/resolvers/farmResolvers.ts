@@ -18,7 +18,6 @@ const farmResolvers = {
         _parent: undefined,
         { input }: { input: CreateFarmInput },
         context: GraphQLContext,
-        _info: GraphQLResolveInfo
       ): Promise<FarmDTO> => {
         const accessToken = getAccessToken(context.req);
         if (!accessToken) throw new AuthenticationError('You must be logged in to create a farm');
