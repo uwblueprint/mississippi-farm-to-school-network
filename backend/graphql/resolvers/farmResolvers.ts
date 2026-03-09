@@ -4,8 +4,8 @@ import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
-import { CreateFarmInput, FarmDTO } from '@/types';
 import { CreateFarmInput, FarmDTO, Role } from '@/types';
+import type { GraphQLResolveInfo } from 'graphql/type';
 import { getAccessToken, GraphQLContext, isAuthorizedByRole } from '@/middlewares/auth';
 
 const farmService: IFarmService = new FarmService();
@@ -17,7 +17,8 @@ const farmResolvers = {
       async (
         _parent: undefined,
         { input }: { input: CreateFarmInput },
-        context: GraphQLContext
+        context: GraphQLContext,
+        _info: GraphQLResolveInfo
       ): Promise<FarmDTO> => {
         const accessToken = getAccessToken(context.req);
         if (!accessToken) throw new AuthenticationError('You must be logged in to create a farm');
@@ -38,7 +39,7 @@ const farmResolvers = {
 
   FarmDTO: {
     owner: async (farm: FarmDTO) => {
-      return User.findByPk(farm.owner_user_id);
+      return userService.getUserById(farm.owner_user_id);
     },
   },
 };

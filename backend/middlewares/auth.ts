@@ -25,63 +25,67 @@ export const getAccessToken = (req: IncomingMessage): string | null => {
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 export const isAuthorizedByRole = (roles: Set<Role>) => {
-  return async (
-    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any,
-    parent: any,
-    args: any,
-    context: GraphQLContext,
-    info: GraphQLResolveInfo
+  return (
+    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any
   ) => {
-    const accessToken = getAccessToken(context.req);
+    return async (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => {
+      const accessToken = getAccessToken(context.req);
 
-    const authorized = accessToken && (await authService.isAuthorizedByRole(accessToken, roles));
+      const authorized = accessToken && (await authService.isAuthorizedByRole(accessToken, roles));
 
-    if (!authorized) {
-      throw new AuthenticationError('You are not authorized to perform this action');
-    }
+      if (!authorized) {
+        throw new AuthenticationError('You are not authorized to perform this action');
+      }
 
-    return resolve(parent, args, context, info);
+      return resolve(parent, args, context, info);
+    };
   };
 };
 
 export const isAuthorizedByUserId = () => {
-  return async (
-    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any,
-    parent: any,
-    args: { id: string },
-    context: GraphQLContext,
-    info: GraphQLResolveInfo
+  return (
+    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any
   ) => {
-    const accessToken = getAccessToken(context.req);
+    return async (
+      parent: any,
+      args: { id: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const accessToken = getAccessToken(context.req);
 
-    const authorized =
-      accessToken && (await authService.isAuthorizedByUserId(accessToken, args.id));
+      const authorized =
+        accessToken && (await authService.isAuthorizedByUserId(accessToken, args.id));
 
-    if (!authorized) {
-      throw new AuthenticationError('You are not authorized to perform this action');
-    }
+      if (!authorized) {
+        throw new AuthenticationError('You are not authorized to perform this action');
+      }
 
-    return resolve(parent, args, context, info);
+      return resolve(parent, args, context, info);
+    };
   };
 };
 
 export const isAuthorizedByEmail = () => {
-  return async (
-    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any,
-    parent: any,
-    args: { email: string },
-    context: GraphQLContext,
-    info: GraphQLResolveInfo
+  return (
+    resolve: (parent: any, args: any, context: GraphQLContext, info: GraphQLResolveInfo) => any
   ) => {
-    const accessToken = getAccessToken(context.req);
+    return async (
+      parent: any,
+      args: { email: string },
+      context: GraphQLContext,
+      info: GraphQLResolveInfo
+    ) => {
+      const accessToken = getAccessToken(context.req);
 
-    const authorized =
-      accessToken && (await authService.isAuthorizedByEmail(accessToken, args.email));
+      const authorized =
+        accessToken && (await authService.isAuthorizedByEmail(accessToken, args.email));
 
-    if (!authorized) {
-      throw new AuthenticationError('You are not authorized to perform this action');
-    }
+      if (!authorized) {
+        throw new AuthenticationError('You are not authorized to perform this action');
+      }
 
-    return resolve(parent, args, context, info);
+      return resolve(parent, args, context, info);
+    };
   };
 };
