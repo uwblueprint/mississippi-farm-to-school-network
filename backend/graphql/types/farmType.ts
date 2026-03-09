@@ -4,8 +4,6 @@ const farmType = gql`
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
-    updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
-    deleteFarmById(id: ID!): Boolean!
   }
 
   enum FarmStatus {
