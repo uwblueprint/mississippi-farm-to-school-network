@@ -93,7 +93,9 @@ class FarmService implements IFarmService {
       };
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
-        Logger.warn(`Farm creation failed due to a unique constraint. Reason = ${getErrorMessage(error)}`);
+        Logger.warn(
+          `Farm creation failed due to a unique constraint. Reason = ${getErrorMessage(error)}`
+        );
         throw new Error('A farm with that USDA farm ID already exists.');
       }
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);

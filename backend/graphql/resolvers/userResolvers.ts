@@ -69,10 +69,10 @@ const userResolvers = {
     },
   },
   UserDTO: {
-    farms: async(user: UserDTO) => {
-      return Farm.findAll({where: {owner_user_id: user.id}});
-    }
-  }
+    farms: async (user: UserDTO) => {
+      return Farm.findAll({ where: { owner_user_id: user.id } });
+    },
+  },
 };
 
 export default userResolvers;

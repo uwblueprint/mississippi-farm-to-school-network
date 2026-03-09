@@ -25,21 +25,20 @@ const farmResolvers = {
       let decodedIdToken: firebaseAdmin.auth.DecodedIdToken;
       try {
         decodedIdToken = await firebaseAdmin.auth().verifyIdToken(accessToken, true);
-      }
-      catch {
+      } catch {
         throw new AuthenticationError('Invalid or expired token');
       }
-      
+
       const ownerUserId = await userService.getUserIdByAuthId(decodedIdToken.uid);
       return await farmService.createFarm(ownerUserId, input);
     },
   },
 
   FarmDTO: {
-    owner: async(farm: FarmDTO) => {
+    owner: async (farm: FarmDTO) => {
       return User.findByPk(farm.owner_user_id);
-    }
-  }
+    },
+  },
 };
 
 export default farmResolvers;
