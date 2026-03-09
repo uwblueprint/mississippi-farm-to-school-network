@@ -88,6 +88,7 @@ export type CreateFarmInput = {
   website?: string;
   social_media?: Record<string, unknown>;
   farm_address: string;
+  usda_farm_id?: number;
   counties_served: string[];
   cities_served: string[];
   location: { type: 'Point'; coordinates: [number, number] };
