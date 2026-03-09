@@ -8,38 +8,6 @@ import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
 
-/** Shape of a raw SQL row from the farms table with ST_AsGeoJSON */
-interface FarmRow {
-  id: string;
-  owner_user_id: string;
-  usda_farm_id: number;
-  farm_name: string;
-  description: string;
-  primary_phone: string;
-  primary_email: string;
-  website: string | null;
-  social_media: Record<string, unknown> | null;
-  farm_address: string;
-  counties_served: string[];
-  cities_served: string[];
-  location: { type: 'Point'; coordinates: [number, number] };
-  food_categories: string[];
-  market_sales_data: { market: string; times: string }[] | null;
-  bipoc_owned: boolean;
-  gap_certified: boolean;
-  food_safety_plan: boolean;
-  agritourism: boolean;
-  sells_at_markets: boolean;
-  csa_boxes: boolean;
-  online_sales: boolean;
-  delivery: boolean;
-  f2s_experience: boolean;
-  interested_in_f2s: boolean;
-  status: FarmStatus;
-  created_at: string;
-  updated_at: string;
-}
-
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     try {
@@ -58,7 +26,7 @@ class FarmService implements IFarmService {
         `SELECT *, ST_AsGeoJSON(location)::json as location FROM farms WHERE id = :id`,
         { replacements: { id: farm.id } }
       );
-      const reloaded = results[0] as FarmRow;
+      const reloaded = results[0] as FarmDTO;
       if (!reloaded) throw new Error('Farm was created but could not be retrieved');
 
       return {
@@ -88,8 +56,8 @@ class FarmService implements IFarmService {
         f2s_experience: reloaded.f2s_experience,
         interested_in_f2s: reloaded.interested_in_f2s,
         status: reloaded.status,
-        createdAt: new Date(reloaded.created_at).toISOString(),
-        updatedAt: new Date(reloaded.updated_at).toISOString(),
+        createdAt: new Date(reloaded.createdAt).toISOString(),
+        updatedAt: new Date(reloaded.updatedAt).toISOString(),
       };
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
