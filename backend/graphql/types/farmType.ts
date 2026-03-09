@@ -1,11 +1,6 @@
 import { gql } from 'apollo-server';
 
 const farmType = gql`
-  type Query {
-    farmById(id: ID!): FarmDTO!
-    farmsByUserId(userId: ID!): [FarmDTO!]!
-    farms: [FarmDTO!]!
-  }
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
