@@ -43,7 +43,6 @@ services:
 
   db:
     image: postgis/postgis:15-3.5-alpine
-    platform: linux/amd64
     container_name: mfsn-db
     ports:
       - "5432:5432"
