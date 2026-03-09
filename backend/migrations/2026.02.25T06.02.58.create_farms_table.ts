@@ -6,9 +6,6 @@ export const up: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
 
-  // Ensure PostGIS is available before creating a geography column
-  await queryInterface.sequelize.query('CREATE EXTENSION IF NOT EXISTS postgis;');
-
   await queryInterface.createTable('farms', {
     id: {
       type: DataTypes.UUID,
