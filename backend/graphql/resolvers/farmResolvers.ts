@@ -7,6 +7,8 @@ import IUserService from '@/services/interfaces/userService';
 import { CreateFarmInput, FarmDTO } from '@/types';
 import { getAccessToken, GraphQLContext } from '@/middlewares/auth';
 
+import User from '@/models/user.model';
+
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 
@@ -23,13 +25,18 @@ const farmResolvers = {
       let decodedIdToken: firebaseAdmin.auth.DecodedIdToken;
       try {
         decodedIdToken = await firebaseAdmin.auth().verifyIdToken(accessToken, true);
-      }
-      catch {
+      } catch {
         throw new AuthenticationError('Invalid or expired token');
       }
-      
+
       const ownerUserId = await userService.getUserIdByAuthId(decodedIdToken.uid);
       return await farmService.createFarm(ownerUserId, input);
+    },
+  },
+
+  FarmDTO: {
+    owner: async (farm: FarmDTO) => {
+      return User.findByPk(farm.owner_user_id);
     },
   },
 };
