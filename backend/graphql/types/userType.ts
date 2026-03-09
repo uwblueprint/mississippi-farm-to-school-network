@@ -23,6 +23,7 @@ const userType = gql`
 
   type UserDTO {
     id: ID!
+    farms: [FarmDTO!]!
     firebase_uid: String!
     email: String!
     role: Role!

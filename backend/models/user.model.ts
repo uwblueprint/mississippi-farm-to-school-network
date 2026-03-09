@@ -1,10 +1,14 @@
-import { Column, DataType, Model, Table } from 'sequelize-typescript';
+import { Column, HasMany, DataType, Model, Table } from 'sequelize-typescript';
+import Farm from './farm.model';
 import { Role } from '@/types';
 
 @Table({ tableName: 'users', timestamps: true, underscored: true })
 export default class User extends Model {
   @Column({ type: DataType.UUID, primaryKey: true, defaultValue: DataType.UUIDV4 })
   id!: string;
+
+  @HasMany(() => Farm)
+  farms!: Farm[];
 
   @Column({ type: DataType.STRING, allowNull: false, unique: true })
   firebase_uid!: string;
