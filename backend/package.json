@@ -38,7 +38,7 @@
     "@typescript-eslint/parser": "^8.54.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.1",
+    "prettier": "3.8.1",
     "sequelize-cli": "^6.6.5",
     "tsc-alias": "^1.8.16",
     "tsconfig-paths": "^4.2.0",
