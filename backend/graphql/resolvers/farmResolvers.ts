@@ -36,7 +36,7 @@ const farmResolvers = {
 
   FarmDTO: {
     owner: async (farm: FarmDTO) => {
-      return User.findByPk(farm.owner_user_id);
+      return userService.getUserById(farm.owner_user_id);
     },
   },
 };
