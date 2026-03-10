@@ -1,4 +1,4 @@
-import { AuthDTO, Role, Token } from '@/types';
+import { AuthDTO, Token } from '@/types';
 
 interface IAuthService {
   /**
