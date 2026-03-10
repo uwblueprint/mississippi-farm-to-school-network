@@ -1,4 +1,5 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
+import { JSONResolver } from 'graphql-scalars';
 import merge from 'lodash/merge';
 
 import emailResolvers from '@/graphql/resolvers/emailResolvers';
@@ -15,6 +16,7 @@ import fileStorageType from '@/graphql/types/fileStorageType';
 const executableSchema = makeExecutableSchema({
   typeDefs: [emailType, userType, authType, farmType, fileStorageType],
   resolvers: merge(
+    { JSON: JSONResolver },
     emailResolvers,
     userResolvers,
     authResolvers,

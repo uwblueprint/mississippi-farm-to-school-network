@@ -1,6 +1,8 @@
 import { gql } from 'apollo-server';
 
 const farmType = gql`
+  scalar JSON
+
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
   }
@@ -31,7 +33,7 @@ const farmType = gql`
     primary_phone: String!
     primary_email: String!
     website: String
-    social_media: String
+    social_media: JSON
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
@@ -60,7 +62,7 @@ const farmType = gql`
     primary_phone: String!
     primary_email: String!
     website: String
-    social_media: String
+    social_media: JSON
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
