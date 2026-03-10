@@ -7,8 +7,6 @@ import IUserService from '@/services/interfaces/userService';
 import { CreateFarmInput, FarmDTO } from '@/types';
 import { getAccessToken, GraphQLContext } from '@/middlewares/auth';
 
-import User from '@/models/user.model';
-
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 
