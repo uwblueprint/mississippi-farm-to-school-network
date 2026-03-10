@@ -79,32 +79,6 @@ const farmType = gql`
     interested_in_f2s: Boolean
   }
 
-  input UpdateFarmInput {
-    farm_name: String
-    description: String
-    primary_phone: String
-    primary_email: String
-    website: String
-    social_media: String
-    farm_address: String
-    counties_served: [String!]
-    cities_served: [String!]
-    location: GeoJSONPointInput
-    food_categories: [String!]
-    market_sales_data: [MarketSalesDataInput!]
-    bipoc_owned: Boolean
-    gap_certified: Boolean
-    food_safety_plan: Boolean
-    agritourism: Boolean
-    sells_at_markets: Boolean
-    csa_boxes: Boolean
-    online_sales: Boolean
-    delivery: Boolean
-    f2s_experience: Boolean
-    interested_in_f2s: Boolean
-    status: FarmStatus
-  }
-
   input GeoJSONPointInput {
     type: String!
     coordinates: [Float!]!
