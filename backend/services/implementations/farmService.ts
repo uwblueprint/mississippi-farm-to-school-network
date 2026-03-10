@@ -8,6 +8,11 @@ import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
 
+type FarmRow = Omit<FarmDTO, 'createdAt' | 'updatedAt'> & {
+  created_at: string;
+  updated_at: string;
+};
+
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     try {
@@ -26,38 +31,14 @@ class FarmService implements IFarmService {
         `SELECT *, ST_AsGeoJSON(location)::json as location FROM farms WHERE id = :id`,
         { replacements: { id: farm.id } }
       );
-      const reloaded = results[0] as FarmDTO & { created_at: string; updated_at: string };
+      const reloaded = results[0] as FarmRow;
       if (!reloaded) throw new Error('Farm was created but could not be retrieved');
-
+      
+      const { created_at, updated_at, ...rest } = reloaded;
       return {
-        id: reloaded.id,
-        owner_user_id: reloaded.owner_user_id,
-        usda_farm_id: reloaded.usda_farm_id,
-        farm_name: reloaded.farm_name,
-        description: reloaded.description,
-        primary_phone: reloaded.primary_phone,
-        primary_email: reloaded.primary_email,
-        website: reloaded.website,
-        social_media: reloaded.social_media,
-        farm_address: reloaded.farm_address,
-        counties_served: reloaded.counties_served,
-        cities_served: reloaded.cities_served,
-        location: reloaded.location,
-        food_categories: reloaded.food_categories,
-        market_sales_data: reloaded.market_sales_data,
-        bipoc_owned: reloaded.bipoc_owned,
-        gap_certified: reloaded.gap_certified,
-        food_safety_plan: reloaded.food_safety_plan,
-        agritourism: reloaded.agritourism,
-        sells_at_markets: reloaded.sells_at_markets,
-        csa_boxes: reloaded.csa_boxes,
-        online_sales: reloaded.online_sales,
-        delivery: reloaded.delivery,
-        f2s_experience: reloaded.f2s_experience,
-        interested_in_f2s: reloaded.interested_in_f2s,
-        status: reloaded.status,
-        createdAt: new Date(reloaded.created_at).toISOString(),
-        updatedAt: new Date(reloaded.updated_at).toISOString(),
+        ...rest,
+        createdAt: new Date(created_at).toISOString(),
+        updatedAt: new Date(updated_at).toISOString(),
       };
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
