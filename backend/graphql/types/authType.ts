@@ -2,9 +2,7 @@ import { gql } from 'apollo-server';
 
 const authType = gql`
   type Query {
-    isAuthorizedByRole(accessToken: String!, roles: [Role!]!): Boolean!
-    isAuthorizedByUserId(accessToken: String!, userId: ID!): Boolean!
-    isAuthorizedByEmail(accessToken: String!, email: String!): Boolean!
+    _empty: String
   }
 
   type Mutation {
