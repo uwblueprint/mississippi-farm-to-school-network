@@ -13,4 +13,3 @@ export const getAccessToken = (req: IncomingMessage): string | null => {
   }
   return null;
 };
-
