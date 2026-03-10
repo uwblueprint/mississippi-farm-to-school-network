@@ -14,7 +14,13 @@ import fileStorageType from '@/graphql/types/fileStorageType';
 
 const executableSchema = makeExecutableSchema({
   typeDefs: [emailType, userType, authType, farmType, fileStorageType],
-  resolvers: merge(emailResolvers, userResolvers, authResolvers, farmResolvers, fileStorageResolvers),
+  resolvers: merge(
+    emailResolvers,
+    userResolvers,
+    authResolvers,
+    farmResolvers,
+    fileStorageResolvers
+  ),
 });
 
 export default executableSchema;
