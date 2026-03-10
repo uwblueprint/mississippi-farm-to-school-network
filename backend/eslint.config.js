@@ -32,6 +32,6 @@ export default [
   },
   prettier,
   {
-    ignores: ['dist/', 'node_modules/', 'build/'],
+    ignores: ['dist/', 'node_modules/', 'build/', 'typescript/'],
   },
 ];
