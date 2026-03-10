@@ -8,38 +8,22 @@ import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
 
-type FarmRow = Omit<FarmDTO, 'createdAt' | 'updatedAt'> & {
-  created_at: string;
-  updated_at: string;
-};
-
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     try {
       const farm = await Farm.create({
         owner_user_id: ownerUserId,
         ...input,
-        location: {
-          type: 'Point',
-          coordinates: input.location.coordinates,
-        },
         status: FarmStatus.PENDING_APPROVAL,
       });
 
-      // Reload to get the geography column as GeoJSON
-      const [results] = await Farm.sequelize!.query(
-        `SELECT *, ST_AsGeoJSON(location)::json as location FROM farms WHERE id = :id`,
-        { replacements: { id: farm.id } }
-      );
-      const reloaded = results[0] as FarmRow;
-      if (!reloaded) throw new Error('Farm was created but could not be retrieved');
-      
-      const { created_at, updated_at, ...rest } = reloaded;
+      const data = farm.toJSON();
       return {
-        ...rest,
-        createdAt: new Date(created_at).toISOString(),
-        updatedAt: new Date(updated_at).toISOString(),
-      };
+        ...data,
+        location: input.location,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
+      } as FarmDTO;
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
         Logger.warn(
