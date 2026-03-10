@@ -143,50 +143,6 @@ class AuthService implements IAuthService {
       throw error;
     }
   }
-
-  async isAuthorizedByRole(accessToken: string, roles: Set<Role>): Promise<boolean> {
-    try {
-      const decodedIdToken: firebaseAdmin.auth.DecodedIdToken = await firebaseAdmin
-        .auth()
-        .verifyIdToken(accessToken, true);
-      const userRole = await this.userService.getUserRoleByAuthId(decodedIdToken.uid);
-
-      const firebaseUser = await firebaseAdmin.auth().getUser(decodedIdToken.uid);
-
-      return firebaseUser.emailVerified && roles.has(userRole);
-    } catch {
-      return false;
-    }
-  }
-
-  async isAuthorizedByUserId(accessToken: string, requestedUserId: string): Promise<boolean> {
-    try {
-      const decodedIdToken: firebaseAdmin.auth.DecodedIdToken = await firebaseAdmin
-        .auth()
-        .verifyIdToken(accessToken, true);
-      const tokenUserId = await this.userService.getUserIdByAuthId(decodedIdToken.uid);
-
-      const firebaseUser = await firebaseAdmin.auth().getUser(decodedIdToken.uid);
-
-      return firebaseUser.emailVerified && String(tokenUserId) === requestedUserId;
-    } catch {
-      return false;
-    }
-  }
-
-  async isAuthorizedByEmail(accessToken: string, requestedEmail: string): Promise<boolean> {
-    try {
-      const decodedIdToken: firebaseAdmin.auth.DecodedIdToken = await firebaseAdmin
-        .auth()
-        .verifyIdToken(accessToken, true);
-
-      const firebaseUser = await firebaseAdmin.auth().getUser(decodedIdToken.uid);
-
-      return firebaseUser.emailVerified && decodedIdToken.email === requestedEmail;
-    } catch {
-      return false;
-    }
-  }
 }
 
 export default AuthService;
