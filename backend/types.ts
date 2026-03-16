@@ -1,16 +1,3 @@
-export type SampleDTO = {
-  id: number;
-  name: string;
-  description: string;
-  createdAt: string; // ISO string for GraphQL compatibility
-  updatedAt: string; // ISO string for GraphQL compatibility
-};
-
-export type CreateSampleDTO = {
-  name: string;
-  description: string;
-};
-
 export type NodemailerConfig = {
   service: 'gmail';
   auth: {
@@ -62,13 +49,6 @@ export type RegisterUserDTO = {
   password: string;
 };
 
-export type AuthDTO = Token & UserDTO;
-
-export enum SignUpMethod {
-  PASSWORD = 'PASSWORD',
-  GOOGLE = 'GOOGLE',
-}
-
 export type GeoPoint = { type: 'Point'; coordinates: [number, number] };
 
 export type FarmDTO = {
@@ -101,3 +81,36 @@ export type FarmDTO = {
   createdAt: string; // ISO string for GraphQL compatibility
   updatedAt: string; // ISO string for GraphQL compatibility
 };
+
+export type CreateFarmInput = {
+  farm_name: string;
+  description: string;
+  primary_phone: string;
+  primary_email: string;
+  website?: string;
+  social_media?: Record<string, unknown>;
+  farm_address: string;
+  usda_farm_id: number;
+  counties_served: string[];
+  cities_served: string[];
+  location: GeoPoint;
+  food_categories: string[];
+  market_sales_data?: { market: string; times: string }[];
+  bipoc_owned?: boolean;
+  gap_certified?: boolean;
+  food_safety_plan?: boolean;
+  agritourism?: boolean;
+  sells_at_markets?: boolean;
+  csa_boxes?: boolean;
+  online_sales?: boolean;
+  delivery?: boolean;
+  f2s_experience?: boolean;
+  interested_in_f2s?: boolean;
+};
+
+export type AuthDTO = Token & UserDTO;
+
+export enum SignUpMethod {
+  PASSWORD = 'PASSWORD',
+  GOOGLE = 'GOOGLE',
+}

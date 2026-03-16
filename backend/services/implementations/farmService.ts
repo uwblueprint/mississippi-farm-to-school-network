@@ -1,15 +1,42 @@
-import IFarmService from '@/services/interfaces/farmService';
-import { FarmDTO, GeoPoint } from '@/types';
+import { QueryTypes, UniqueConstraintError } from 'sequelize';
+
 import Farm from '@/models/farm.model';
-import logger from '@/utilities/logger';
+import IFarmService from '@/services/interfaces/farmService';
+import { CreateFarmInput, FarmDTO, FarmStatus, GeoPoint } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
-import { QueryTypes } from 'sequelize';
+import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
 
 class FarmService implements IFarmService {
+  async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.create({
+        owner_user_id: ownerUserId,
+        ...input,
+        status: FarmStatus.PENDING_APPROVAL,
+      });
+
+      const data = farm.toJSON();
+      return {
+        ...data,
+        location: input.location,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
+      } as FarmDTO;
+    } catch (error: unknown) {
+      if (error instanceof UniqueConstraintError) {
+        Logger.warn(
+          `Farm creation failed due to a unique constraint. Reason = ${getErrorMessage(error)}`
+        );
+        throw new Error('A farm with that USDA farm ID already exists.');
+      }
+      Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
-    
     try {
       const { sequelize } = Farm;
       if (!sequelize) throw new Error('Database connection not initialized');
@@ -28,7 +55,7 @@ class FarmService implements IFarmService {
         {
           replacements: { lat, lng, radiusMeters: radiusKm * 1000 },
           type: QueryTypes.SELECT,
-        },
+        }
       );
 
       return (farms as Record<string, unknown>[]).map((farm) => ({

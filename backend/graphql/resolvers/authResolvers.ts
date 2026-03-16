@@ -12,29 +12,7 @@ const emailService: IEmailService = new EmailService(nodemailerConfig);
 const authService: IAuthService = new AuthService(userService, emailService);
 
 const authResolvers = {
-  Query: {
-    isAuthorizedByRole: async (
-      _parent: undefined,
-      { accessToken, roles }: { accessToken: string; roles: Role[] }
-    ): Promise<boolean> => {
-      const isAuthorized = await authService.isAuthorizedByRole(accessToken, new Set(roles));
-      return isAuthorized;
-    },
-    isAuthorizedByUserId: async (
-      _parent: undefined,
-      { accessToken, userId }: { accessToken: string; userId: string }
-    ): Promise<boolean> => {
-      const isAuthorized = await authService.isAuthorizedByUserId(accessToken, userId);
-      return isAuthorized;
-    },
-    isAuthorizedByEmail: async (
-      _parent: undefined,
-      { accessToken, email }: { accessToken: string; email: string }
-    ): Promise<boolean> => {
-      const isAuthorized = await authService.isAuthorizedByEmail(accessToken, email);
-      return isAuthorized;
-    },
-  },
+  Query: {},
   Mutation: {
     login: async (
       _parent: undefined,

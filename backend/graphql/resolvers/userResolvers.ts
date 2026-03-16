@@ -6,6 +6,9 @@ import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
 import { CreateUserDTO, UpdateUserDTO, UserDTO } from '@/types';
+import { AuthenticationError } from 'apollo-server-express';
+
+import Farm from '@/models/farm.model';
 
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
@@ -13,6 +16,20 @@ const authService: IAuthService = new AuthService(userService, emailService);
 
 const userResolvers = {
   Query: {
+    me: async (_: unknown, __: unknown, context: { firebaseUid?: string }): Promise<UserDTO> => {
+      if (!context.firebaseUid) {
+        throw new AuthenticationError('You must be logged in to view your profile.');
+      }
+
+      // Fetch the user from the database using the UID
+      const user = await userService.getCurrentUser(context.firebaseUid);
+
+      if (!user) {
+        throw new AuthenticationError('User not found in database.');
+      }
+
+      return user;
+    },
     userById: async (_parent: undefined, { id }: { id: string }): Promise<UserDTO> => {
       return userService.getUserById(id);
     },
@@ -45,6 +62,15 @@ const userResolvers = {
     ): Promise<boolean> => {
       await userService.deleteUserByEmail(email);
       return true;
+    },
+    verifyUserEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
+      const user = await userService.verifyUserEmail(email);
+      return user;
+    },
+  },
+  UserDTO: {
+    farms: async (user: UserDTO) => {
+      return Farm.findAll({ where: { owner_user_id: user.id } });
     },
   },
 };

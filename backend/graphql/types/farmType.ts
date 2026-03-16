@@ -7,14 +7,8 @@ const farmType = gql`
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
   }
 
-  type GeoPoint {
-    type: String!
-    coordinates: [Float!]!
-  }
-
-  type MarketSalesEntry {
-    market: String!
-    times: String!
+  type Mutation {
+    createFarm(input: CreateFarmInput!): FarmDTO!
   }
 
   enum FarmStatus {
@@ -23,9 +17,20 @@ const farmType = gql`
     REJECTED
   }
 
+  type GeoJSONPoint {
+    type: String!
+    coordinates: [Float!]!
+  }
+
+  type MarketSalesData {
+    market: String!
+    times: String!
+  }
+
   type FarmDTO {
     id: ID!
     owner_user_id: ID!
+    owner: UserDTO!
     usda_farm_id: Int!
     farm_name: String!
     description: String!
@@ -36,9 +41,9 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
-    location: GeoPoint!
+    location: GeoJSONPoint!
     food_categories: [String!]!
-    market_sales_data: [MarketSalesEntry]
+    market_sales_data: [MarketSalesData!]
     bipoc_owned: Boolean!
     gap_certified: Boolean!
     food_safety_plan: Boolean!
@@ -52,6 +57,42 @@ const farmType = gql`
     status: FarmStatus!
     createdAt: String!
     updatedAt: String!
+  }
+
+  input CreateFarmInput {
+    usda_farm_id: Int!
+    farm_name: String!
+    description: String!
+    primary_phone: String!
+    primary_email: String!
+    website: String
+    social_media: JSON
+    farm_address: String!
+    counties_served: [String!]!
+    cities_served: [String!]!
+    location: GeoJSONPointInput!
+    food_categories: [String!]!
+    market_sales_data: [MarketSalesDataInput!]
+    bipoc_owned: Boolean
+    gap_certified: Boolean
+    food_safety_plan: Boolean
+    agritourism: Boolean
+    sells_at_markets: Boolean
+    csa_boxes: Boolean
+    online_sales: Boolean
+    delivery: Boolean
+    f2s_experience: Boolean
+    interested_in_f2s: Boolean
+  }
+
+  input GeoJSONPointInput {
+    type: String!
+    coordinates: [Float!]!
+  }
+
+  input MarketSalesDataInput {
+    market: String!
+    times: String!
   }
 `;
 

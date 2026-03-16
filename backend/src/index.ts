@@ -32,7 +32,24 @@ if (process.env.GOOGLE_APPLICATION_CREDENTIALS) {
 
 const server = new ApolloServer({
   schema: executableSchema,
-  context: ({ req }) => ({ req }),
+  context: async ({ req }) => {
+    const authHeader = req.headers.authorization || '';
+    let firebaseUid: string | null = null;
+
+    if (authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        // decode and verify the Firebase ID token
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        firebaseUid = decodedToken.uid;
+      } catch (error) {
+        console.error('Error verifying Firebase token:', error, '\n');
+      }
+    }
+
+    // firebaseUid becomes available in every resolver as the third argument
+    return { req, firebaseUid };
+  },
 });
 
 server.listen({ port: Number(PORT) }).then(async ({ url }: { url: string }) => {
