@@ -145,8 +145,5 @@ export interface FarmFilter {
   counties_served?: string[];
   cities_served?: string[];
   food_categories?: string[];
-  // temporary aliases for compatibility during migration
-  countiesServed?: string[];
-  foodCategories?: string[];
-  approved?: boolean; // maps to status === 'APPROVED'
+  approved?: boolean; // convenience filter: true → status === APPROVED, false → status !== APPROVED
 }
