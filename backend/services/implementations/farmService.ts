@@ -97,12 +97,9 @@ class FarmService implements IFarmService {
       social_media?: Record<string, unknown> | null;
       website?: string | null;
     };
-    
-    //handle if location data is null, throws error, if valid DTO returned 
-    const location = data.location as
-      | { type?: unknown; coordinates?: unknown }
-      | null
-      | undefined;
+
+    // Handle if location data is null. Throws error if invalid, returns DTO if valid.
+    const location = data.location as { type?: unknown; coordinates?: unknown } | null | undefined;
 
     if (
       !location ||
