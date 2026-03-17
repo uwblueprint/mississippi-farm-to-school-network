@@ -126,9 +126,13 @@ class FarmService implements IFarmService {
       interested_in_f2s: data.interested_in_f2s,
       status: data.status,
       createdAt:
-        data.createdAt instanceof Date ? data.createdAt.toISOString() : new Date(data.createdAt).toISOString(),
+        data.createdAt instanceof Date
+          ? data.createdAt.toISOString()
+          : new Date(data.createdAt).toISOString(),
       updatedAt:
-        data.updatedAt instanceof Date ? data.updatedAt.toISOString() : new Date(data.updatedAt).toISOString(),
+        data.updatedAt instanceof Date
+          ? data.updatedAt.toISOString()
+          : new Date(data.updatedAt).toISOString(),
     };
   }
 }
