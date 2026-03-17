@@ -1,5 +1,5 @@
 import * as firebaseAdmin from 'firebase-admin';
-import { AuthenticationError } from 'apollo-server';
+import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
@@ -63,10 +63,10 @@ const farmResolvers = {
       }
 
       if (farm.owner_user_id !== currentUserId) {
-        throw new AuthenticationError('You are not authorized to update this farm');
+        throw new ForbiddenError('You are not authorized to update this farm');
       }
 
-      return farmService.updateFarm(id, input);
+      return farmService.updateFarm(id, input, farm);
     },
   },
 

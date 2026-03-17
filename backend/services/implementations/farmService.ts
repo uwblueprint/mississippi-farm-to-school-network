@@ -62,9 +62,9 @@ class FarmService implements IFarmService {
     }
   }
 
-  async updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO> {
+  async updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO> {
     try {
-      const farm = await Farm.findByPk(id);
+      const farm = farmToUpdate ?? (await Farm.findByPk(id));
       if (!farm) {
         throw new Error(`Farm with id ${id} not found.`);
       }
@@ -97,6 +97,24 @@ class FarmService implements IFarmService {
       social_media?: Record<string, unknown> | null;
       website?: string | null;
     };
+    
+    //handle if location data is null, throws error, if valid DTO returned 
+    const location = data.location as
+      | { type?: unknown; coordinates?: unknown }
+      | null
+      | undefined;
+
+    if (
+      !location ||
+      location.type !== 'Point' ||
+      !Array.isArray(location.coordinates) ||
+      location.coordinates.length !== 2 ||
+      typeof location.coordinates[0] !== 'number' ||
+      typeof location.coordinates[1] !== 'number'
+    ) {
+      Logger.error(`Farm ${data.id} has invalid or missing location`);
+      throw new Error(`Farm ${data.id} is missing a valid location`);
+    }
 
     return {
       id: data.id,
@@ -111,7 +129,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
-      location: data.location as { type: 'Point'; coordinates: [number, number] },
+      location: location as { type: 'Point'; coordinates: [number, number] },
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
       bipoc_owned: data.bipoc_owned,
