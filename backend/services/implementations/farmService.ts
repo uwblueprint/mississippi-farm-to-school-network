@@ -35,6 +35,24 @@ class FarmService implements IFarmService {
       throw error;
     }
   }
+
+  async getFarmById(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`farmId ${farmId} not found.`);
+      }
+      const data = farm.toJSON();
+      return {
+        ...data,
+        createdAt: data.createdAt.toISOString(),
+        updatedAt: data.updatedAt.toISOString(),
+      } as FarmDTO;
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
 }
 
 export default FarmService;

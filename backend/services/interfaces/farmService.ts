@@ -9,6 +9,7 @@ interface IFarmService {
    * @throws Error if farm creation fails
    */
   createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO>;
+  getFarmById(farmId: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;
