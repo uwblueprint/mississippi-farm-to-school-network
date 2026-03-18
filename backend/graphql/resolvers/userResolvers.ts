@@ -48,16 +48,14 @@ const userResolvers = {
       await userService.deleteUserById(id);
       return true;
     },
-    deleteUserByEmail: async (
-      _parent: undefined,
-      { email }: { email: string },
-      context: { firebaseUid?: string }
-    ): Promise<boolean> => {
+    deleteUserByEmail: async (_parent: undefined, { email }: { email: string }, context: { firebaseUid?: string }): Promise<boolean> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       await userService.deleteUserByEmail(email);
       return true;
     },
-    verifyUserEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
+    verifyUserEmail: async (_parent: undefined, { email }: { email: string }, context: { firebaseUid?: string }): Promise<UserDTO> => {
+      const targetUserId = (await userService.getUserByEmail(email)).id;
+      await authHelper.requireOwnerOrAdmin(context, targetUserId)
       const user = await userService.verifyUserEmail(email);
       return user;
     },

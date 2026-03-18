@@ -25,13 +25,18 @@ type RefreshTokenResponse = {
 
 
 const AuthHelper = {
+  /**
+   * Ensures the request is authenticated and returns the current user.
+   *
+   * @param context - GraphQL request context with `firebaseUid`.
+   * @returns The current user record.
+   * @throws {AuthenticationError} If `firebaseUid` is missing or the user cannot be found.
+   */
   requireAuth: async (context: { firebaseUid?: string }): Promise<UserDTO> => {
-    
     if (!context.firebaseUid) {
         throw new AuthenticationError('You must be logged in to view your profile.');
       }
 
-      // Fetch the user from the database using the UID
       const userService: IUserService = new UserService();
       const user = await userService.getCurrentUser(context.firebaseUid);
 
@@ -42,14 +47,13 @@ const AuthHelper = {
       return user;
   },
 
-  requireRole: async (context: { firebaseUid?: string }, roles: Role[]): Promise<UserDTO> => {
-    const user = await AuthHelper.requireAuth(context);
-    if (!roles.includes(user.role)) {
-      throw new ForbiddenError('You do not have permission to access this resource.');
-    }
-    return user;
-  },
-
+  /**
+   * Ensures the request is authenticated and the user's email is verified.
+   *
+   * @param context - GraphQL request context with `firebaseUid`.
+   * @returns The current user record (verified).
+   * @throws {AuthenticationError} If not logged in, user not found, or `user.is_verified` is false.
+   */
   requireEmailVerified: async (context: { firebaseUid?: string }): Promise<UserDTO> => {
     const user = await AuthHelper.requireAuth(context);
     if (!user.is_verified) {
@@ -58,6 +62,34 @@ const AuthHelper = {
     return user;
   },
 
+  /**
+   * Ensures the request is authenticated and the user has one of the allowed roles.
+   *
+   * @param context - GraphQL request context with `firebaseUid`.
+   * @param roles - Allowed roles for this operation.
+   * @returns The current user record (authorized).
+   * @throws {AuthenticationError} If not logged in or user not found.
+   * @throws {ForbiddenError} If the user does not have an allowed role.
+   */
+  requireRole: async (context: { firebaseUid?: string }, roles: Role[]): Promise<UserDTO> => {
+    const user = await AuthHelper.requireAuth(context);
+    if (!roles.includes(user.role)) {
+      throw new ForbiddenError('You do not have permission to access this resource.');
+    }
+    return user;
+  },
+
+  /**
+   * Ensures the request is authenticated and the current user is either:
+   * - the owner of `targetUserId`, or
+   * - an admin.
+   *
+   * @param context - GraphQL request context with `firebaseUid`.
+   * @param targetUserId - The user id that the operation is acting on.
+   * @returns The current user record (authorized).
+   * @throws {AuthenticationError} If not logged in or user not found.
+   * @throws {ForbiddenError} If the user is neither the owner nor an admin.
+   */
   requireOwnerOrAdmin: async (context: { firebaseUid?: string }, targetUserId: string):  Promise<UserDTO> => {
     const user = await AuthHelper.requireAuth(context);
     if (user.role != Role.ADMIN && user.id != targetUserId) {
