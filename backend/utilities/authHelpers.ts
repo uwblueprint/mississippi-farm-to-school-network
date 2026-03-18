@@ -34,7 +34,7 @@ const AuthHelper = {
    */
   requireAuth: async (context: { firebaseUid?: string }): Promise<UserDTO> => {
     if (!context.firebaseUid) {
-        throw new AuthenticationError('You must be logged in to view your profile.');
+        throw new AuthenticationError('You must be logged in to view or edit profiles.');
       }
 
       const userService: IUserService = new UserService();
@@ -93,7 +93,7 @@ const AuthHelper = {
   requireOwnerOrAdmin: async (context: { firebaseUid?: string }, targetUserId: string):  Promise<UserDTO> => {
     const user = await AuthHelper.requireAuth(context);
     if (user.role != Role.ADMIN && user.id != targetUserId) {
-      throw new ForbiddenError('You do not have permission to access this resource.');
+      throw new ForbiddenError('You do not have permission to access or modify this resource.');
     }
     return user;
   }
