@@ -24,13 +24,21 @@ const userResolvers = {
     userByEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
       return userService.getUserByEmail(email);
     },
-    users: async (_parent: undefined, __: unknown, context: { firebaseUid?: string }): Promise<UserDTO[]> => {
+    users: async (
+      _parent: undefined,
+      __: unknown,
+      context: { firebaseUid?: string }
+    ): Promise<UserDTO[]> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return userService.getUsers();
     },
   },
   Mutation: {
-    createUser: async (_parent: undefined, { user }: { user: CreateUserDTO }, context: { firebaseUid?: string }): Promise<UserDTO> => {
+    createUser: async (
+      _parent: undefined,
+      { user }: { user: CreateUserDTO },
+      context: { firebaseUid?: string }
+    ): Promise<UserDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       const newUser = await userService.createUser(user);
       await authService.sendEmailVerificationLink(newUser.email);
@@ -38,24 +46,37 @@ const userResolvers = {
     },
     updateUser: async (
       _parent: undefined,
-      { id, user }: { id: string; user: UpdateUserDTO }, context: { firebaseUid?: string }
+      { id, user }: { id: string; user: UpdateUserDTO },
+      context: { firebaseUid?: string }
     ): Promise<UserDTO> => {
-      await authHelper.requireOwnerOrAdmin(context, id)
+      await authHelper.requireOwnerOrAdmin(context, id);
       return userService.updateUserById(id, user);
     },
-    deleteUserById: async (_parent: undefined, { id }: { id: string }, context: { firebaseUid?: string }): Promise<boolean> => {
-      await authHelper.requireOwnerOrAdmin(context, id)
+    deleteUserById: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: { firebaseUid?: string }
+    ): Promise<boolean> => {
+      await authHelper.requireOwnerOrAdmin(context, id);
       await userService.deleteUserById(id);
       return true;
     },
-    deleteUserByEmail: async (_parent: undefined, { email }: { email: string }, context: { firebaseUid?: string }): Promise<boolean> => {
+    deleteUserByEmail: async (
+      _parent: undefined,
+      { email }: { email: string },
+      context: { firebaseUid?: string }
+    ): Promise<boolean> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       await userService.deleteUserByEmail(email);
       return true;
     },
-    verifyUserEmail: async (_parent: undefined, { email }: { email: string }, context: { firebaseUid?: string }): Promise<UserDTO> => {
+    verifyUserEmail: async (
+      _parent: undefined,
+      { email }: { email: string },
+      context: { firebaseUid?: string }
+    ): Promise<UserDTO> => {
       const targetUserId = (await userService.getUserByEmail(email)).id;
-      await authHelper.requireOwnerOrAdmin(context, targetUserId)
+      await authHelper.requireOwnerOrAdmin(context, targetUserId);
       const user = await userService.verifyUserEmail(email);
       return user;
     },
