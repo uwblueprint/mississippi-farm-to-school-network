@@ -30,6 +30,24 @@ export default [
       ...tseslint.configs.recommended.rules,
     },
   },
+  {
+    files: ['**/*.test.ts', '**/tests/**/*.ts'],
+    languageOptions: {
+      globals: {
+        jest: 'readonly',
+        describe: 'readonly',
+        test: 'readonly',
+        expect: 'readonly',
+        beforeEach: 'readonly',
+        afterEach: 'readonly',
+        beforeAll: 'readonly',
+        afterAll: 'readonly',
+      },
+    },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+    },
+  },
   prettier,
   {
     ignores: ['dist/', 'node_modules/', 'build/', 'typescript/'],
