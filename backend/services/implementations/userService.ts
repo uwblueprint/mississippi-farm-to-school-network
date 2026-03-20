@@ -21,6 +21,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -44,6 +47,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -72,6 +78,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: true,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to verify user. Reason = ${getErrorMessage(error)}`);
@@ -136,6 +145,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
@@ -152,6 +164,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       }));
     } catch (error: unknown) {
       Logger.error(`Failed to get users. Reason = ${getErrorMessage(error)}`);
@@ -194,6 +209,9 @@ class UserService implements IUserService {
           email: user.email,
           role: user.role,
           is_verified: false,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          phone: user.phone ?? null,
         });
       } catch (postgresError) {
         // Rollback Firebase user creation if Postgres fails
@@ -224,6 +242,9 @@ class UserService implements IUserService {
       email: newUser.email,
       role: newUser.role,
       is_verified: newUser.is_verified,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      phone: newUser.phone,
     };
   }
 
@@ -248,6 +269,9 @@ class UserService implements IUserService {
       await existingUser.update({
         email: user.email,
         role: user.role,
+        firstName: user.firstName ?? existingUser.firstName,
+        lastName: user.lastName ?? existingUser.lastName,
+        phone: user.phone ?? existingUser.phone,
       });
 
       return {
@@ -256,6 +280,9 @@ class UserService implements IUserService {
         email: existingUser.email,
         role: existingUser.role,
         is_verified: existingUser.is_verified,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        phone: existingUser.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to update user. Reason = ${getErrorMessage(error)}`);
@@ -288,6 +315,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [
@@ -334,6 +364,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [

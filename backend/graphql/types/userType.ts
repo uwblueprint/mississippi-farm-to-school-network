@@ -28,17 +28,26 @@ const userType = gql`
     email: String!
     role: Role!
     is_verified: Boolean!
+    firstName: String
+    lastName: String
+    phone: String
   }
 
   input CreateUserDTO {
     email: String!
     role: Role!
     password: String
+    firstName: String
+    lastName: String
+    phone: String
   }
 
   input UpdateUserDTO {
     email: String!
     role: Role!
+    firstName: String
+    lastName: String
+    phone: String
   }
 `;
 
