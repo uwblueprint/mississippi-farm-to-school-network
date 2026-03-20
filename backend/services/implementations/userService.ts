@@ -285,17 +285,34 @@ class UserService implements IUserService {
 
   async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
     try {
+      if (!input.firebase_uid || !input.email || !input.firstName || !input.lastName || !input.phone) {
+        throw new Error('All fields are required: firebase_uid, email, firstName, lastName, phone.');
+      }
+
+      if (!input.firstName.trim() || !input.lastName.trim()) {
+        throw new Error('First name and last name must not be empty.');
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input.email)) {
+        throw new Error('Invalid email format.');
+      }
+
       const digits = input.phone.replace(/\D/g, '');
       if (digits.length !== 10) {
         throw new Error('Phone number must contain exactly 10 digits.');
+      }
+
+      const existingUser = await User.findOne({ where: { firebase_uid: input.firebase_uid } });
+      if (!existingUser) {
+        throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
       const role = input.email.endsWith('@mississippifarmtoschool.org')
         ? Role.ADMIN
         : Role.FARMER;
 
-      const [user] = await User.upsert({
-        firebase_uid: input.firebase_uid,
+      await existingUser.update({
         email: input.email,
         first_name: input.firstName,
         last_name: input.lastName,
@@ -304,14 +321,14 @@ class UserService implements IUserService {
       });
 
       return {
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        phone: user.phone,
+        id: existingUser.id,
+        firebase_uid: existingUser.firebase_uid,
+        email: existingUser.email,
+        role: existingUser.role,
+        is_verified: existingUser.is_verified,
+        first_name: existingUser.first_name,
+        last_name: existingUser.last_name,
+        phone: existingUser.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
