@@ -82,11 +82,11 @@ const userResolvers = {
     },
     completeUserProfile: async (
       _parent: undefined,
-      { profile }: { profile: CompleteUserProfileInput },
+      { input }: { input: CompleteUserProfileInput },
       context: { firebaseUid?: string }
     ): Promise<UserDTO> => {
       await authHelper.requireAuth(context);
-      return userService.completeUserProfile(profile);
+      return userService.completeUserProfile(input);
     },
   },
   UserDTO: {
