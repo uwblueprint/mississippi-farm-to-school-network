@@ -32,7 +32,7 @@ const farmResolvers = {
       } catch {
         throw new AuthenticationError('Invalid or expired token');
       }
-      
+
       let userRole;
       try {
         userRole = await userService.getUserRoleByAuthId(decodedIdToken.uid);
@@ -42,11 +42,14 @@ const farmResolvers = {
       if (userRole !== 'ADMIN') {
         throw new ForbiddenError('You are not authorized to view farms by status');
       }
-      
+
       try {
         return await farmService.getFarmsByStatus(status);
       } catch (error) {
-        throw new Error('Failed to fetch farms by status: ' + (error instanceof Error ? error.message : String(error)));
+        throw new Error(
+          'Failed to fetch farms by status: ' +
+            (error instanceof Error ? error.message : String(error))
+        );
       }
     },
   },
