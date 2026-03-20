@@ -1,3 +1,4 @@
+import * as firebaseAdmin from 'firebase-admin';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
