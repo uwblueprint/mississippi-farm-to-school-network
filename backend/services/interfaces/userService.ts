@@ -100,10 +100,10 @@ interface IUserService {
   verifyUserEmail(email: string): Promise<UserDTO>;
 
   /*
-   * Complete user's profile during onboarding, upserts user record
+   * Complete user's profile during onboarding, updates user record
    * @param CompleteUserProfileInput includes firebase_uid, email, firstname, lastname, phone
    * @returns updated UserDTO
-   * @throws Error if phone validation fails or upsert fails
+   * @throws Error if user not found or improper/missing inputs
    */
   completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO>;
 }
