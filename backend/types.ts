@@ -31,6 +31,9 @@ export type UserDTO = {
   email: string;
   role: Role;
   is_verified: boolean;
+  first_name: string;
+  last_name: string;
+  phone: string | null;
 };
 
 export type CreateUserDTO = {
@@ -42,6 +45,14 @@ export type CreateUserDTO = {
 export type UpdateUserDTO = {
   email: string;
   role: Role;
+};
+
+export type CompleteUserProfileInput = {
+  firebase_uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
 };
 
 export type RegisterUserDTO = {

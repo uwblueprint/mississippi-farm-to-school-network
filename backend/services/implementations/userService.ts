@@ -1,6 +1,6 @@
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
-import { CreateUserDTO, Role, SignUpMethod, UpdateUserDTO, UserDTO } from '@/types';
+import { CompleteUserProfileInput, CreateUserDTO, Role, SignUpMethod, UpdateUserDTO, UserDTO } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import User from '@/models/user.model';
@@ -21,6 +21,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -44,6 +47,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -72,6 +78,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: true,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to verify user. Reason = ${getErrorMessage(error)}`);
@@ -136,6 +145,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
@@ -152,6 +164,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
       }));
     } catch (error: unknown) {
       Logger.error(`Failed to get users. Reason = ${getErrorMessage(error)}`);
@@ -224,6 +239,9 @@ class UserService implements IUserService {
       email: newUser.email,
       role: newUser.role,
       is_verified: newUser.is_verified,
+      first_name: newUser.first_name,
+      last_name: newUser.last_name,
+      phone: newUser.phone,
     };
   }
 
@@ -256,9 +274,48 @@ class UserService implements IUserService {
         email: existingUser.email,
         role: existingUser.role,
         is_verified: existingUser.is_verified,
+        first_name: existingUser.first_name,
+        last_name: existingUser.last_name,
+        phone: existingUser.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to update user. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
+    try {
+      const digits = input.phone.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        throw new Error('Phone number must contain exactly 10 digits.');
+      }
+
+      const role = input.email.endsWith('@mississippifarmtoschool.org')
+        ? Role.ADMIN
+        : Role.FARMER;
+
+      const [user] = await User.upsert({
+        firebase_uid: input.firebase_uid,
+        email: input.email,
+        first_name: input.firstName,
+        last_name: input.lastName,
+        phone: digits,
+        role,
+      });
+
+      return {
+        id: user.id,
+        firebase_uid: user.firebase_uid,
+        email: user.email,
+        role: user.role,
+        is_verified: user.is_verified,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        phone: user.phone,
+      };
+    } catch (error: unknown) {
+      Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
