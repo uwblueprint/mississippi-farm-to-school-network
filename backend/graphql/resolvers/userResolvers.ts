@@ -5,7 +5,7 @@ import UserService from '@/services/implementations/userService';
 import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
-import { CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
+import { CompleteUserProfileInput, CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
 import Farm from '@/models/farm.model';
 import authHelper from '@/utilities/authHelpers';
 
@@ -79,6 +79,14 @@ const userResolvers = {
       await authHelper.requireOwnerOrAdmin(context, targetUserId);
       const user = await userService.verifyUserEmail(email);
       return user;
+    },
+    completeUserProfile: async (
+      _parent: undefined,
+      { profile }: { profile: CompleteUserProfileInput },
+      context: { firebaseUid?: string }
+    ): Promise<UserDTO> => {
+      await authHelper.requireAuth(context);
+      return userService.completeUserProfile(profile);
     },
   },
   UserDTO: {

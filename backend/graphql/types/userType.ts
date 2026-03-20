@@ -14,7 +14,7 @@ const userType = gql`
     deleteUserById(id: ID!): Boolean!
     deleteUserByEmail(email: String!): Boolean!
     verifyUserEmail(email: String!): UserDTO!
-    completeUserProfile(input: CompleteUserProfileInput!): UserDTO!
+    completeUserProfile(profile: CompleteUserProfileInput!): UserDTO!
   }
 
   enum Role {
