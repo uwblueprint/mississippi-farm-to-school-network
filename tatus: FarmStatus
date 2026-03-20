@@ -1,0 +1,672 @@
+[33mcommit 520572d461d38a38522963dcdd1051941ce40bae[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mMFSNW26-addApproveFarmMutation[m[33m, [m[1;31morigin/MSFNW26-user-name-phone-fields[m[33m)[m
+Author: Vidu Widyalankara <63118171+VidsterBroyo@users.noreply.github.com>
+Date:   Thu Mar 19 14:52:34 2026 -0400
+
+    [MFSNW26] Adds auth helpers
+    
+    * Adds + implements auth helpers
+    
+    * Adds JSDoc comments to auth helpers
+    
+    * Changes auth message
+    
+    * Fixes lint
+
+[33mcommit 508ada09b08a3aa3d916494bbec05078cd6d0952[m
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Wed Mar 18 19:46:08 2026 -0400
+
+    Bump rollup from 4.57.1 to 4.59.0 in /frontend (#36)
+    
+    Bumps [rollup](https://github.com/rollup/rollup) from 4.57.1 to 4.59.0.
+    - [Release notes](https://github.com/rollup/rollup/releases)
+    - [Changelog](https://github.com/rollup/rollup/blob/master/CHANGELOG.md)
+    - [Commits](https://github.com/rollup/rollup/compare/v4.57.1...v4.59.0)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: rollup
+      dependency-version: 4.59.0
+      dependency-type: indirect
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+    Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+
+[33mcommit 3781e6cb16df766402c3f9bdb8d06636888d8a42[m
+Author: Sherry Tse <99365726+stse3@users.noreply.github.com>
+Date:   Wed Mar 18 16:39:55 2026 -0400
+
+    [MFSNW26] Implement farm filtering and updateFarm mutation (#50)
+    
+    * implemented mutation return shapes and partial updates
+    
+    * add farm filtering and updateFarm tests
+    
+    * fixed lint issue by adding Jest in ESLint config
+    
+    * updates
+    
+    * lint fixes
+
+[33mcommit e33d441f64f3abfc47d2a9e4648fa036ba976973[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Wed Mar 18 00:14:12 2026 -0400
+
+    Downgrade PostGIS image version (#51)
+    
+    * Downgrade PostGIS image version
+    
+    * Empty commit
+    
+    ---------
+    
+    Co-authored-by: Vidu <vidsterbroyo@gmail.com>
+
+[33mcommit 0eba4080b2908c5f9f0b44cd379ce117b52abaa3[m
+Author: Lukas Li <103869972+eatingfood142434@users.noreply.github.com>
+Date:   Wed Mar 11 20:58:36 2026 -0400
+
+    Mfsnw26 add farm api and services (#46)
+    
+    * create model and migrations
+    
+    * add healthcheck to db service so backend waits for postgres
+    
+    * copied migration to enable PostGIS extension
+    
+    * add Farm TypeScript types and GraphQL schema
+    
+    * add farm service interface and implementation
+    
+    * add farm resolvers and register in GraphQL schema
+    
+    * copied add farms table migration with PostGIS location column
+    
+    * update dependencies
+    
+    * wip
+    
+    * lint
+    
+    * Add optional usda_farm_id field to CreateFarmInput type
+    
+    * Remove not part of ticket Query types from farmType GraphQL schema
+    
+    * Remove not part of ticket, updateFarm and deleteFarmById mutations from farmType GraphQL schema
+    
+    * lint
+    
+    * delete duplicate file
+    
+    * postgis is installed somewhere else
+    
+    * might as well
+    
+    * Refactor FarmService to remove FarmRow interface and update type casting for reloaded farm data
+    
+    * Update docker-compose.yml
+    
+    Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+    
+    * Update backend/graphql/resolvers/farmResolvers.ts
+    
+    Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+    
+    * bump prettier
+    
+    * Refactor farmResolvers and auth middleware to improve type safety and authorization checks
+    
+    - Added GraphQLResolveInfo type to farmResolvers for better type inference.
+    - Updated isAuthorizedByRole, isAuthorizedByUserId, and isAuthorizedByEmail middleware to use async/await syntax consistently and improve readability.
+    
+    * remove info
+    
+    * Add GraphQLResolveInfo type to farmResolvers for type safety
+    
+    * register farmResolvers in GraphQL schema
+    
+    * use snake_case column names from raw SQL result
+    
+    * Refactor createFarm resolver to remove role-based authorization and streamline token verification
+    
+    * Remove unused User model import from farmResolvers
+    
+    * lint??
+    
+    * Remove unused UpdateFarmInput type from farmType definition
+    
+    * Install graph-ql scalars to set social_media to type JSON to match db
+    
+    * cleaned up farmService.ts
+    
+    * Refactor createFarm method to simplify location handling and remove unnecessary database reload
+    
+    * lint: remove unnecessary whitespace in auth middleware
+    
+    * Make USDA farm ID a required field in CreateFarmInput
+    
+    ---------
+    
+    Co-authored-by: Fiona Cai <69484076+fiona-cai@users.noreply.github.com>
+    Co-authored-by: Tina <tzxia@uwaterloo.ca>
+    Co-authored-by: Tina <79479823+tunazxia@users.noreply.github.com>
+    Co-authored-by: Copilot <175728472+Copilot@users.noreply.github.com>
+    Co-authored-by: Erica Han <ericahan.38@gmail.com>
+
+[33mcommit 229a6841f04f0c19f4c1a876797fb20bd2002b1d[m
+Author: Vidu Widyalankara <63118171+VidsterBroyo@users.noreply.github.com>
+Date:   Tue Mar 10 10:46:25 2026 -0400
+
+    Removes redundant GQL auth
+    
+    * Removes redundant GQL auth
+    
+    * linting
+
+[33mcommit ca316ad58f076e4e8981817b29b2c704cdaa3beb[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Thu Mar 5 21:52:00 2026 -0500
+
+    Implement Firebase file storage service with GraphQL integration (#45)
+
+[33mcommit 781b67472c0ae81a5bb1ceae4bc354cae000600b[m
+Author: Lucas Jin <112668276+LucasHJin@users.noreply.github.com>
+Date:   Thu Mar 5 20:35:20 2026 -0500
+
+    [MFSNW26] Sync service for verified status (#42)
+    
+    * Created a GraphQL mutation + resolver to be callable from the frontend, updated the service interface and implementation to have the actual functionality of modifying the database
+      * Syncs the Postgre DB's verified status the first time this function is called (to be called after the Frontend verifies the user's email)
+      * Produces errors if called on unknown user/after already verified
+
+[33mcommit 0ffaa958a5173b9f9641e2caf4bd11d18c3c13be[m
+Author: Vidu Widyalankara <63118171+VidsterBroyo@users.noreply.github.com>
+Date:   Wed Mar 4 20:50:28 2026 -0500
+
+    [MFSNW26] Adds user authorization
+
+[33mcommit fc5a39ef84e492b10d8f4e95af60dcd58bdd8819[m[33m ([m[1;31morigin/mfsnw26-API-service-personal-info[m[33m)[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Wed Mar 4 00:05:43 2026 -0500
+
+    Update Firebase service account and project ID (#44)
+
+[33mcommit 1b5dfacb3024c7fef6f0637d971d5456407bbac0[m
+Author: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+Date:   Tue Mar 3 23:57:58 2026 -0500
+
+    Bump svelte from 5.49.1 to 5.53.6 in /frontend (#35)
+    
+    * Bump svelte from 5.49.1 to 5.53.6 in /frontend
+    
+    Bumps [svelte](https://github.com/sveltejs/svelte/tree/HEAD/packages/svelte) from 5.49.1 to 5.53.6.
+    - [Release notes](https://github.com/sveltejs/svelte/releases)
+    - [Changelog](https://github.com/sveltejs/svelte/blob/main/packages/svelte/CHANGELOG.md)
+    - [Commits](https://github.com/sveltejs/svelte/commits/svelte@5.53.6/packages/svelte)
+    
+    ---
+    updated-dependencies:
+    - dependency-name: svelte
+      dependency-version: 5.53.6
+      dependency-type: direct:development
+    ...
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+    
+    * Update condition for build_and_preview job
+    
+    * Add permissions for checks and pull-requests
+    
+    * Add firebase.json for Firebase hosting configuration
+    
+    * lint fix
+    
+    * Update Firebase hosting configuration to use 'dist' directory
+    
+    * Update Firebase hosting configuration to point to the Svelte output directory
+    
+    ---------
+    
+    Signed-off-by: dependabot[bot] <support@github.com>
+    Co-authored-by: dependabot[bot] <49699333+dependabot[bot]@users.noreply.github.com>
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    Co-authored-by: Erica Han <ericahan.38@gmail.com>
+
+[33mcommit 4448dbb82a52f148cf5c499876ea7b54e6617d91[m
+Author: Tony Qiu <90103972+tonyqiu123@users.noreply.github.com>
+Date:   Tue Mar 3 23:51:13 2026 -0500
+
+    [MFSNW26] Add backend service cookbook (#33)
+    
+    * [MFSNW26] Add backend service cookbook for onboarding developers
+    
+    Step-by-step guide covering schema design, migrations, models, DTOs,
+    service interfaces/implementations, GraphQL types/resolvers, and
+    schema registration with CLI commands at every step.
+    
+    Made-with: Cursor
+    
+    * Fix Prettier formatting in cookbook
+    
+    Made-with: Cursor
+    
+    * Remove Sample backend; cookbook: MFSN Architecture Design Doc as source of truth
+    
+    Made-with: Cursor
+    
+    * Point cookbook to architecture doc; add drop-samples migration and backend prettier ignore
+    
+    Made-with: Cursor
+    
+    * Restore original samples down() behavior in initial migration
+    
+    Made-with: Cursor
+    
+    ---------
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit 8bec5d285382b742c41e0c643ad34c781c8c0416[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Tue Mar 3 23:04:38 2026 -0500
+
+    Update Firebase service account secret reference (#41)
+    
+    * Update Firebase service account secret reference
+    
+    * Update Firebase project ID in workflow file
+    
+    * chore: trigger ci
+    
+    ---------
+    
+    Co-authored-by: Tony Qiu <90103972+tonyqiu123@users.noreply.github.com>
+
+[33mcommit 20cc36e7734feab36d9c270fd0731840361df5f9[m
+Author: Fiona Cai <69484076+fiona-cai@users.noreply.github.com>
+Date:   Tue Mar 3 11:08:52 2026 -0500
+
+    [MFSNW26] Create model and migrations (#32)
+    
+    * create model and migrations
+    
+    * Update dotenv
+    
+    * add options {} to dropTable and lint fix
+    
+    ---------
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    Co-authored-by: Erica Han <ericahan.38@gmail.com>
+
+[33mcommit 86be7f3003f7084f263a9dee17340d71b7d4330e[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Mon Mar 2 23:11:00 2026 -0500
+
+    Delete backend/.env.example (#39)
+
+[33mcommit 4bd0dd8be7cea13bd053ded1e84411d2171b89ed[m
+Author: dcheng6775 <dcheng6775@gmail.com>
+Date:   Mon Mar 2 19:54:33 2026 -0500
+
+    [MFSNW26] Enables postgis (#31)
+    
+    * enable postgis
+    
+    * enables postgis
+    
+    * adjust docker-compose file
+    
+    * bumped postgis version
+    
+    * cascade
+    
+    * removed auth {} from firebase host yml
+    
+    * removed auth {} from another yml file
+    
+    * don't use queryInterface for down migration for user table
+    
+    ---------
+    
+    Co-authored-by: 349lolol <PatrickZX.wei@gmail.com>
+    Co-authored-by: Patrick Wei <87584815+patrick-zx-wei@users.noreply.github.com>
+    Co-authored-by: Erica Han <ericahan.38@gmail.com>
+
+[33mcommit 95e9865686ea156b51515f8e5b77e49c7920e71d[m
+Author: Lucas Jin <112668276+LucasHJin@users.noreply.github.com>
+Date:   Sun Feb 22 19:48:49 2026 -0500
+
+    [MFSNW26] Adds migration file for user table (#30)
+    
+    * Add migration file
+    
+    * Add migrate up and down for users
+    
+    * Adds fields to user migration
+    
+    * Lint fix for migrations
+    
+    ---------
+    
+    Co-authored-by: Vidu <vidsterbroyo@gmail.com>
+
+[33mcommit 30e8269d9c6389c4271749335904e5d48e127a36[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Sun Feb 22 18:57:38 2026 -0500
+
+    Update user roles and model to use firebase_uid; modify user-related DTOs and services for consistency
+
+[33mcommit 2a81d807655478c1970bc4a961d70c33c39ad1c5[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Sat Feb 21 23:42:25 2026 -0500
+
+    [MFSNW26] Implement User Auth (#22)
+    
+    * added email service using Nodemailer
+    
+    * implement authentication and user management services
+    
+    * Use await for asynchronous email sending operations
+    
+    * Update sample model and bug fixes to migrations
+    
+    * fix: frontend lint - Prettier format, ESLint globals for File and console
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+    
+    ---------
+    
+    Co-authored-by: tonyqiu123 <tonyqiu12345@gmail.com>
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+
+[33mcommit d652ac720455704325086a2f273362d97552a249[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Tue Feb 17 23:57:11 2026 -0500
+
+    Update sample model and bug fixes to migrations
+
+[33mcommit eaf9a315cda637414c07a5c6bf90c16af78418b5[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Mon Feb 16 23:48:41 2026 -0500
+
+    [MFSNW26] Set up EmailService (#21)
+    
+    * added email service using Nodemailer
+    
+    * created resolvers for email service and added absolute imports
+    
+    * fix umzug and create first migration for sample and email service
+    
+    * style: fix Prettier formatting in emailResolvers and migration
+    
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+    
+    ---------
+    
+    Co-authored-by: Tony Qiu <tonyqiu@Mac-mini.local>
+    Co-authored-by: Cursor <cursoragent@cursor.com>
+
+[33mcommit 2a3df437b4dd248ff647292bae7e348d3253f25d[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Sun Feb 8 13:58:44 2026 -0500
+
+    [MFSNW26] Add boilerplate GraphQL structure (#20)
+    
+    * added boilerplate graphql-related files
+    
+    * lint fix
+    
+    * downgrade express
+
+[33mcommit 2ecfcd61d206219e4474b40f037c0059b00d2cdf[m
+Author: Tony Qiu <90103972+tonyqiu123@users.noreply.github.com>
+Date:   Sun Feb 8 00:01:07 2026 -0500
+
+    [MSFNW26] Setup Sequlize (#19)
+    
+    * MSFNW26-setup-sequlize
+    
+    * update readme to include migration instruction
+    
+    * fix lint
+    
+    * fix lint
+
+[33mcommit d8b637ed0b88605063b8f221d768db3b134f78f7[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Wed Feb 4 21:27:34 2026 -0500
+
+    Revise README for clarity and additional details
+    
+    Updated the README to provide a clearer overview of the Mississippi Farm to School Network, including its purpose, technical stack, installation instructions, and author information.
+
+[33mcommit 7c6c1434a26879f645890826c716ff432decbfc0[m
+Author: Lukas Li <103869972+eatingfood142434@users.noreply.github.com>
+Date:   Wed Feb 4 21:14:55 2026 -0500
+
+    [MFSNW26] Updates Dependencies in README (#13)
+    
+    * squash
+    
+    * restored package lock
+    
+    * Update README.md
+    
+    ---------
+    
+    Co-authored-by: 349lolol <PatrickZX.wei@gmail.com>
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit 720d8fe14a9ef13862e0bf34d30f9381ce908345[m
+Author: Sherry Tse <99365726+stse3@users.noreply.github.com>
+Date:   Wed Feb 4 21:14:18 2026 -0500
+
+    Added MFSN description (#14)
+    
+    * improved MFSN description
+    
+    * added author name
+    
+    * Apply suggestion from @ericahan22
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    
+    * [MFSNW26] i Update README.md
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    
+    ---------
+    
+    Co-authored-by: Lucas Jin <112668276+LucasHJin@users.noreply.github.com>
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    Co-authored-by: Erica Han <ericahan.38@gmail.com>
+
+[33mcommit 3f2a85a5af88714798115f0f263d4eeeb87ce767[m
+Author: Tony Qiu <90103972+tonyqiu123@users.noreply.github.com>
+Date:   Sun Feb 1 23:50:01 2026 -0500
+
+    changes README description in root (#15)
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit a53871e3bc5dd07b68d8185c64912d5e34370ea4[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Sun Feb 1 22:54:48 2026 -0500
+
+    Update frontend and backend linting configurations (#18)
+
+[33mcommit 85714d0e3905ae14ef4aa1ae295189b8631115dd[m
+Author: Lucas Jin <112668276+LucasHJin@users.noreply.github.com>
+Date:   Sun Feb 1 15:37:00 2026 -0500
+
+    [MSFNW26] Add help with missing env in README (#12)
+
+[33mcommit 52b4cf06b428b5f7b8c782d0deeb19fe8517e1cb[m
+Author: dcheng6775 <dcheng6775@gmail.com>
+Date:   Sun Feb 1 15:28:43 2026 -0500
+
+    update authors and add project name (#16)
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit 146d446d234a581a190cdcb94f5cc0e6df858c8a[m
+Author: Fiona Cai <69484076+fiona-cai@users.noreply.github.com>
+Date:   Sun Feb 1 15:27:52 2026 -0500
+
+    [MFSNW26] Updates Title of README.md (#17)
+    
+    * Update the Title
+    
+    * Add myself as author
+    
+    ---------
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit a8ae255b5dbbe9cbc4707d68e1576d59a6c3aa04[m
+Author: Tina <79479823+tunazxia@users.noreply.github.com>
+Date:   Sun Feb 1 15:25:01 2026 -0500
+
+    [MSFNW26] Update project description (#11)
+    
+    * Updating MSFN readme description
+    
+    * package-lock
+    
+    * Apply suggestion from @ericahan22
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    
+    ---------
+    
+    Co-authored-by: Sherry Tse <99365726+stse3@users.noreply.github.com>
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit ab7d5adfc1a66db787644031f07dccef4eca2268[m
+Author: Patrick Wei <87584815+patrick-zx-wei@users.noreply.github.com>
+Date:   Sun Feb 1 15:07:43 2026 -0500
+
+    [MSFNW26] Updated installation guides and added author contact info in readme (#9)
+    
+    * Updated installation guides and added author contact info
+    
+    * Update README.md
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+    
+    ---------
+    
+    Co-authored-by: Erica Han <57574635+ericahan22@users.noreply.github.com>
+
+[33mcommit 17516a1a22627564519e1544ebc6d14093b97be6[m
+Author: Vidu Widyalankara <63118171+VidsterBroyo@users.noreply.github.com>
+Date:   Sun Feb 1 14:39:54 2026 -0500
+
+    [MFSNW26] Updates readme with dependencies (#8)
+    
+    * Adds dependencies to readme
+    
+    * adds newline after my name in readme
+
+[33mcommit 6f64f89ec663c5551df5ba5dacbe9452613b0ca4[m
+Author: Erica Han <57574635+ericahan22@users.noreply.github.com>
+Date:   Sun Feb 1 01:54:17 2026 -0500
+
+    Enhance README with project details and instructions
+    
+    Expanded README with project description, getting started guide, and author information.
+
+[33mcommit 2c7db9a01ae90e88faa30a7ca39bef411065864b[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Sun Feb 1 00:39:59 2026 -0500
+
+    feat: initialize backend and frontend structure with SvelteKit and Express
+    
+    - Added backend package.json with scripts and dependencies for Express and TypeScript.
+    - Created backend entry point (index.ts) with basic Express server setup and health check route.
+    - Integrated Tailwind CSS for styling and created layout.css for global styles.
+    - Configured Vite for SvelteKit with Tailwind CSS plugin.
+    - Updated Dockerfiles and docker-compose
+
+[33mcommit caa9132dca6e27f40d3e139e6441b6c86f9025ca[m[33m ([m[1;31morigin/backup[m[33m)[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 20:23:04 2026 -0500
+
+    as
+
+[33mcommit 817826e911043973720916a63f41c62048bb3b16[m
+Merge: a7c70c3 36ae2a2
+Author: Tony Qiu <90103972+tonyqiu123@users.noreply.github.com>
+Date:   Thu Jan 29 19:56:49 2026 -0500
+
+    Merge pull request #4 from uwblueprint/third-attempt
+    
+    Adds code fixes to compile successfully and pass tests
+
+[33mcommit 36ae2a2ccf51eacbeffb482705aece6643a4b18a[m[33m ([m[1;31morigin/third-attempt[m[33m)[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 19:52:51 2026 -0500
+
+    fix linit
+
+[33mcommit d2b410950417c883f8c437cf0602efada7123278[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 19:50:08 2026 -0500
+
+    lint
+
+[33mcommit 9eb3e26c0afbfd41e9b1f7f332569301db70dd85[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 19:39:16 2026 -0500
+
+    sd
+
+[33mcommit 36ba4cd49b408c5ba6b86a7261771e04614cec55[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 19:37:19 2026 -0500
+
+    everything works
+
+[33mcommit 6c740e3644056a49f5cda6d37a72a8de2194b5a3[m
+Author: Tony Qiu <tonyqiu@Mac-mini.local>
+Date:   Thu Jan 29 19:29:44 2026 -0500
+
+    save
+
+[33mcommit a31cd8b9aa1301af3d608d23b51d16e1a7251bad[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Thu Jan 29 18:35:02 2026 -0500
+
+    Add the frontend .env.example
+
+[33mcommit 3cdf320906aa539794459d83c109aedd9f3b757f[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Thu Jan 29 18:21:47 2026 -0500
+
+    Add .env.example
+
+[33mcommit 2b0882c25e57d663af7da7680b724a18bb655168[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Mon Jan 26 23:57:44 2026 -0500
+
+    Make the tests freaking pass
+
+[33mcommit 29faa74573468c2a38b9512dd903fa5f40b245ae[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Mon Jan 26 21:57:47 2026 -0500
+
+    Comment out as little as possible to make the backend compile and run
+
+[33mcommit 4c62baeeb07a57f7326ee5d054cb3ca52bb92793[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Mon Jan 26 21:41:49 2026 -0500
+
+    Minimal changes just to make frontend compile successfully
+
+[33mcommit a7c70c31deb1ac68dd24bb5e2beeb62b658504d0[m
+Author: Erica Han <ericahan.38@gmail.com>
+Date:   Mon Jan 26 21:03:45 2026 -0500
+
+    Initial commit

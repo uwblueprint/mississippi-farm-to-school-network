@@ -3,10 +3,18 @@ import { Op, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
 import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
+import UserService from '@/services/implementations/userService';
+import EmailService from '@/services/implementations/emailService';
+import IUserService from '@/services/interfaces/userService';
+import IEmailService from '@/services/interfaces/emailService';
+import nodemailerConfig from '@/nodemailer.config';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
+
+const userService: IUserService = new UserService();
+const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
@@ -83,6 +91,40 @@ class FarmService implements IFarmService {
       Logger.error(`Failed to update farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+  }
+
+  async approveFarm(farmId: string): Promise<FarmDTO> {
+    let updatedFarm: FarmDTO;
+
+    try {
+      updatedFarm = await this.updateFarm(farmId, { status: FarmStatus.APPROVED });
+    } catch (error: unknown) {
+      Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+
+    let ownerEmail: string;
+    try {
+      ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
+    } catch (error: unknown) {
+      Logger.error(`Failed to fetch farm owner email. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+
+    const subject = 'Your Farm Has Been Approved!';
+    const emailBody = `<h2>Your Farm Has Been Approved!</h2>
+                      <p>Congratulations! Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
+                      <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
+
+    try {
+      await emailService.sendEmail(ownerEmail, subject, emailBody);
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm approved but failed to send approval email to ${ownerEmail}. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return updatedFarm;
   }
 
   private convertToFarmDTOs(farms: Farm[]): FarmDTO[] {
