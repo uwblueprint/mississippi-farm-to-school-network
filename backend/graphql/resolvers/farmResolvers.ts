@@ -1,4 +1,3 @@
-import * as firebaseAdmin from 'firebase-admin';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
@@ -6,7 +5,8 @@ import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
 import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
-import { getAccessToken, type GraphQLContext } from '@/middlewares/auth';
+import { AuthContext, getAccessToken, type GraphQLContext } from '@/middlewares/auth';
+import authHelper from '@/utilities/authHelpers';
 
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
@@ -58,49 +58,25 @@ const farmResolvers = {
     createFarm: async (
       _parent: undefined,
       { input }: { input: CreateFarmInput },
-      context: GraphQLContext
+      context: AuthContext
     ): Promise<FarmDTO> => {
-      const accessToken = getAccessToken(context.req);
-      if (!accessToken) throw new AuthenticationError('You must be logged in to create a farm');
-
-      let decodedIdToken: firebaseAdmin.auth.DecodedIdToken;
-      try {
-        decodedIdToken = await firebaseAdmin.auth().verifyIdToken(accessToken, true);
-      } catch {
-        throw new AuthenticationError('Invalid or expired token');
-      }
-
-      const ownerUserId = await userService.getUserIdByAuthId(decodedIdToken.uid);
-      return await farmService.createFarm(ownerUserId, input);
+      const currentUser = await authHelper.requireEmailVerified(context);
+      return farmService.createFarm(currentUser.id, input);
     },
 
     updateFarm: async (
       _parent: undefined,
       { id, input }: { id: string; input: UpdateFarmInput },
-      context: GraphQLContext
+      context: AuthContext
     ): Promise<FarmDTO> => {
-      const accessToken = getAccessToken(context.req);
-      if (!accessToken) {
-        throw new AuthenticationError('Access token is required');
-      }
-
-      let decodedToken: firebaseAdmin.auth.DecodedIdToken;
-      try {
-        decodedToken = await firebaseAdmin.auth().verifyIdToken(accessToken, true);
-      } catch {
-        throw new AuthenticationError('Invalid authentication token');
-      }
-
-      const currentUserId = await userService.getUserIdByAuthId(decodedToken.uid);
+      await authHelper.requireEmailVerified(context);
       const farm = await Farm.findByPk(id);
 
       if (!farm) {
-        throw new Error(`Farm with id ${id} not found`);
+        throw new Error(`Farm with id ${id} not found.`);
       }
 
-      if (farm.owner_user_id !== currentUserId) {
-        throw new ForbiddenError('You are not authorized to update this farm');
-      }
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
       return farmService.updateFarm(id, input, farm);
     },
@@ -109,6 +85,22 @@ const farmResolvers = {
   FarmDTO: {
     owner: async (farm: FarmDTO) => {
       return userService.getUserById(farm.owner_user_id);
+    },
+    usda_farm_id: async (
+      farm: FarmDTO,
+      _args: unknown,
+      context: AuthContext
+    ): Promise<number | null> => {
+      try {
+        await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+        return farm.usda_farm_id;
+      } catch (error: unknown) {
+        if (error instanceof AuthenticationError || error instanceof ForbiddenError) {
+          return null;
+        }
+
+        throw error;
+      }
     },
   },
 };

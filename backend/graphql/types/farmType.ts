@@ -22,7 +22,7 @@ const farmType = gql`
     id: ID!
     owner_user_id: ID!
     owner: UserDTO!
-    usda_farm_id: Int!
+    usda_farm_id: Int
     farm_name: String!
     description: String!
     primary_phone: String!
