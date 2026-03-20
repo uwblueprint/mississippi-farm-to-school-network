@@ -1,7 +1,21 @@
 import { Role, UserDTO } from '@/types';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
+import { AuthContext } from '@/middlewares/auth';
 import UserService from '@/services/implementations/userService';
 import IUserService from '@/services/interfaces/userService';
+import { getErrorMessage } from '@/utilities/errorUtils';
+
+const AUTHENTICATION_REQUIRED_MESSAGE = 'You must be logged in to access this resource.';
+const USER_NOT_FOUND_MESSAGE = 'Authenticated user was not found.';
+const EMAIL_VERIFICATION_REQUIRED_MESSAGE = 'You must verify your email to access this resource.';
+const PERMISSION_DENIED_MESSAGE = 'You do not have permission to access this resource.';
+const OWNERSHIP_REQUIRED_MESSAGE = 'You do not have permission to access or modify this resource.';
+
+const userService: IUserService = new UserService();
+
+const isUserNotFoundError = (error: unknown): boolean => {
+  return getErrorMessage(error).toLowerCase().includes('not found');
+};
 
 const AuthHelper = {
   /**
@@ -11,19 +25,20 @@ const AuthHelper = {
    * @returns The current user record.
    * @throws {AuthenticationError} If `firebaseUid` is missing or the user cannot be found.
    */
-  requireAuth: async (context: { firebaseUid?: string }): Promise<UserDTO> => {
+  requireAuth: async (context: AuthContext): Promise<UserDTO> => {
     if (!context.firebaseUid) {
-      throw new AuthenticationError('You must be logged in to view or edit profiles.');
+      throw new AuthenticationError(AUTHENTICATION_REQUIRED_MESSAGE);
     }
 
-    const userService: IUserService = new UserService();
-    const user = await userService.getCurrentUser(context.firebaseUid);
+    try {
+      return await userService.getCurrentUser(context.firebaseUid);
+    } catch (error: unknown) {
+      if (isUserNotFoundError(error)) {
+        throw new AuthenticationError(USER_NOT_FOUND_MESSAGE);
+      }
 
-    if (!user) {
-      throw new AuthenticationError('User not found in database.');
+      throw error;
     }
-
-    return user;
   },
 
   /**
@@ -33,10 +48,10 @@ const AuthHelper = {
    * @returns The current user record (verified).
    * @throws {AuthenticationError} If not logged in, user not found, or `user.is_verified` is false.
    */
-  requireEmailVerified: async (context: { firebaseUid?: string }): Promise<UserDTO> => {
+  requireEmailVerified: async (context: AuthContext): Promise<UserDTO> => {
     const user = await AuthHelper.requireAuth(context);
     if (!user.is_verified) {
-      throw new AuthenticationError('Please verify your email.');
+      throw new AuthenticationError(EMAIL_VERIFICATION_REQUIRED_MESSAGE);
     }
     return user;
   },
@@ -50,10 +65,10 @@ const AuthHelper = {
    * @throws {AuthenticationError} If not logged in or user not found.
    * @throws {ForbiddenError} If the user does not have an allowed role.
    */
-  requireRole: async (context: { firebaseUid?: string }, roles: Role[]): Promise<UserDTO> => {
-    const user = await AuthHelper.requireAuth(context);
+  requireRole: async (context: AuthContext, roles: Role[]): Promise<UserDTO> => {
+    const user = await AuthHelper.requireEmailVerified(context);
     if (!roles.includes(user.role)) {
-      throw new ForbiddenError('You do not have permission to access this resource.');
+      throw new ForbiddenError(PERMISSION_DENIED_MESSAGE);
     }
     return user;
   },
@@ -69,13 +84,10 @@ const AuthHelper = {
    * @throws {AuthenticationError} If not logged in or user not found.
    * @throws {ForbiddenError} If the user is neither the owner nor an admin.
    */
-  requireOwnerOrAdmin: async (
-    context: { firebaseUid?: string },
-    targetUserId: string
-  ): Promise<UserDTO> => {
+  requireOwnerOrAdmin: async (context: AuthContext, targetUserId: string): Promise<UserDTO> => {
     const user = await AuthHelper.requireAuth(context);
-    if (user.role != Role.ADMIN && user.id != targetUserId) {
-      throw new ForbiddenError('You do not have permission to access or modify this resource.');
+    if (user.role !== Role.ADMIN && user.id !== targetUserId) {
+      throw new ForbiddenError(OWNERSHIP_REQUIRED_MESSAGE);
     }
     return user;
   },

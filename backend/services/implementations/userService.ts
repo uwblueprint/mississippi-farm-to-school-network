@@ -265,7 +265,6 @@ class UserService implements IUserService {
       // Update in Postgres
       await existingUser.update({
         email: user.email,
-        role: user.role,
       });
 
       return {

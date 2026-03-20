@@ -50,7 +50,6 @@ const userType = gql`
 
   input UpdateUserDTO {
     email: String!
-    role: Role!
   }
 `;
 

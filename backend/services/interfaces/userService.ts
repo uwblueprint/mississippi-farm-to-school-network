@@ -67,8 +67,9 @@ interface IUserService {
   createUser(user: CreateUserDTO, authId?: string, signUpMethod?: SignUpMethod): Promise<UserDTO>;
 
   /**
-   * Update a user. Note: the password cannot be updated using this method, use
-   * IAuthService.resetPassword instead
+   * Update a user. Only mutable profile fields belong here; role is immutable after account
+   * creation. Note: the password cannot be updated using this method, use IAuthService.resetPassword
+   * instead.
    * @param userId user's id
    * @param user the user to be updated
    * @returns a UserDTO with the updated user's information

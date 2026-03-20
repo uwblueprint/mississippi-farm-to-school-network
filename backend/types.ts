@@ -44,7 +44,6 @@ export type CreateUserDTO = {
 
 export type UpdateUserDTO = {
   email: string;
-  role: Role;
 };
 
 export type CompleteUserProfileInput = {
