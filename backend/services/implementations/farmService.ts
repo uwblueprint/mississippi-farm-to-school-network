@@ -1,5 +1,4 @@
 import { Op, UniqueConstraintError } from 'sequelize';
-
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
 import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
@@ -97,17 +96,20 @@ class FarmService implements IFarmService {
     let updatedFarm: FarmDTO;
 
     try {
+      const currentFarm = await Farm.findByPk(farmId);
+
+      if (!currentFarm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (currentFarm.status == FarmStatus.APPROVED) {
+        Logger.warn(`Farm with id ${farmId} is already approved.`);
+        return this.convertToFarmDTO(currentFarm);
+      }
+
       updatedFarm = await this.updateFarm(farmId, { status: FarmStatus.APPROVED });
     } catch (error: unknown) {
       Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
-      throw error;
-    }
-
-    let ownerEmail: string;
-    try {
-      ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
-    } catch (error: unknown) {
-      Logger.error(`Failed to fetch farm owner email. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
 
@@ -116,11 +118,13 @@ class FarmService implements IFarmService {
                       <p>Congratulations! Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
                       <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
 
+    let ownerEmail: string;
     try {
+      ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
       await emailService.sendEmail(ownerEmail, subject, emailBody);
     } catch (error: unknown) {
       Logger.warn(
-        `Farm approved but failed to send approval email to ${ownerEmail}. Reason = ${getErrorMessage(error)}`
+        `Farm approved but failed to send approval email. Reason = ${getErrorMessage(error)}`
       );
     }
 
