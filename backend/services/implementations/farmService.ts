@@ -2,7 +2,14 @@ import { Op, UniqueConstraintError } from 'sequelize';
 
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, LocationDTO } from '@/types';
+import {
+  CreateFarmInput,
+  FarmDTO,
+  FarmFilter,
+  FarmStatus,
+  UpdateFarmInput,
+  LocationDTO,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 
@@ -15,7 +22,7 @@ const convertToPostGISPoint = (location: LocationDTO) => {
   };
 };
 
-const convertFromPostGISPoint = (location: any): LocationDTO => {
+const convertFromPostGISPoint = (location: { type: string; coordinates: [number, number] }): LocationDTO => {
   return {
     lat: location.coordinates[1],
     lng: location.coordinates[0],
@@ -89,7 +96,7 @@ class FarmService implements IFarmService {
       ) as Partial<UpdateFarmInput>;
 
       if (updateValues.location) {
-        (updateValues as any).location = convertToPostGISPoint(updateValues.location);
+        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
       }
 
       Object.assign(farm, updateValues);

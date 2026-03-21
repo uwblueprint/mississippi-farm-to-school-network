@@ -80,8 +80,8 @@ export type FarmDTO = {
   f2s_experience: boolean;
   interested_in_f2s: boolean;
   status: FarmStatus;
-  createdAt: string; 
-  updatedAt: string; 
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type CreateFarmInput = {
@@ -148,5 +148,5 @@ export interface FarmFilter {
   counties_served?: string[];
   cities_served?: string[];
   food_categories?: string[];
-  approved?: boolean; 
+  approved?: boolean;
 }
