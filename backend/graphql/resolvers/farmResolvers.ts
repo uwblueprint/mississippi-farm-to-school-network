@@ -5,7 +5,7 @@ import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
 import { AuthContext } from '@/middlewares/auth';
-import { CreateFarmInput, FarmDTO, FarmFilter, UpdateFarmInput } from '@/types';
+import { CreateFarmInput, FarmDTO, FarmFilter, UpdateFarmInput, Role } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 
 const farmService: IFarmService = new FarmService();
@@ -43,6 +43,15 @@ const farmResolvers = {
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
       return farmService.updateFarm(id, input, farm);
+    },
+
+    approveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.approveFarm(id);
     },
   },
 
