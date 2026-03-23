@@ -29,7 +29,8 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       const currentUser = await authHelper.requireEmailVerified(context);
-
+      const createdFarm = await farmService.createFarm(currentUser.id, input);
+      
       const subject = 'New Farm Application Submitted';
       const emailBody = `<h2>New Farm Application Submitted</h2>
                       <p>A new farm application has been submitted for ${input.farm_name}.</p>
@@ -37,7 +38,7 @@ const farmResolvers = {
       const adminEmail = "mfsn@uwblueprint.org";
       await emailService.sendEmail(adminEmail, subject, emailBody);
 
-      return farmService.createFarm(currentUser.id, input);
+      return createdFarm;
     },
 
     updateFarm: async (
