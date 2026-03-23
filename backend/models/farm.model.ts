@@ -45,8 +45,8 @@ export default class Farm extends Model {
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
   cities_served!: string[];
 
-  @Column({ type: DataType.GEOGRAPHY('POINT', 4326), allowNull: false })
-  location!: unknown;
+  @Column({ type: DataType.GEOMETRY('POINT', 4326), allowNull: false })
+  location!: { type: string; coordinates: [number, number] };
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
   food_categories!: string[];
