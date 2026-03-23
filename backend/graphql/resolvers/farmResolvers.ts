@@ -1,12 +1,11 @@
-import * as firebaseAdmin from 'firebase-admin';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
-import { AuthContext, getAccessToken, type GraphQLContext } from '@/middlewares/auth';
+import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, Role } from '@/types';
+import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
 
 const farmService: IFarmService = new FarmService();
@@ -20,38 +19,10 @@ const farmResolvers = {
     farmsByStatus: async (
       _parent: undefined,
       { status }: { status: FarmStatus },
-      context: GraphQLContext
+      context: AuthContext
     ): Promise<FarmDTO[]> => {
-      const accessToken = getAccessToken(context.req);
-      if (!accessToken) {
-        throw new AuthenticationError('You must be logged in to view farms by status');
-      }
-
-      let decodedIdToken: firebaseAdmin.auth.DecodedIdToken;
-      try {
-        decodedIdToken = await firebaseAdmin.auth().verifyIdToken(accessToken, true);
-      } catch {
-        throw new AuthenticationError('Invalid or expired token');
-      }
-
-      let userRole;
-      try {
-        userRole = await userService.getUserRoleByAuthId(decodedIdToken.uid);
-      } catch {
-        throw new AuthenticationError('User not found or error retrieving role');
-      }
-      if (userRole !== 'ADMIN') {
-        throw new ForbiddenError('You are not authorized to view farms by status');
-      }
-
-      try {
-        return await farmService.getFarmsByStatus(status);
-      } catch (error) {
-        throw new Error(
-          'Failed to fetch farms by status: ' +
-            (error instanceof Error ? error.message : String(error))
-        );
-      }
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmsByStatus(status);
     },
   },
 
