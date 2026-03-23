@@ -1,8 +1,14 @@
 import { Op, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
-
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, LocationDTO } from '@/types';
+import {
+  CreateFarmInput,
+  FarmDTO,
+  FarmFilter,
+  FarmStatus,
+  UpdateFarmInput,
+  LocationDTO,
+} from '@/types';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
 import IUserService from '@/services/interfaces/userService';
