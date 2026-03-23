@@ -22,7 +22,10 @@ const convertToPostGISPoint = (location: LocationDTO) => {
   };
 };
 
-const convertFromPostGISPoint = (location: { type: string; coordinates: [number, number] }): LocationDTO => {
+const convertFromPostGISPoint = (location: {
+  type: string;
+  coordinates: [number, number];
+}): LocationDTO => {
   return {
     lat: location.coordinates[1],
     lng: location.coordinates[0],
