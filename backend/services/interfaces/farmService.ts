@@ -35,6 +35,12 @@ interface IFarmService {
    * @throws Error if farm retrieval fails
    */
   getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]>;
+   * Update a farm's status to APPROVED & attempt to email farm owner
+   * @param id farm's id
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm update fails
+   */
+  approveFarm(id: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;

@@ -1,6 +1,8 @@
 import { IncomingMessage } from 'http';
 
-export type GraphQLContext = { req: IncomingMessage };
+export type AuthContext = { firebaseUid?: string };
+
+export type GraphQLContext = AuthContext & { req: IncomingMessage };
 
 export const getAccessToken = (req: IncomingMessage): string | null => {
   const authHeaderParts = req.headers.authorization?.split(' ');
