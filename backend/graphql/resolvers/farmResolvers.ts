@@ -52,6 +52,15 @@ const farmResolvers = {
 
       return farmService.updateFarm(id, input, farm);
     },
+
+    approveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.approveFarm(id);
+    },
   },
 
   FarmDTO: {

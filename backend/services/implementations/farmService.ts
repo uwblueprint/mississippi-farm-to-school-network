@@ -1,12 +1,42 @@
 import { Op, UniqueConstraintError } from 'sequelize';
-
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
+import {
+  CreateFarmInput,
+  FarmDTO,
+  FarmFilter,
+  FarmStatus,
+  UpdateFarmInput,
+  LocationDTO,
+} from '@/types';
+import UserService from '@/services/implementations/userService';
+import EmailService from '@/services/implementations/emailService';
+import IUserService from '@/services/interfaces/userService';
+import IEmailService from '@/services/interfaces/emailService';
+import nodemailerConfig from '@/nodemailer.config';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
+const userService: IUserService = new UserService();
+const emailService: IEmailService = new EmailService(nodemailerConfig);
+
+const convertToPostGISPoint = (location: LocationDTO) => {
+  return {
+    type: 'Point',
+    coordinates: [location.lng, location.lat],
+  };
+};
+
+const convertFromPostGISPoint = (location: {
+  type: string;
+  coordinates: [number, number];
+}): LocationDTO => {
+  return {
+    lat: location.coordinates[1],
+    lng: location.coordinates[0],
+  };
+};
 
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
@@ -14,6 +44,7 @@ class FarmService implements IFarmService {
       const farm = await Farm.create({
         owner_user_id: ownerUserId,
         ...input,
+        location: convertToPostGISPoint(input.location),
         status: FarmStatus.PENDING_APPROVAL,
       });
 
@@ -73,6 +104,10 @@ class FarmService implements IFarmService {
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
 
+      if (updateValues.location) {
+        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
+      }
+
       Object.assign(farm, updateValues);
 
       await farm.save();
@@ -83,6 +118,45 @@ class FarmService implements IFarmService {
       Logger.error(`Failed to update farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+  }
+
+  async approveFarm(farmId: string): Promise<FarmDTO> {
+    let updatedFarm: FarmDTO;
+
+    try {
+      const currentFarm = await Farm.findByPk(farmId);
+
+      if (!currentFarm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (currentFarm.status == FarmStatus.APPROVED) {
+        Logger.warn(`Farm with id ${farmId} is already approved.`);
+        return this.convertToFarmDTO(currentFarm);
+      }
+
+      updatedFarm = await this.updateFarm(farmId, { status: FarmStatus.APPROVED });
+    } catch (error: unknown) {
+      Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+
+    const subject = 'Your Farm Has Been Approved!';
+    const emailBody = `<h2>Your Farm Has Been Approved!</h2>
+                      <p>Congratulations! Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
+                      <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
+
+    let ownerEmail: string;
+    try {
+      ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
+      await emailService.sendEmail(ownerEmail, subject, emailBody);
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm approved but failed to send approval email. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return updatedFarm;
   }
 
   private convertToFarmDTOs(farms: Farm[]): FarmDTO[] {
@@ -98,17 +172,7 @@ class FarmService implements IFarmService {
       website?: string | null;
     };
 
-    // Handle if location data is null. Throws error if invalid, returns DTO if valid.
-    const location = data.location as { type?: unknown; coordinates?: unknown } | null | undefined;
-
-    if (
-      !location ||
-      location.type !== 'Point' ||
-      !Array.isArray(location.coordinates) ||
-      location.coordinates.length !== 2 ||
-      typeof location.coordinates[0] !== 'number' ||
-      typeof location.coordinates[1] !== 'number'
-    ) {
+    if (!data.location) {
       Logger.error(`Farm ${data.id} has invalid or missing location`);
       throw new Error(`Farm ${data.id} is missing a valid location`);
     }
@@ -126,7 +190,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
-      location: location as { type: 'Point'; coordinates: [number, number] },
+      location: convertFromPostGISPoint(data.location),
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
       bipoc_owned: data.bipoc_owned,
