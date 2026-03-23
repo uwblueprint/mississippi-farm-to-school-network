@@ -12,7 +12,6 @@ import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
-
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
