@@ -135,7 +135,7 @@ class FarmService implements IFarmService {
         return this.convertToFarmDTO(currentFarm);
       }
 
-      updatedFarm = await this.updateFarm(farmId, { status: FarmStatus.APPROVED });
+      updatedFarm = await this.updateFarmStatus(currentFarm, FarmStatus.APPROVED);
     } catch (error: unknown) {
       Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -161,6 +161,13 @@ class FarmService implements IFarmService {
 
   private convertToFarmDTOs(farms: Farm[]): FarmDTO[] {
     return farms.map((farm) => this.convertToFarmDTO(farm));
+  }
+
+  private async updateFarmStatus(farm: Farm, status: FarmStatus): Promise<FarmDTO> {
+    farm.status = status;
+    await farm.save();
+    await farm.reload();
+    return this.convertToFarmDTO(farm);
   }
 
   private convertToFarmDTO(farm: Farm): FarmDTO {
