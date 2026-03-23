@@ -5,7 +5,6 @@ import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
 import { Role } from '@/types';
 
-
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const emailResolvers = {
