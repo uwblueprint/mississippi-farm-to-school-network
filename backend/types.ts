@@ -141,6 +141,7 @@ export type UpdateFarmInput = {
   delivery?: boolean;
   f2s_experience?: boolean;
   interested_in_f2s?: boolean;
+  status?: FarmStatus;
 };
 
 export interface FarmFilter {

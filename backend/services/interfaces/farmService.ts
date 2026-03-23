@@ -27,6 +27,14 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO>;
+
+  /**
+   * Update a farm's status to APPROVED & email farm owner.
+   * @param id farm's id
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm update fails
+   */
+  approveFarm(id: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;
