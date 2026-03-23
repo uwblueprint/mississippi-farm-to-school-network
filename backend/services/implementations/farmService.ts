@@ -38,9 +38,6 @@ const convertFromPostGISPoint = (location: {
   };
 };
 
-const userService: IUserService = new UserService();
-const emailService: IEmailService = new EmailService(nodemailerConfig);
-
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     try {
