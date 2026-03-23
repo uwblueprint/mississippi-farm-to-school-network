@@ -1,7 +1,8 @@
 import { Op, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput } from '@/types';
+
+import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, LocationDTO } from '@/types';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
 import IUserService from '@/services/interfaces/userService';
@@ -15,12 +16,30 @@ const Logger = logger(__filename);
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
+const convertToPostGISPoint = (location: LocationDTO) => {
+  return {
+    type: 'Point',
+    coordinates: [location.lng, location.lat],
+  };
+};
+
+const convertFromPostGISPoint = (location: {
+  type: string;
+  coordinates: [number, number];
+}): LocationDTO => {
+  return {
+    lat: location.coordinates[1],
+    lng: location.coordinates[0],
+  };
+};
+
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     try {
       const farm = await Farm.create({
         owner_user_id: ownerUserId,
         ...input,
+        location: convertToPostGISPoint(input.location),
         status: FarmStatus.PENDING_APPROVAL,
       });
 
@@ -79,6 +98,10 @@ class FarmService implements IFarmService {
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
+
+      if (updateValues.location) {
+        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
+      }
 
       Object.assign(farm, updateValues);
 
@@ -144,17 +167,7 @@ class FarmService implements IFarmService {
       website?: string | null;
     };
 
-    // Handle if location data is null. Throws error if invalid, returns DTO if valid.
-    const location = data.location as { type?: unknown; coordinates?: unknown } | null | undefined;
-
-    if (
-      !location ||
-      location.type !== 'Point' ||
-      !Array.isArray(location.coordinates) ||
-      location.coordinates.length !== 2 ||
-      typeof location.coordinates[0] !== 'number' ||
-      typeof location.coordinates[1] !== 'number'
-    ) {
+    if (!data.location) {
       Logger.error(`Farm ${data.id} has invalid or missing location`);
       throw new Error(`Farm ${data.id} is missing a valid location`);
     }
@@ -172,7 +185,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
-      location: location as { type: 'Point'; coordinates: [number, number] },
+      location: convertFromPostGISPoint(data.location),
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
       bipoc_owned: data.bipoc_owned,
