@@ -23,7 +23,7 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.getFarmById(id);
-    }
+    },
   },
 
   Mutation: {
