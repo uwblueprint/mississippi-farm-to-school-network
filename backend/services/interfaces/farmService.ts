@@ -29,7 +29,7 @@ interface IFarmService {
   updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO>;
 
   /**
-   * Update a farm's status to APPROVED & email farm owner.
+   * Update a farm's status to APPROVED & attempt to email farm owner
    * @param id farm's id
    * @returns a FarmDTO with the updated farm's information
    * @throws Error if farm update fails
