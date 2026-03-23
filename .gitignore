@@ -44,9 +44,7 @@ Thumbs.db
 # Firebase
 **/firebaseServiceAccount.json
 
-# Docker
-docker-compose.yml
-docker-compose.override.yml
+
 
 # Database
 *.sqlite
