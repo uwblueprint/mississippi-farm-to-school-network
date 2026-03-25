@@ -69,8 +69,17 @@ const farmResolvers = {
   },
 
   FarmDTO: {
-    owner: async (farm: FarmDTO) => {
-      return userService.getUserById(farm.owner_user_id);
+    owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
+      try {
+        await authHelper.requireRole(context, [Role.ADMIN]);
+        return userService.getUserById(farm.owner_user_id);
+      } catch (error: unknown) {
+        if (error instanceof AuthenticationError || error instanceof ForbiddenError) {
+          return null;
+        }
+
+        throw error;
+      }
     },
     usda_farm_id: async (
       farm: FarmDTO,
