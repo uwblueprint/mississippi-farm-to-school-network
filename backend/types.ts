@@ -56,7 +56,7 @@ export type LocationDTO = {
 export type FarmDTO = {
   id: string;
   owner_user_id: string;
-  usda_farm_id: number;
+  usda_farm_id: number | null;
   farm_name: string;
   description: string;
   primary_phone: string;
@@ -141,7 +141,6 @@ export type UpdateFarmInput = {
   delivery?: boolean;
   f2s_experience?: boolean;
   interested_in_f2s?: boolean;
-  status?: FarmStatus;
 };
 
 export interface FarmFilter {
