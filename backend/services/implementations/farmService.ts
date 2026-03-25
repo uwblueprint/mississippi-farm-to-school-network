@@ -217,6 +217,16 @@ class FarmService implements IFarmService {
           : new Date(data.updatedAt).toISOString(),
     };
   }
+
+  async getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]> {
+    try {
+      const farms = await Farm.findAll({ where: { status } });
+      return this.convertToFarmDTOs(farms);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
 }
 
 export default FarmService;

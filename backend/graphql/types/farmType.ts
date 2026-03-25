@@ -21,7 +21,7 @@ const farmType = gql`
   type FarmDTO {
     id: ID!
     owner_user_id: ID!
-    owner: UserDTO!
+    owner: UserDTO
     usda_farm_id: Int
     farm_name: String!
     description: String!
@@ -127,6 +127,7 @@ const farmType = gql`
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+    approveFarm(id: ID!): FarmDTO!
   }
 `;
 
