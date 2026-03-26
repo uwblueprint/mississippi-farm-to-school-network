@@ -59,10 +59,15 @@ export type RegisterUserDTO = {
   password: string;
 };
 
+export type LocationDTO = {
+  lat: number;
+  lng: number;
+};
+
 export type FarmDTO = {
   id: string;
   owner_user_id: string;
-  usda_farm_id: number;
+  usda_farm_id: number | null;
   farm_name: string;
   description: string;
   primary_phone: string;
@@ -72,7 +77,7 @@ export type FarmDTO = {
   farm_address: string;
   counties_served: string[];
   cities_served: string[];
-  location: { type: 'Point'; coordinates: [number, number] }; // GeoJSON format
+  location: LocationDTO;
   food_categories: string[];
   market_sales_data: { market: string; times: string }[] | null;
   bipoc_owned: boolean;
@@ -86,8 +91,8 @@ export type FarmDTO = {
   f2s_experience: boolean;
   interested_in_f2s: boolean;
   status: FarmStatus;
-  createdAt: string; // ISO string for GraphQL compatibility
-  updatedAt: string; // ISO string for GraphQL compatibility
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type CreateFarmInput = {
@@ -101,7 +106,7 @@ export type CreateFarmInput = {
   usda_farm_id: number;
   counties_served: string[];
   cities_served: string[];
-  location: { type: 'Point'; coordinates: [number, number] };
+  location: LocationDTO;
   food_categories: string[];
   market_sales_data?: { market: string; times: string }[];
   bipoc_owned?: boolean;
@@ -134,7 +139,7 @@ export type UpdateFarmInput = {
   farm_address?: string;
   counties_served?: string[];
   cities_served?: string[];
-  location?: { type: 'Point'; coordinates: [number, number] };
+  location?: LocationDTO;
   food_categories?: string[];
   market_sales_data?: { market: string; times: string }[];
   bipoc_owned?: boolean;
@@ -149,11 +154,10 @@ export type UpdateFarmInput = {
   interested_in_f2s?: boolean;
 };
 
-// Farm Filter
 export interface FarmFilter {
   status?: FarmStatus;
   counties_served?: string[];
   cities_served?: string[];
   food_categories?: string[];
-  approved?: boolean; // convenience filter: true → status === APPROVED, false → status !== APPROVED
+  approved?: boolean;
 }
