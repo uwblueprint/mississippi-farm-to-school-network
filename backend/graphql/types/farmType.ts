@@ -120,6 +120,10 @@ const farmType = gql`
     interested_in_f2s: Boolean
   }
 
+  input RejectFarmInput {
+    rejection_reason: String!
+  }
+
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
   }
