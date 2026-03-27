@@ -7,9 +7,13 @@ import Farm from '@/models/farm.model';
 import { AuthContext } from '@/middlewares/auth';
 import { CreateFarmInput, FarmDTO, FarmFilter, UpdateFarmInput, Role } from '@/types';
 import authHelper from '@/utilities/authHelpers';
+import EmailService from '@/services/implementations/emailService';
+import IEmailService from '@/services/interfaces/emailService';
+import nodemailerConfig from '@/nodemailer.config';
 
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
+const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const farmResolvers = {
   Query: {
@@ -33,7 +37,16 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       const currentUser = await authHelper.requireEmailVerified(context);
-      return farmService.createFarm(currentUser.id, input);
+      const createdFarm = await farmService.createFarm(currentUser.id, input);
+
+      const subject = 'New Farm Application Submitted';
+      const emailBody = `<h2>New Farm Application Submitted</h2>
+                      <p>A new farm application has been submitted for ${input.farm_name}.</p>
+                      <p>Please review the application and approve or reject it.</p>`;
+      const adminEmail = 'mfsn@uwblueprint.org';
+      await emailService.sendEmail(adminEmail, subject, emailBody);
+
+      return createdFarm;
     },
 
     updateFarm: async (
@@ -64,8 +77,17 @@ const farmResolvers = {
   },
 
   FarmDTO: {
-    owner: async (farm: FarmDTO) => {
-      return userService.getUserById(farm.owner_user_id);
+    owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
+      try {
+        await authHelper.requireRole(context, [Role.ADMIN]);
+        return userService.getUserById(farm.owner_user_id);
+      } catch (error: unknown) {
+        if (error instanceof AuthenticationError || error instanceof ForbiddenError) {
+          return null;
+        }
+
+        throw error;
+      }
     },
     usda_farm_id: async (
       farm: FarmDTO,
