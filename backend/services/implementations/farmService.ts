@@ -162,7 +162,11 @@ class FarmService implements IFarmService {
     return updatedFarm;
   }
 
-  async rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO> {
+  async rejectFarm(
+    farmId: string,
+    rejectedByUserId: string,
+    rejectionReason: string
+  ): Promise<FarmDTO> {
     const sequelize = Farm.sequelize;
     if (!sequelize) {
       throw new Error('Sequelize instance not found on Farm model');
@@ -185,17 +189,15 @@ class FarmService implements IFarmService {
         ...currentFarm.toJSON(),
         location: {
           type: currentFarm.location.type,
-          coordinates: [
-            currentFarm.location.coordinates[0],
-            currentFarm.location.coordinates[1],
-          ],
+          coordinates: [currentFarm.location.coordinates[0], currentFarm.location.coordinates[1]],
         },
         farm_snapshot_updated_at: currentFarm.updatedAt,
       };
 
       const farm_snapshot_updated_at =
-      currentFarm.updatedAt instanceof Date
-      ? currentFarm.updatedAt : new Date(currentFarm.updatedAt);
+        currentFarm.updatedAt instanceof Date
+          ? currentFarm.updatedAt
+          : new Date(currentFarm.updatedAt);
 
       await FarmRejection.create(
         {

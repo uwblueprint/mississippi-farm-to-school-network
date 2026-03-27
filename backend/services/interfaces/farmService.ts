@@ -52,7 +52,7 @@ interface IFarmService {
    * @returns a FarmDTO with the updated farm's information
    * @throws Error if farm update fails
    */
-  rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO>
+  rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;
