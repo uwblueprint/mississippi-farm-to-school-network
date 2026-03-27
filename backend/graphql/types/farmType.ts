@@ -123,6 +123,7 @@ const farmType = gql`
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
+    farmsByStatus(status: FarmStatus!): [FarmDTO!]!
   }
 
   type Mutation {

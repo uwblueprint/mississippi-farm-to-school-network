@@ -135,7 +135,10 @@ class FarmService implements IFarmService {
         return this.convertToFarmDTO(currentFarm);
       }
 
-      updatedFarm = await this.updateFarm(farmId, { status: FarmStatus.APPROVED });
+      currentFarm.status = FarmStatus.APPROVED;
+      await currentFarm.save();
+      await currentFarm.reload();
+      updatedFarm = this.convertToFarmDTO(currentFarm);
     } catch (error: unknown) {
       Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
       throw error;

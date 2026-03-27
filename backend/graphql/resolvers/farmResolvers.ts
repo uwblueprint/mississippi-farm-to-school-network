@@ -4,8 +4,8 @@ import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
+import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, Role } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
-import { CreateFarmInput, FarmDTO, FarmFilter, UpdateFarmInput, Role } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import EmailService from '@/services/implementations/emailService';
 import IEmailService from '@/services/interfaces/emailService';
@@ -20,6 +20,7 @@ const farmResolvers = {
     farms: async (_parent: undefined, { filter }: { filter?: FarmFilter }) => {
       return farmService.getFarms(filter);
     },
+<<<<<<< MFSNW26-addFarmById-graphql
     farmById: async (
       _parent: undefined,
       { id }: { id: string },
@@ -27,6 +28,15 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.getFarmById(id);
+=======
+    farmsByStatus: async (
+      _parent: undefined,
+      { status }: { status: FarmStatus },
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmsByStatus(status);
+>>>>>>> main
     },
   },
 
