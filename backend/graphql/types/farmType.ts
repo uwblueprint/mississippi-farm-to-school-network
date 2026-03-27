@@ -21,7 +21,7 @@ const farmType = gql`
   type FarmDTO {
     id: ID!
     owner_user_id: ID!
-    owner: UserDTO!
+    owner: UserDTO
     usda_farm_id: Int
     farm_name: String!
     description: String!
@@ -122,6 +122,7 @@ const farmType = gql`
 
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
+    farmsByStatus(status: FarmStatus!): [FarmDTO!]!
   }
 
   type Mutation {
