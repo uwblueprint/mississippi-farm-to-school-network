@@ -43,6 +43,16 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   approveFarm(id: string): Promise<FarmDTO>;
+
+  /**
+   * Update a farm's status to REJECTED & attempt to email farm owner
+   * @param id farm's id
+   * @param rejectionReason reason for rejecting the farm application
+   * @param rejectedByUserId id of the user rejecting the farm application
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm update fails
+   */
+  rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO>
 }
 
 export default IFarmService;

@@ -66,6 +66,23 @@ const farmResolvers = {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.approveFarm(id);
     },
+    rejectFarm: async (
+      _parent: undefined,
+      { id, input }: { id: string; input: { user_id: string; rejection_reason: string } },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      const rejectedFarm = await farmService.rejectFarm(id, input.user_id, input.rejection_reason);
+
+      const subject = 'Farm Application Rejected';
+      const emailBody = `<h2>Farm Application Rejected</h2>
+                      <p>Your farm application for ${rejectedFarm.farm_name} has been rejected.</p>
+                      <p>Reason for rejection: ${input.rejection_reason}</p>`;
+      const owner = await userService.getUserById(rejectedFarm.owner_user_id);
+      await emailService.sendEmail(owner.email, subject, emailBody);
+
+      return rejectedFarm;
+    },
   },
 
   FarmDTO: {
