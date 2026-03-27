@@ -231,12 +231,7 @@ class FarmService implements IFarmService {
       if (!farm) {
         throw new Error(`farmId ${farmId} not found.`);
       }
-      const data = farm.toJSON();
-      return {
-        ...data,
-        createdAt: data.createdAt.toISOString(),
-        updatedAt: data.updatedAt.toISOString(),
-      } as FarmDTO;
+      return this.convertToFarmDTO(farm);
     } catch (error: unknown) {
       Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
       throw error;
