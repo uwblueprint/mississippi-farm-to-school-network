@@ -162,6 +162,74 @@ class FarmService implements IFarmService {
     return updatedFarm;
   }
 
+  async rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO> {
+    const sequelize = Farm.sequelize;
+    if (!sequelize) {
+      throw new Error('Sequelize instance not found on Farm model');
+    }
+    let updatedFarm: FarmDTO;
+
+    return await sequelize.transaction(async (transaction) => {
+      const currentFarm = await Farm.findByPk(farmId, { transaction });
+
+      if (!currentFarm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (currentFarm.status == FarmStatus.REJECTED) {
+        Logger.warn(`Farm with id ${farmId} is already rejected.`);
+        return this.convertToFarmDTO(currentFarm);
+      }
+
+      const farmSnapshot = {
+        ...currentFarm.toJSON(),
+        location: {
+          type: currentFarm.location.type,
+          coordinates: [
+            currentFarm.location.coordinates[0],
+            currentFarm.location.coordinates[1],
+          ],
+        },
+        farm_snapshot_updated_at: currentFarm.updatedAt,
+      };
+
+      const farm_snapshot_updated_at =
+      currentFarm.updatedAt instanceof Date
+      ? currentFarm.updatedAt : new Date(currentFarm.updatedAt);
+
+      await FarmRejection.create(
+        {
+          farm_id: currentFarm.id,
+          rejected_by_user_id: rejectedByUserId,
+          rejection_reason: rejectionReason,
+          farm_snapshot: farmSnapshot,
+          farm_snapshot_updated_at,
+        },
+        { transaction }
+      );
+
+      currentFarm.status = FarmStatus.REJECTED;
+      await currentFarm.save({ transaction });
+      await currentFarm.reload({ transaction });
+      updatedFarm = this.convertToFarmDTO(currentFarm);
+
+      try {
+        const ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
+        const subject = 'Your Farm Application Has Been Rejected';
+        const emailBody = `<h2>Your Farm Application Has Been Rejected</h2>
+                          <p>Your farm application for ${updatedFarm.farm_name} has been rejected.</p>
+                          <p>Reason for rejection: ${rejectionReason}</p>`;
+        await emailService.sendEmail(ownerEmail, subject, emailBody);
+      } catch (error: unknown) {
+        Logger.warn(
+          `Farm rejected but failed to send rejection email. Reason = ${getErrorMessage(error)}`
+        );
+      }
+
+      return updatedFarm;
+    });
+  }
+
   private convertToFarmDTOs(farms: Farm[]): FarmDTO[] {
     return farms.map((farm) => this.convertToFarmDTO(farm));
   }
