@@ -132,6 +132,7 @@ const farmType = gql`
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
+    rejectFarm(id: ID!, input: RejectFarmInput!): FarmDTO!
   }
 `;
 
