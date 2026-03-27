@@ -5,7 +5,9 @@ import UserService from '@/services/implementations/userService';
 import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
+import { AuthContext } from '@/middlewares/auth';
 import { AuthDTO, RegisterUserDTO, Role, SignUpMethod } from '@/types';
+import authHelper from '@/utilities/authHelpers';
 
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
@@ -51,7 +53,12 @@ const authResolvers = {
       const token = await authService.renewToken(refreshToken);
       return token.accessToken;
     },
-    logout: async (_parent: undefined, { userId }: { userId: string }): Promise<boolean> => {
+    logout: async (
+      _parent: undefined,
+      { userId }: { userId: string },
+      context: AuthContext
+    ): Promise<boolean> => {
+      await authHelper.requireOwnerOrAdmin(context, userId);
       await authService.revokeTokens(userId);
       return true;
     },
