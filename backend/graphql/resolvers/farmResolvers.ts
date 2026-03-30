@@ -20,6 +20,14 @@ const farmResolvers = {
     farms: async (_parent: undefined, { filter }: { filter?: FarmFilter }) => {
       return farmService.getFarms(filter);
     },
+    farmById: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmById(id);
+    },
     farmsByStatus: async (
       _parent: undefined,
       { status }: { status: FarmStatus },
