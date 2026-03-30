@@ -29,8 +29,8 @@ const userType = gql`
     email: String!
     role: Role!
     is_verified: Boolean!
-    first_name: String!
-    last_name: String!
+    firstName: String
+    lastName: String
     phone: String
   }
 
@@ -46,10 +46,17 @@ const userType = gql`
     email: String!
     role: Role!
     password: String
+    firstName: String
+    lastName: String
+    phone: String
   }
 
   input UpdateUserDTO {
     email: String!
+    role: Role!
+    firstName: String
+    lastName: String
+    phone: String
   }
 `;
 

@@ -31,8 +31,8 @@ export type UserDTO = {
   email: string;
   role: Role;
   is_verified: boolean;
-  first_name: string;
-  last_name: string;
+  firstName: string | null;
+  lastName: string | null;
   phone: string | null;
 };
 
@@ -40,10 +40,17 @@ export type CreateUserDTO = {
   email: string;
   role: Role;
   password?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 };
 
 export type UpdateUserDTO = {
   email: string;
+  role: Role;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 };
 
 export type CompleteUserProfileInput = {

@@ -21,8 +21,8 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         phone: user.phone,
       };
     } catch (error: unknown) {
@@ -47,8 +47,8 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         phone: user.phone,
       };
     } catch (error: unknown) {
@@ -78,8 +78,8 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: true,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         phone: user.phone,
       };
     } catch (error: unknown) {
@@ -145,8 +145,8 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         phone: user.phone,
       };
     } catch (error: unknown) {
@@ -164,8 +164,8 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
-        first_name: user.first_name,
-        last_name: user.last_name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         phone: user.phone,
       }));
     } catch (error: unknown) {
@@ -209,6 +209,9 @@ class UserService implements IUserService {
           email: user.email,
           role: user.role,
           is_verified: false,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          phone: user.phone ?? null,
         });
       } catch (postgresError) {
         // Rollback Firebase user creation if Postgres fails
@@ -239,8 +242,8 @@ class UserService implements IUserService {
       email: newUser.email,
       role: newUser.role,
       is_verified: newUser.is_verified,
-      first_name: newUser.first_name,
-      last_name: newUser.last_name,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
       phone: newUser.phone,
     };
   }
@@ -265,6 +268,10 @@ class UserService implements IUserService {
       // Update in Postgres
       await existingUser.update({
         email: user.email,
+        role: user.role,
+        firstName: user.firstName ?? existingUser.firstName,
+        lastName: user.lastName ?? existingUser.lastName,
+        phone: user.phone ?? existingUser.phone,
       });
 
       return {
@@ -273,8 +280,8 @@ class UserService implements IUserService {
         email: existingUser.email,
         role: existingUser.role,
         is_verified: existingUser.is_verified,
-        first_name: existingUser.first_name,
-        last_name: existingUser.last_name,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
         phone: existingUser.phone,
       };
     } catch (error: unknown) {
@@ -314,8 +321,8 @@ class UserService implements IUserService {
 
       await existingUser.update({
         email: input.email,
-        first_name: input.firstName,
-        last_name: input.lastName,
+        firstName: input.firstName,
+        lastName: input.lastName,
         phone: digits,
         role,
       });
@@ -326,8 +333,8 @@ class UserService implements IUserService {
         email: existingUser.email,
         role: existingUser.role,
         is_verified: existingUser.is_verified,
-        first_name: existingUser.first_name,
-        last_name: existingUser.last_name,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
         phone: existingUser.phone,
       };
     } catch (error: unknown) {
@@ -361,6 +368,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [
@@ -407,6 +417,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [
