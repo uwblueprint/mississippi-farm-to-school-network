@@ -3,7 +3,6 @@ import { gql } from 'apollo-server';
 const farmType = gql`
   scalar JSON
 
-
   enum FarmStatus {
     PENDING_APPROVAL
     APPROVED
