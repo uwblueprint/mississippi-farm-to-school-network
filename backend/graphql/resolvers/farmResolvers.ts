@@ -20,7 +20,6 @@ const farmResolvers = {
     farms: async (_parent: undefined, { filter }: { filter?: FarmFilter }) => {
       return farmService.getFarms(filter);
     },
-<<<<<<< MFSNW26-addFarmById-graphql
     farmById: async (
       _parent: undefined,
       { id }: { id: string },
@@ -28,7 +27,7 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.getFarmById(id);
-=======
+    },
     farmsByStatus: async (
       _parent: undefined,
       { status }: { status: FarmStatus },
@@ -36,7 +35,6 @@ const farmResolvers = {
     ): Promise<FarmDTO[]> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.getFarmsByStatus(status);
->>>>>>> main
     },
   },
 
