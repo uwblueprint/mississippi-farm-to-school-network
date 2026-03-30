@@ -8,14 +8,12 @@ export const up: MigrationFn = async (params) => {
 
   await queryInterface.addColumn('users', 'first_name', {
     type: DataTypes.STRING,
-    allowNull: false,
-    defaultValue: 'default_value',
+    allowNull: true,
   });
 
   await queryInterface.addColumn('users', 'last_name', {
     type: DataTypes.STRING,
-    allowNull: false,
-    defaultValue: 'default_value',
+    allowNull: true,
   });
 
   await queryInterface.addColumn('users', 'phone', {
