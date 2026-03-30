@@ -1,14 +1,15 @@
 import nodemailerConfig from '@/nodemailer.config';
+import { ForbiddenError } from 'apollo-server';
 import AuthService from '@/services/implementations/authService';
 import EmailService from '@/services/implementations/emailService';
 import UserService from '@/services/implementations/userService';
 import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
-import { CreateUserDTO, UpdateUserDTO, UserDTO } from '@/types';
-import { AuthenticationError } from 'apollo-server-express';
-
+import { AuthContext } from '@/middlewares/auth';
+import { CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
 import Farm from '@/models/farm.model';
+import authHelper from '@/utilities/authHelpers';
 
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
@@ -16,56 +17,79 @@ const authService: IAuthService = new AuthService(userService, emailService);
 
 const userResolvers = {
   Query: {
-    me: async (_: unknown, __: unknown, context: { firebaseUid?: string }): Promise<UserDTO> => {
-      if (!context.firebaseUid) {
-        throw new AuthenticationError('You must be logged in to view your profile.');
-      }
-
-      // Fetch the user from the database using the UID
-      const user = await userService.getCurrentUser(context.firebaseUid);
-
-      if (!user) {
-        throw new AuthenticationError('User not found in database.');
-      }
-
-      return user;
+    me: async (_: unknown, __: unknown, context: AuthContext): Promise<UserDTO> => {
+      return authHelper.requireAuth(context);
     },
-    userById: async (_parent: undefined, { id }: { id: string }): Promise<UserDTO> => {
+    userById: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      await authHelper.requireOwnerOrAdmin(context, id);
       return userService.getUserById(id);
     },
-    userByEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
+    userByEmail: async (
+      _parent: undefined,
+      { email }: { email: string },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
       return userService.getUserByEmail(email);
     },
-    users: async (): Promise<UserDTO[]> => {
+    users: async (_parent: undefined, __: unknown, context: AuthContext): Promise<UserDTO[]> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
       return userService.getUsers();
     },
   },
   Mutation: {
-    createUser: async (_parent: undefined, { user }: { user: CreateUserDTO }): Promise<UserDTO> => {
+    createUser: async (
+      _parent: undefined,
+      { user }: { user: CreateUserDTO },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
       const newUser = await userService.createUser(user);
       await authService.sendEmailVerificationLink(newUser.email);
       return newUser;
     },
     updateUser: async (
       _parent: undefined,
-      { id, user }: { id: string; user: UpdateUserDTO }
+      { id, user }: { id: string; user: UpdateUserDTO },
+      context: AuthContext
     ): Promise<UserDTO> => {
+      await authHelper.requireOwnerOrAdmin(context, id);
       return userService.updateUserById(id, user);
     },
-    deleteUserById: async (_parent: undefined, { id }: { id: string }): Promise<boolean> => {
+    deleteUserById: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<boolean> => {
+      await authHelper.requireOwnerOrAdmin(context, id);
       await userService.deleteUserById(id);
       return true;
     },
     deleteUserByEmail: async (
       _parent: undefined,
-      { email }: { email: string }
+      { email }: { email: string },
+      context: AuthContext
     ): Promise<boolean> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
       await userService.deleteUserByEmail(email);
       return true;
     },
-    verifyUserEmail: async (_parent: undefined, { email }: { email: string }): Promise<UserDTO> => {
-      const user = await userService.verifyUserEmail(email);
-      return user;
+    verifyUserEmail: async (
+      _parent: undefined,
+      { email }: { email: string },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      const currentUser = await authHelper.requireAuth(context);
+
+      if (currentUser.role !== Role.ADMIN && currentUser.email !== email) {
+        throw new ForbiddenError('You do not have permission to access or modify this resource.');
+      }
+
+      return userService.verifyUserEmail(email);
     },
   },
   UserDTO: {

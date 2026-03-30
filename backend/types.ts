@@ -41,7 +41,6 @@ export type CreateUserDTO = {
 
 export type UpdateUserDTO = {
   email: string;
-  role: Role;
 };
 
 export type RegisterUserDTO = {
@@ -113,4 +112,39 @@ export type AuthDTO = Token & UserDTO;
 export enum SignUpMethod {
   PASSWORD = 'PASSWORD',
   GOOGLE = 'GOOGLE',
+}
+
+export type UpdateFarmInput = {
+  usda_farm_id?: number;
+  farm_name?: string;
+  description?: string;
+  primary_phone?: string;
+  primary_email?: string;
+  website?: string;
+  social_media?: Record<string, unknown>;
+  farm_address?: string;
+  counties_served?: string[];
+  cities_served?: string[];
+  location?: { type: 'Point'; coordinates: [number, number] };
+  food_categories?: string[];
+  market_sales_data?: { market: string; times: string }[];
+  bipoc_owned?: boolean;
+  gap_certified?: boolean;
+  food_safety_plan?: boolean;
+  agritourism?: boolean;
+  sells_at_markets?: boolean;
+  csa_boxes?: boolean;
+  online_sales?: boolean;
+  delivery?: boolean;
+  f2s_experience?: boolean;
+  interested_in_f2s?: boolean;
+};
+
+// Farm Filter
+export interface FarmFilter {
+  status?: FarmStatus;
+  counties_served?: string[];
+  cities_served?: string[];
+  food_categories?: string[];
+  approved?: boolean; // convenience filter: true → status === APPROVED, false → status !== APPROVED
 }

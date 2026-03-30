@@ -9,7 +9,7 @@ const emailResolvers = {
     sendEmail: async (
       _: unknown,
       { to, subject, htmlBody }: { to: string; subject: string; htmlBody: string }
-    ) => {
+    ): Promise<boolean> => {
       await emailService.sendEmail(to, subject, htmlBody);
       return true;
     },

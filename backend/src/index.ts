@@ -34,7 +34,7 @@ const server = new ApolloServer({
   schema: executableSchema,
   context: async ({ req }) => {
     const authHeader = req.headers.authorization || '';
-    let firebaseUid: string | null = null;
+    let firebaseUid: string | undefined;
 
     if (authHeader.startsWith('Bearer ')) {
       const token = authHeader.split(' ')[1];

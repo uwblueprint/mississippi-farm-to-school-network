@@ -1,4 +1,5 @@
-import { CreateFarmInput, FarmDTO } from '@/types';
+import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput } from '@/types';
+import Farm from '@/models/farm.model';
 
 interface IFarmService {
   /**
@@ -19,6 +20,23 @@ interface IFarmService {
    * @throws Error if failure
    */
   getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]>;
+
+  /**
+   * Get farms with optional filtering
+   * @param filter optional farm filter criteria
+   * @returns array of FarmDTOs
+   * @throws Error if farm retrieval fails
+   */
+  getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>>;
+
+  /**
+   * Update a farm by id
+   * @param id farm's id
+   * @param input the farm fields to be updated
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm update fails
+   */
+  updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO>;
 }
 
 export default IFarmService;
