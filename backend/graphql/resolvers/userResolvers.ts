@@ -94,7 +94,7 @@ const userResolvers = {
     completeUserProfile: async (
       _parent: undefined,
       { input }: { input: CompleteUserProfileInput },
-      context: { firebaseUid?: string }
+      context: AuthContext
     ): Promise<UserDTO> => {
       await authHelper.requireAuth(context);
       return userService.completeUserProfile(input);
