@@ -277,7 +277,11 @@ class FarmService implements IFarmService {
     farmBeforeUpdate: FarmDTO
   ): Partial<FarmDTO> {
     const rejectionSnapshot = farmJson.rejection_snapshot;
-    if (rejectionSnapshot && typeof rejectionSnapshot === 'object' && !Array.isArray(rejectionSnapshot)) {
+    if (
+      rejectionSnapshot &&
+      typeof rejectionSnapshot === 'object' &&
+      !Array.isArray(rejectionSnapshot)
+    ) {
       return rejectionSnapshot as Partial<FarmDTO>;
     }
 
@@ -285,7 +289,12 @@ class FarmService implements IFarmService {
   }
 
   private getRejectionReason(farmJson: Record<string, unknown>): string {
-    const reasonFields = ['rejection_reason', 'rejectionReason', 'rejection_notes', 'rejectionNotes'];
+    const reasonFields = [
+      'rejection_reason',
+      'rejectionReason',
+      'rejection_notes',
+      'rejectionNotes',
+    ];
     for (const field of reasonFields) {
       const value = farmJson[field];
       if (typeof value === 'string' && value.trim().length > 0) {

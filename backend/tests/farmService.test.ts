@@ -4,9 +4,7 @@ import EmailService from '@/services/implementations/emailService';
 import Farm from '@/models/farm.model';
 import { FarmStatus } from '@/types';
 
-const mockSendEmail = jest
-  .spyOn(EmailService.prototype, 'sendEmail')
-  .mockResolvedValue(undefined);
+const mockSendEmail = jest.spyOn(EmailService.prototype, 'sendEmail').mockResolvedValue(undefined);
 
 // Mock the entire Farm model module
 jest.mock('@/models/farm.model');
