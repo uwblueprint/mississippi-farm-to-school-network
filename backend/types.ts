@@ -165,9 +165,9 @@ export type AnnouncementDTO = {
   id: string;
   message: string;
   start_date: string;
-  end_date: string;
+  end_date?: string;
   created_by: string;
-  deleted_at: string | null;
+  deleted_at?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -175,6 +175,16 @@ export type AnnouncementDTO = {
 export type CreateAnnouncementDTO = {
   message: string;
   start_date: string;
-  end_date: string;
-  created_by: string;
+  end_date?: string;
+};
+
+export type UpdateAnnouncementDTO = {
+  message?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+export type CreateAnnouncementResult = {
+  announcement: AnnouncementDTO | null;
+  overlappingAnnouncements: AnnouncementDTO[];
 };

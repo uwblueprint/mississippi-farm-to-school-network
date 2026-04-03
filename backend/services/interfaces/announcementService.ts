@@ -1,23 +1,23 @@
-import { AnnouncementDTO, CreateAnnouncementDTO, UpdateAnnouncementDTO } from '@/types';
+import { AnnouncementDTO, CreateAnnouncementDTO, CreateAnnouncementResult, UpdateAnnouncementDTO } from '@/types';
 
 interface IAnnouncementService {
   /**
    * Create an announcement
    * @param createdBy user's id
    * @param announcement announcement details
-   * @returns AnnouncementDTO object containing the created announcement's information
+   * @returns CreateAnnouncementResult object containing the created announcement's information and overlapping announcements
    * @throws Error if announcement creation fails
    */
-  createAnnouncement(createdBy: string, announcement: CreateAnnouncementDTO): Promise<AnnouncementDTO>;
+  createAnnouncement(createdBy: string, announcement: CreateAnnouncementDTO): Promise<CreateAnnouncementResult>;
 
   /**
    * Update an announcement
    * @param id announcement's id
    * @param announcement announcement details
-   * @returns AnnouncementDTO object containing the updated announcement's information
+   * @returns CreateAnnouncementResult object containing the updated announcement's information and overlapping announcements
    * @throws Error if announcement update fails
    */
-  updateAnnouncement(id: string, announcement: UpdateAnnouncementDTO): Promise<AnnouncementDTO>;
+  updateAnnouncement(id: string, announcement: UpdateAnnouncementDTO): Promise<CreateAnnouncementResult>;
 
   /**
    * Delete an announcement
@@ -40,7 +40,6 @@ interface IAnnouncementService {
    * @throws Error if announcement retrieval fails
    */
   getPastAnnouncements(): Promise<AnnouncementDTO[]>;
-
 
   /**
    * Get overlapping announcements
