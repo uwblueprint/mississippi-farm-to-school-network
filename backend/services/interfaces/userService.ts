@@ -1,4 +1,11 @@
-import { CompleteUserProfileInput, CreateUserDTO, Role, UpdateUserDTO, UserDTO, SignUpMethod } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  UpdateUserDTO,
+  UserDTO,
+  SignUpMethod,
+} from '@/types';
 
 interface IUserService {
   /**

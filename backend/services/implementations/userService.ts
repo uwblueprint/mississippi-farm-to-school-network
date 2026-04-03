@@ -1,6 +1,13 @@
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
-import { CompleteUserProfileInput, CreateUserDTO, Role, SignUpMethod, UpdateUserDTO, UserDTO } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  SignUpMethod,
+  UpdateUserDTO,
+  UserDTO,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import User from '@/models/user.model';
@@ -292,8 +299,16 @@ class UserService implements IUserService {
 
   async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
     try {
-      if (!input.firebase_uid || !input.email || !input.firstName || !input.lastName || !input.phone) {
-        throw new Error('All fields are required: firebase_uid, email, firstName, lastName, phone.');
+      if (
+        !input.firebase_uid ||
+        !input.email ||
+        !input.firstName ||
+        !input.lastName ||
+        !input.phone
+      ) {
+        throw new Error(
+          'All fields are required: firebase_uid, email, firstName, lastName, phone.'
+        );
       }
 
       if (!input.firstName.trim() || !input.lastName.trim()) {
@@ -315,9 +330,7 @@ class UserService implements IUserService {
         throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
-      const role = input.email.endsWith('@mississippifarmtoschool.org')
-        ? Role.ADMIN
-        : Role.FARMER;
+      const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
 
       await existingUser.update({
         email: input.email,
