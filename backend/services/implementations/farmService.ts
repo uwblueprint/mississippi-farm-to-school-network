@@ -2,7 +2,14 @@ import { Op, QueryTypes, UniqueConstraintError } from 'sequelize';
 
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, GeoPoint, UpdateFarmInput } from '@/types';
+import {
+  CreateFarmInput,
+  FarmDTO,
+  FarmFilter,
+  FarmStatus,
+  GeoPoint,
+  UpdateFarmInput,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 
