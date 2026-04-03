@@ -185,6 +185,6 @@ export type UpdateAnnouncementDTO = {
 };
 
 export type CreateAnnouncementResult = {
-  announcement: AnnouncementDTO | null;
+  announcement: AnnouncementDTO;
   overlappingAnnouncements: AnnouncementDTO[];
 };

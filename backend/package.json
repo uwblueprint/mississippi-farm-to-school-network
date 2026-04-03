@@ -21,6 +21,7 @@
     "graphql": "^16.9.0",
     "graphql-scalars": "^1.25.0",
     "lodash": "^4.17.21",
+    "luxon": "^3.7.2",
     "node-fetch": "^2.7.0",
     "nodemailer": "^8.0.1",
     "pg": "^8.18.0",
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.0",
+    "@types/luxon": "^3.7.1",
     "@types/node": "^25.1.0",
     "@types/node-fetch": "^2.6.11",
     "@types/nodemailer": "^7.0.9",
