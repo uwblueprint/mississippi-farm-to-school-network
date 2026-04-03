@@ -232,10 +232,13 @@ describe('AnnouncementService.getLiveAndUpcomingAnnouncements', () => {
 
     await service.getLiveAndUpcomingAnnouncements();
 
-    // Confirm the query filters out past end_dates — the where clause should
-    // require end_date IS NULL or end_date >= now, which excludes expired rows
-    const whereClause = MockAnnouncement.findAll.mock.calls[0][0]?.where as Record<string, unknown>;
-    expect(whereClause.deleted_at).toBeNull();
+    // Confirm the query requires end_date IS NULL or end_date >= now
+    const whereClause = MockAnnouncement.findAll.mock.calls[0][0]?.where as any;
+    const orClauses: any[] = whereClause[Op.or];
+    const hasNullEndDate = orClauses.some((clause) => clause?.end_date === null);
+    const hasEndDateGte = orClauses.some((clause) => clause?.end_date?.[Op.gte] instanceof Date);
+    expect(hasNullEndDate).toBe(true);
+    expect(hasEndDateGte).toBe(true);
   });
 
   test('returns live and upcoming announcements ordered by start_date ASC', async () => {

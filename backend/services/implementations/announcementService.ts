@@ -32,7 +32,7 @@ class AnnouncementService implements IAnnouncementService {
     if (endDate && isPast(endDate)) {
       throw new Error('End date cannot be in the past');
     }
-    if (announcement.end_date && announcement.start_date > announcement.end_date) {
+    if (endDate && startDate > endDate) {
       throw new Error('Start date cannot be after end date');
     }
 
@@ -117,7 +117,7 @@ class AnnouncementService implements IAnnouncementService {
     if (announcementToDelete.end_date && isPast(announcementToDelete.end_date)) {
       throw new Error('Cannot delete announcements that have ended.');
     }
-    // deleting an already deleted farm is a no-op
+    // deleting an already deleted announcement is a no-op
     if (announcementToDelete.deleted_at) {
       return this.convertToAnnouncementDTO(announcementToDelete);
     }
