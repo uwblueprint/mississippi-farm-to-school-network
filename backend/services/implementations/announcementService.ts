@@ -1,6 +1,11 @@
 import IAnnouncementService from '@/services/interfaces/announcementService';
 import Announcement from '@/models/announcement.model';
-import { AnnouncementDTO, CreateAnnouncementDTO, CreateAnnouncementResult, UpdateAnnouncementDTO } from '@/types';
+import {
+  AnnouncementDTO,
+  CreateAnnouncementDTO,
+  CreateAnnouncementResult,
+  UpdateAnnouncementDTO,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import { DateTime } from 'luxon';
@@ -22,7 +27,10 @@ const isPast = (date: Date) => {
 };
 
 class AnnouncementService implements IAnnouncementService {
-  async createAnnouncement(createdBy: string, announcement: CreateAnnouncementDTO): Promise<CreateAnnouncementResult> {
+  async createAnnouncement(
+    createdBy: string,
+    announcement: CreateAnnouncementDTO
+  ): Promise<CreateAnnouncementResult> {
     const startDate = toStartOfDayCST(announcement.start_date);
     const endDate = announcement.end_date ? toEndOfDayCST(announcement.end_date) : null;
 
@@ -56,14 +64,20 @@ class AnnouncementService implements IAnnouncementService {
     }
   }
 
-  async updateAnnouncement(id: string, newAnnouncement: UpdateAnnouncementDTO): Promise<CreateAnnouncementResult> {
+  async updateAnnouncement(
+    id: string,
+    newAnnouncement: UpdateAnnouncementDTO
+  ): Promise<CreateAnnouncementResult> {
     const announcementToUpdate = await Announcement.findByPk(id);
 
     if (!announcementToUpdate) {
       throw new Error('Announcement not found');
     }
 
-    if ((announcementToUpdate.end_date && isPast(announcementToUpdate.end_date)) || (announcementToUpdate.deleted_at)) {
+    if (
+      (announcementToUpdate.end_date && isPast(announcementToUpdate.end_date)) ||
+      announcementToUpdate.deleted_at
+    ) {
       throw new Error('Cannot update announcements that have ended.');
     }
 
@@ -73,7 +87,6 @@ class AnnouncementService implements IAnnouncementService {
     const endDate = newAnnouncement.end_date
       ? toEndOfDayCST(newAnnouncement.end_date)
       : announcementToUpdate.end_date;
-
 
     if (newAnnouncement.start_date && isPast(startDate)) {
       throw new Error('Start date cannot be in the past');
@@ -91,7 +104,11 @@ class AnnouncementService implements IAnnouncementService {
     }
 
     try {
-      const overlappingAnnouncements = await this.getOverlappingAnnouncements(startDate, endDate, id);
+      const overlappingAnnouncements = await this.getOverlappingAnnouncements(
+        startDate,
+        endDate,
+        id
+      );
 
       const updatedAnnouncement = await announcementToUpdate.update({
         ...newAnnouncement,
@@ -125,7 +142,6 @@ class AnnouncementService implements IAnnouncementService {
     try {
       const announcement = await announcementToDelete.update({ deleted_at: new Date() });
       return this.convertToAnnouncementDTO(announcement);
-
     } catch (error: unknown) {
       Logger.error(`Failed to delete announcement. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -136,10 +152,7 @@ class AnnouncementService implements IAnnouncementService {
     const announcements = await Announcement.findAll({
       where: {
         deleted_at: null,
-        [Op.or]: [
-          { end_date: null },
-          { end_date: { [Op.gte]: new Date() } },
-        ]
+        [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: new Date() } }],
       },
       order: [['start_date', 'ASC']],
     });
@@ -150,17 +163,18 @@ class AnnouncementService implements IAnnouncementService {
   async getPastAnnouncements(): Promise<AnnouncementDTO[]> {
     const announcements = await Announcement.findAll({
       where: {
-        [Op.or]: [
-          { [Op.not]: { deleted_at: null } },
-          { end_date: { [Op.lt]: new Date() } },
-        ]
+        [Op.or]: [{ [Op.not]: { deleted_at: null } }, { end_date: { [Op.lt]: new Date() } }],
       },
       order: [['start_date', 'DESC']],
     });
     return announcements.map(this.convertToAnnouncementDTO);
   }
 
-  async getOverlappingAnnouncements(startDate: Date, endDate: Date | null, excludeId?: string): Promise<AnnouncementDTO[]> {
+  async getOverlappingAnnouncements(
+    startDate: Date,
+    endDate: Date | null,
+    excludeId?: string
+  ): Promise<AnnouncementDTO[]> {
     const announcements = await Announcement.findAll({
       where: {
         // while Op.and is redundant, it allows for conditional querying
@@ -176,8 +190,8 @@ class AnnouncementService implements IAnnouncementService {
               {
                 [Op.and]: [
                   { end_date: null },
-                  endDate ? { start_date: { [Op.lte]: endDate } } : {}
-                ]
+                  endDate ? { start_date: { [Op.lte]: endDate } } : {},
+                ],
               },
 
               // existing event is bounded:
@@ -186,13 +200,13 @@ class AnnouncementService implements IAnnouncementService {
               {
                 [Op.and]: [
                   { end_date: { [Op.gte]: startDate } },
-                  endDate ? { start_date: { [Op.lte]: endDate } } : {}
-                ]
+                  endDate ? { start_date: { [Op.lte]: endDate } } : {},
+                ],
               },
-            ]
+            ],
           },
-        ]
-      }
+        ],
+      },
     });
     return announcements.map(this.convertToAnnouncementDTO);
   }

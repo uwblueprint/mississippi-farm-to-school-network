@@ -37,7 +37,7 @@ const makeAnnouncementInstance = (overrides: Partial<Record<string, unknown>> = 
     ...data,
     update: jest.fn().mockImplementation(async function (
       this: Record<string, unknown>,
-      values: Record<string, unknown>,
+      values: Record<string, unknown>
     ) {
       Object.assign(this, values);
       return this;
@@ -58,7 +58,7 @@ describe('AnnouncementService.createAnnouncement', () => {
 
   test('past start_date throws an error', async () => {
     await expect(
-      service.createAnnouncement('user-1', { message: 'Hello', start_date: YESTERDAY }),
+      service.createAnnouncement('user-1', { message: 'Hello', start_date: YESTERDAY })
     ).rejects.toThrow('Start date cannot be in the past');
   });
 
@@ -68,13 +68,16 @@ describe('AnnouncementService.createAnnouncement', () => {
         message: 'Hello',
         start_date: NEXT_WEEK,
         end_date: TOMORROW,
-      }),
+      })
     ).rejects.toThrow('Start date cannot be after end date');
   });
 
   test("today's start_date succeeds", async () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
-    const instance = makeAnnouncementInstance({ start_date: new Date(`${TODAY}T00:00:00.000-06:00`), end_date: null });
+    const instance = makeAnnouncementInstance({
+      start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
+      end_date: null,
+    });
     MockAnnouncement.create.mockResolvedValue(instance as any);
 
     const result = await service.createAnnouncement('user-1', {
@@ -86,9 +89,12 @@ describe('AnnouncementService.createAnnouncement', () => {
     expect(result.overlappingAnnouncements).toEqual([]);
   });
 
-  test("1 day announcement", async () => {
+  test('1 day announcement', async () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
-    const instance = makeAnnouncementInstance({ start_date: new Date(`${TODAY}T00:00:00.000-06:00`), end_date: null });
+    const instance = makeAnnouncementInstance({
+      start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
+      end_date: null,
+    });
     MockAnnouncement.create.mockResolvedValue(instance as any);
 
     const result = await service.createAnnouncement('user-1', {
@@ -137,7 +143,7 @@ describe('AnnouncementService.updateAnnouncement', () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
 
     await expect(
-      service.updateAnnouncement('announcement-id', { message: 'testing' }),
+      service.updateAnnouncement('announcement-id', { message: 'testing' })
     ).rejects.toThrow('Cannot update announcements that have ended.');
   });
 
@@ -148,16 +154,16 @@ describe('AnnouncementService.updateAnnouncement', () => {
     MockAnnouncement.findByPk.mockResolvedValue(deletedAnnouncement as any);
 
     await expect(
-      service.updateAnnouncement('announcement-1', { message: 'Updated' }),
+      service.updateAnnouncement('announcement-1', { message: 'Updated' })
     ).rejects.toThrow('Cannot update announcements that have ended.');
   });
 
   test('updating a nonexistent announcement throws an error', async () => {
     MockAnnouncement.findByPk.mockResolvedValue(null);
 
-    await expect(
-      service.updateAnnouncement('nonexistent', { message: 'Updated' }),
-    ).rejects.toThrow('Announcement not found');
+    await expect(service.updateAnnouncement('nonexistent', { message: 'Updated' })).rejects.toThrow(
+      'Announcement not found'
+    );
   });
 });
 
@@ -178,7 +184,7 @@ describe('AnnouncementService.deleteAnnouncement', () => {
     const result = await service.deleteAnnouncement('announcement-1');
 
     expect(liveAnnouncement.update).toHaveBeenCalledWith(
-      expect.objectContaining({ deleted_at: expect.any(Date) }),
+      expect.objectContaining({ deleted_at: expect.any(Date) })
     );
     expect(result.deleted_at).toBeDefined();
   });
@@ -202,7 +208,7 @@ describe('AnnouncementService.deleteAnnouncement', () => {
     MockAnnouncement.findByPk.mockResolvedValue(expiredAnnouncement as any);
 
     await expect(service.deleteAnnouncement('announcement-1')).rejects.toThrow(
-      'Cannot delete announcements that have ended.',
+      'Cannot delete announcements that have ended.'
     );
   });
 });
@@ -256,7 +262,7 @@ describe('AnnouncementService.getLiveAndUpcomingAnnouncements', () => {
 
     expect(result).toHaveLength(2);
     expect(MockAnnouncement.findAll).toHaveBeenCalledWith(
-      expect.objectContaining({ order: [['start_date', 'ASC']] }),
+      expect.objectContaining({ order: [['start_date', 'ASC']] })
     );
   });
 });
@@ -299,7 +305,7 @@ describe('AnnouncementService.getPastAnnouncements', () => {
     await service.getPastAnnouncements();
 
     expect(MockAnnouncement.findAll).toHaveBeenCalledWith(
-      expect.objectContaining({ order: [['start_date', 'DESC']] }),
+      expect.objectContaining({ order: [['start_date', 'DESC']] })
     );
   });
 });
@@ -320,7 +326,7 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
 
     const result = await service.getOverlappingAnnouncements(
       new Date(`${TODAY}T00:00:00.000-06:00`),
-      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`),
+      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`)
     );
 
     expect(result).toHaveLength(1);
@@ -332,7 +338,7 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
 
     const result = await service.getOverlappingAnnouncements(
       new Date(`${TODAY}T00:00:00.000-06:00`),
-      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`),
+      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`)
     );
 
     expect(result).toEqual([]);
@@ -344,15 +350,13 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
     await service.getOverlappingAnnouncements(
       new Date(`${TODAY}T00:00:00.000-06:00`),
       new Date(`${NEXT_WEEK}T23:59:59.999-06:00`),
-      'announcement-1',
+      'announcement-1'
     );
 
     // Confirm the excludeId condition is present in the Op.and array
     const whereClause = MockAnnouncement.findAll.mock.calls[0][0]?.where as any;
     const andClauses: unknown[] = whereClause[Op.and];
-    const hasExclude = andClauses.some(
-      (clause: any) => clause?.id?.[Op.ne] === 'announcement-1',
-    );
+    const hasExclude = andClauses.some((clause: any) => clause?.id?.[Op.ne] === 'announcement-1');
     expect(hasExclude).toBe(true);
   });
 
@@ -362,7 +366,7 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
 
     const result = await service.getOverlappingAnnouncements(
       new Date(`${TODAY}T00:00:00.000-06:00`),
-      null,
+      null
     );
 
     expect(result).toHaveLength(1);

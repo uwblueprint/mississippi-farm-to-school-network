@@ -1,4 +1,9 @@
-import { AnnouncementDTO, CreateAnnouncementDTO, CreateAnnouncementResult, UpdateAnnouncementDTO } from '@/types';
+import {
+  AnnouncementDTO,
+  CreateAnnouncementDTO,
+  CreateAnnouncementResult,
+  UpdateAnnouncementDTO,
+} from '@/types';
 
 interface IAnnouncementService {
   /**
@@ -8,7 +13,10 @@ interface IAnnouncementService {
    * @returns CreateAnnouncementResult object containing the created announcement's information and overlapping announcements
    * @throws Error if announcement creation fails
    */
-  createAnnouncement(createdBy: string, announcement: CreateAnnouncementDTO): Promise<CreateAnnouncementResult>;
+  createAnnouncement(
+    createdBy: string,
+    announcement: CreateAnnouncementDTO
+  ): Promise<CreateAnnouncementResult>;
 
   /**
    * Update an announcement
@@ -17,7 +25,10 @@ interface IAnnouncementService {
    * @returns CreateAnnouncementResult object containing the updated announcement's information and overlapping announcements
    * @throws Error if announcement update fails
    */
-  updateAnnouncement(id: string, announcement: UpdateAnnouncementDTO): Promise<CreateAnnouncementResult>;
+  updateAnnouncement(
+    id: string,
+    announcement: UpdateAnnouncementDTO
+  ): Promise<CreateAnnouncementResult>;
 
   /**
    * Delete an announcement
@@ -49,7 +60,11 @@ interface IAnnouncementService {
    * @returns array of AnnouncementDTOs
    * @throws Error if announcement retrieval fails
    */
-  getOverlappingAnnouncements(startDate: Date, endDate: Date | null, excludeId?: string): Promise<AnnouncementDTO[]>;
+  getOverlappingAnnouncements(
+    startDate: Date,
+    endDate: Date | null,
+    excludeId?: string
+  ): Promise<AnnouncementDTO[]>;
 }
 
 export default IAnnouncementService;
