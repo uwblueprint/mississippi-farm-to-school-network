@@ -1,4 +1,4 @@
-import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput } from '@/types';
+import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput, FarmStatus } from '@/types';
 import Farm from '@/models/farm.model';
 
 interface IFarmService {
@@ -37,6 +37,23 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO>;
+
+  /**
+   * Get farms by their FarmStatus
+   * @param status the status to filter farms by
+   * @returns array of FarmDTOs
+   * @throws Error if farm retrieval fails
+   */
+  getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]>;
+
+  /**
+   * Update a farm's status to APPROVED & attempt to email farm owner
+   * @param id farm's id
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm update fails
+   */
+  approveFarm(id: string): Promise<FarmDTO>;
+  getFarmById(farmId: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;

@@ -9,9 +9,9 @@ const farmType = gql`
     REJECTED
   }
 
-  type GeoJSONPoint {
-    type: String!
-    coordinates: [Float!]!
+  type Location {
+    lat: Float!
+    lng: Float!
   }
 
   type MarketSalesData {
@@ -22,7 +22,7 @@ const farmType = gql`
   type FarmDTO {
     id: ID!
     owner_user_id: ID!
-    owner: UserDTO!
+    owner: UserDTO
     usda_farm_id: Int
     farm_name: String!
     description: String!
@@ -33,7 +33,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
-    location: GeoJSONPoint!
+    location: Location!
     food_categories: [String!]!
     market_sales_data: [MarketSalesData!]
     bipoc_owned: Boolean!
@@ -62,7 +62,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
-    location: GeoJSONPointInput!
+    location: LocationInput!
     food_categories: [String!]!
     market_sales_data: [MarketSalesDataInput!]
     bipoc_owned: Boolean
@@ -77,9 +77,9 @@ const farmType = gql`
     interested_in_f2s: Boolean
   }
 
-  input GeoJSONPointInput {
-    type: String!
-    coordinates: [Float!]!
+  input LocationInput {
+    lat: Float!
+    lng: Float!
   }
 
   input MarketSalesDataInput {
@@ -106,7 +106,7 @@ const farmType = gql`
     farm_address: String
     counties_served: [String!]
     cities_served: [String!]
-    location: GeoJSONPointInput
+    location: LocationInput
     food_categories: [String!]
     market_sales_data: [MarketSalesDataInput!]
     bipoc_owned: Boolean
@@ -124,11 +124,14 @@ const farmType = gql`
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
+    farmById(id: ID!): FarmDTO!
+    farmsByStatus(status: FarmStatus!): [FarmDTO!]!
   }
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+    approveFarm(id: ID!): FarmDTO!
   }
 `;
 
