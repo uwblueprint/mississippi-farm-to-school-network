@@ -32,7 +32,7 @@ const authResolvers = {
     },
     register: async (_parent: undefined, { user }: { user: RegisterUserDTO }): Promise<AuthDTO> => {
       if (!user.password) {
-        throw new Error('Password is required for registration');
+        throw new Error('Password is required for registration.');
       }
       const newUser = await userService.createUser(
         {

@@ -54,7 +54,7 @@ class FarmService implements IFarmService {
         Logger.warn(
           `Farm creation failed due to a unique constraint. Reason = ${getErrorMessage(error)}`
         );
-        throw new Error('A farm with that USDA farm ID already exists.');
+        throw new Error('Farm with that USDA farm ID already exists.');
       }
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -177,7 +177,7 @@ class FarmService implements IFarmService {
 
     if (!data.location) {
       Logger.error(`Farm ${data.id} has invalid or missing location`);
-      throw new Error(`Farm ${data.id} is missing a valid location`);
+      throw new Error(`Farm with id ${data.id} is missing a valid location.`);
     }
 
     return {
@@ -224,6 +224,19 @@ class FarmService implements IFarmService {
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async getFarmById(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
