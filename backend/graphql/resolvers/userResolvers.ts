@@ -96,7 +96,10 @@ const userResolvers = {
       { input }: { input: CompleteUserProfileInput },
       context: AuthContext
     ): Promise<UserDTO> => {
-      await authHelper.requireAuth(context);
+      const currentUser = await authHelper.requireAuth(context);
+      if (currentUser.firebase_uid !== input.firebase_uid) {
+        throw new ForbiddenError('You do not have permission to access or modify this resource.');
+      }
       return userService.completeUserProfile(input);
     },
   },
