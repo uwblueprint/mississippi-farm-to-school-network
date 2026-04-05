@@ -1,6 +1,9 @@
 import nodemailer, { Transporter } from 'nodemailer';
 import IEmailService from '@/services/interfaces/emailService';
 import { NodemailerConfig } from '@/types';
+import logger from '@/utilities/logger';
+
+const Logger = logger(__filename);
 
 class EmailService implements IEmailService {
   transporter: Transporter;
@@ -28,7 +31,7 @@ class EmailService implements IEmailService {
       await this.transporter.sendMail(mailOptions);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.error(`Failed to send email. Reason = ${errorMessage}`);
+      Logger.error(`Failed to send email. Reason = ${errorMessage}`);
       throw error;
     }
   }

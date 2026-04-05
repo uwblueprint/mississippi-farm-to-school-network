@@ -12,7 +12,7 @@ class UserService implements IUserService {
     try {
       const user = await User.findByPk(userId);
       if (!user) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       return {
@@ -38,7 +38,7 @@ class UserService implements IUserService {
       });
 
       if (!user) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
 
       return {
@@ -64,10 +64,10 @@ class UserService implements IUserService {
       });
 
       if (!user) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
       if (user.is_verified) {
-        throw new Error(`user with email ${email} is already verified.`);
+        throw new Error(`User with email ${email} is already verified.`);
       }
 
       await user.update({ is_verified: true });
@@ -94,7 +94,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return user.role;
     } catch (error: unknown) {
@@ -109,7 +109,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return user.id;
     } catch (error: unknown) {
@@ -122,7 +122,7 @@ class UserService implements IUserService {
     try {
       const user = await User.findByPk(userId);
       if (!user) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
       return user.firebase_uid;
     } catch (error: unknown) {
@@ -137,7 +137,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return {
         id: user.id,
@@ -187,7 +187,7 @@ class UserService implements IUserService {
         // Create Firebase user
         if (signUpMethod === SignUpMethod.PASSWORD) {
           if (!user.password) {
-            throw new Error('Password is required for password signup');
+            throw new Error('Password is required for password signup.');
           }
           const firebaseUser = await firebaseAdmin.auth().createUser({
             email: user.email,
@@ -195,7 +195,7 @@ class UserService implements IUserService {
           });
           resolvedFirebaseUid = firebaseUser.uid;
         } else {
-          throw new Error(`Unsupported signup method: ${signUpMethod}`);
+          throw new Error(`Unsupported signup method: ${signUpMethod}.`);
         }
       } else {
         // Verify Firebase user exists
@@ -252,7 +252,7 @@ class UserService implements IUserService {
     try {
       const existingUser = await User.findByPk(userId);
       if (!existingUser) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       // Update email in Firebase if it changed
@@ -295,7 +295,7 @@ class UserService implements IUserService {
       const deletedUser = await User.findByPk(userId);
 
       if (!deletedUser) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       // Delete from Postgres first
@@ -344,7 +344,7 @@ class UserService implements IUserService {
       });
 
       if (!deletedUser) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
 
       // Delete from Postgres first

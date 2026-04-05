@@ -43,6 +43,7 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   approveFarm(id: string): Promise<FarmDTO>;
+  getFarmById(farmId: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;
