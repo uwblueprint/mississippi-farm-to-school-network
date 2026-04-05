@@ -1,11 +1,4 @@
-import {
-  CreateFarmInput,
-  FarmFilter,
-  FarmDTO,
-  UpdateFarmInput,
-  FarmStatus,
-  FarmRejectionDTO,
-} from '@/types';
+import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput, FarmStatus } from '@/types';
 import Farm from '@/models/farm.model';
 
 interface IFarmService {
@@ -50,28 +43,6 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   approveFarm(id: string): Promise<FarmDTO>;
-
-  /**
-   * Creates a farm rejection history record with a farm snapshot.
-   * @param farmId id of farm being rejected
-   * @param rejectedByUserId admin user id who rejected the farm
-   * @param rejectionReason reason for rejection
-   * @returns created FarmRejectionDTO
-   * @throws Error if farm is not found or creation fails
-   */
-  createFarmRejection(
-    farmId: string,
-    rejectedByUserId: string,
-    rejectionReason: string
-  ): Promise<FarmRejectionDTO>;
-
-  /**
-   * Get the latest rejection event for a farm.
-   * @param farmId id of farm
-   * @returns latest FarmRejectionDTO or null if none exists
-   * @throws Error if query fails
-   */
-  getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null>;
 }
 
 export default IFarmService;
