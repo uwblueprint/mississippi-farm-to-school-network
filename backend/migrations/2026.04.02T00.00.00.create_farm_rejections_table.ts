@@ -74,10 +74,7 @@ export const up: MigrationFn = async (params) => {
 
 export const down: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
-  const queryInterface = sequelize.getQueryInterface();
 
-  await queryInterface.dropTable('farm_rejections');
-  await queryInterface.sequelize.query(
-    'DROP TYPE IF EXISTS "enum_farm_rejections_resolution_type";'
-  );
+  await sequelize.query('DROP TYPE IF EXISTS "enum_farm_rejections_resolution_type";');
+  await sequelize.query('DROP TABLE IF EXISTS "farm_rejections";');
 };
