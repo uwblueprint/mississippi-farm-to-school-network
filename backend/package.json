@@ -20,7 +20,7 @@
     "firebase-admin": "^12.7.0",
     "graphql": "^16.9.0",
     "graphql-scalars": "^1.25.0",
-    "lodash": "^4.17.21",
+    "lodash": "^4.18.1",
     "node-fetch": "^2.7.0",
     "nodemailer": "^8.0.1",
     "pg": "^8.18.0",
@@ -30,7 +30,6 @@
     "umzug": "^3.8.2"
   },
   "devDependencies": {
-    "@types/dotenv": "^6.1.1",
     "@types/jest": "^30.0.0",
     "@types/lodash": "^4.17.0",
     "@types/node": "^25.1.0",

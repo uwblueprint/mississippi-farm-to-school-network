@@ -64,8 +64,7 @@ const farmResolvers = {
       const emailBody = `<h2>New Farm Application Submitted</h2>
                       <p>A new farm application has been submitted for ${input.farm_name}.</p>
                       <p>Please review the application and approve or reject it.</p>`;
-      const adminEmail = 'mfsn@uwblueprint.org';
-      await emailService.sendEmail(adminEmail, subject, emailBody);
+      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
 
       return createdFarm;
     },
