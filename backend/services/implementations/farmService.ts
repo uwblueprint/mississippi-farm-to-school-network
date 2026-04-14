@@ -117,9 +117,7 @@ class FarmService implements IFarmService {
       const farmBeforeUpdate = this.convertToFarmDTO(farm);
       const farmJson = farm.toJSON() as Record<string, unknown>;
       const rejectionSnapshot = this.getRejectedSnapshot(farmJson, farmBeforeUpdate);
-      const resubmissionDiff = this.generateFieldLevelDiff(rejectionSnapshot, input);
-      const isRejectedFarmResubmission =
-        farm.status === FarmStatus.REJECTED && resubmissionDiff.length > 0;
+      const wasRejected = farm.status === FarmStatus.REJECTED;
 
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
@@ -130,18 +128,26 @@ class FarmService implements IFarmService {
       }
 
       Object.assign(farm, updateValues);
-      if (isRejectedFarmResubmission) {
-        // Treat edits to a rejected farm as a resubmission back to admin review.
-        farm.status = FarmStatus.PENDING_APPROVAL;
-      }
 
       await farm.save();
       await farm.reload();
 
-      const updatedFarm = this.convertToFarmDTO(farm);
-      if (isRejectedFarmResubmission) {
-        const rejectionReason = this.getRejectionReason(farmJson);
-        void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
+      let updatedFarm = this.convertToFarmDTO(farm);
+
+      if (wasRejected) {
+        const resubmissionDiff = this.generateFieldLevelDiffAgainstPersisted(
+          rejectionSnapshot,
+          updatedFarm,
+          input
+        );
+        if (resubmissionDiff.length > 0) {
+          farm.status = FarmStatus.PENDING_APPROVAL;
+          await farm.save();
+          await farm.reload();
+          updatedFarm = this.convertToFarmDTO(farm);
+          const rejectionReason = this.getRejectionReason(farmJson);
+          void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
+        }
       }
 
       return updatedFarm;
@@ -305,8 +311,9 @@ class FarmService implements IFarmService {
     return 'Not provided';
   }
 
-  private generateFieldLevelDiff(
+  private generateFieldLevelDiffAgainstPersisted(
     previousSnapshot: Partial<FarmDTO>,
+    currentFarm: FarmDTO,
     updatedPayload: UpdateFarmInput
   ): FarmFieldDiff[] {
     const diff: FarmFieldDiff[] = [];
@@ -317,12 +324,12 @@ class FarmService implements IFarmService {
         continue;
       }
 
-      const currentValue = updatedPayload[key as keyof UpdateFarmInput];
-      if (currentValue === undefined) {
+      if (updatedPayload[key as keyof UpdateFarmInput] === undefined) {
         continue;
       }
 
       const previousValue = previousSnapshot[key as keyof FarmDTO];
+      const currentValue = currentFarm[key as keyof FarmDTO];
       if (!this.valuesAreEqual(previousValue, currentValue)) {
         diff.push({
           field: key,

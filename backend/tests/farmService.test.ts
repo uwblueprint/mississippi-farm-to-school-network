@@ -433,6 +433,8 @@ describe('FarmService.updateFarm', () => {
     });
 
     expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
+    expect(instance.save).toHaveBeenCalledTimes(2);
+    expect(instance.reload).toHaveBeenCalledTimes(2);
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
 
     const [to, subject, htmlBody] = mockSendEmail.mock.calls[0];
@@ -457,6 +459,25 @@ describe('FarmService.updateFarm', () => {
     });
 
     expect(result.status).toBe(FarmStatus.REJECTED);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  test('rejected farm resubmitting same location as lat/lng does not false-positive diff or email', async () => {
+    const instance = makeFarmInstance({
+      status: FarmStatus.REJECTED,
+      rejection_reason: 'Please verify location',
+      location: { type: 'Point', coordinates: [-90.18, 32.3] },
+    });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.updateFarm('uuid-1', {
+      location: { lat: 32.3, lng: -90.18 },
+    });
+
+    expect(result.status).toBe(FarmStatus.REJECTED);
+    expect(result.location).toEqual({ lat: 32.3, lng: -90.18 });
+    expect(instance.save).toHaveBeenCalledTimes(1);
     expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
