@@ -1,7 +1,10 @@
 import { Op } from 'sequelize';
 import FarmService from '@/services/implementations/farmService';
+import EmailService from '@/services/implementations/emailService';
 import Farm from '@/models/farm.model';
 import { FarmStatus } from '@/types';
+
+const mockSendEmail = jest.spyOn(EmailService.prototype, 'sendEmail').mockResolvedValue(undefined);
 
 // Mock the entire Farm model module
 jest.mock('@/models/farm.model');
@@ -297,6 +300,7 @@ describe('FarmService.updateFarm', () => {
 
   beforeEach(() => {
     service = new FarmService();
+    mockSendEmail.mockClear();
   });
 
   // ── partial update ────────────────────────────────────────────────────────
@@ -414,5 +418,66 @@ describe('FarmService.updateFarm', () => {
     MockFarm.findByPk.mockResolvedValue(instance as any);
 
     await expect(service.updateFarm('uuid-1', { farm_name: 'X' })).rejects.toThrow('Save failed');
+  });
+
+  test('rejected farm resubmission generates diff and emails admins', async () => {
+    const instance = makeFarmInstance({
+      status: FarmStatus.REJECTED,
+      rejection_reason: 'Missing GAP documentation',
+    });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.updateFarm('uuid-1', {
+      farm_name: 'Resubmitted Farm Name',
+      description: 'Updated farm description',
+    });
+
+    expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
+    expect(instance.save).toHaveBeenCalledTimes(2);
+    expect(instance.reload).toHaveBeenCalledTimes(2);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
+
+    const [to, subject, htmlBody] = mockSendEmail.mock.calls[0];
+    expect(to).toBe('mfsn@uwblueprint.org');
+    expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
+    expect(htmlBody).toContain('Missing GAP documentation');
+    expect(htmlBody).toContain('Farm Name');
+    expect(htmlBody).toContain('Description');
+    expect(htmlBody).toContain('Original Name');
+    expect(htmlBody).toContain('Resubmitted Farm Name');
+  });
+
+  test('rejected farm update with no actual field change does not email admins', async () => {
+    const instance = makeFarmInstance({
+      status: FarmStatus.REJECTED,
+      rejection_reason: 'Missing GAP documentation',
+    });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.updateFarm('uuid-1', {
+      farm_name: 'Original Name',
+    });
+
+    expect(result.status).toBe(FarmStatus.REJECTED);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(mockSendEmail).not.toHaveBeenCalled();
+  });
+
+  test('rejected farm resubmitting same location as lat/lng does not false-positive diff or email', async () => {
+    const instance = makeFarmInstance({
+      status: FarmStatus.REJECTED,
+      rejection_reason: 'Please verify location',
+      location: { type: 'Point', coordinates: [-90.18, 32.3] },
+    });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.updateFarm('uuid-1', {
+      location: { lat: 32.3, lng: -90.18 },
+    });
+
+    expect(result.status).toBe(FarmStatus.REJECTED);
+    expect(result.location).toEqual({ lat: 32.3, lng: -90.18 });
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });
