@@ -20,6 +20,20 @@ import logger from '@/utilities/logger';
 const Logger = logger(__filename);
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
+const ADMIN_RESUBMISSION_EMAIL = 'mfsn@uwblueprint.org';
+const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
+  'id',
+  'owner_user_id',
+  'createdAt',
+  'updatedAt',
+  'status',
+]);
+
+type FarmFieldDiff = {
+  field: string;
+  previous: unknown;
+  current: unknown;
+};
 
 const convertToPostGISPoint = (location: LocationDTO) => {
   return {
@@ -100,6 +114,11 @@ class FarmService implements IFarmService {
         throw new Error(`Farm with id ${id} not found.`);
       }
 
+      const farmBeforeUpdate = this.convertToFarmDTO(farm);
+      const farmJson = farm.toJSON() as Record<string, unknown>;
+      const rejectionSnapshot = this.getRejectedSnapshot(farmJson, farmBeforeUpdate);
+      const wasRejected = farm.status === FarmStatus.REJECTED;
+
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
@@ -113,7 +132,25 @@ class FarmService implements IFarmService {
       await farm.save();
       await farm.reload();
 
-      return this.convertToFarmDTO(farm);
+      let updatedFarm = this.convertToFarmDTO(farm);
+
+      if (wasRejected) {
+        const resubmissionDiff = this.generateFieldLevelDiffAgainstPersisted(
+          rejectionSnapshot,
+          updatedFarm,
+          input
+        );
+        if (resubmissionDiff.length > 0) {
+          farm.status = FarmStatus.PENDING_APPROVAL;
+          await farm.save();
+          await farm.reload();
+          updatedFarm = this.convertToFarmDTO(farm);
+          const rejectionReason = this.getRejectionReason(farmJson);
+          void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
+        }
+      }
+
+      return updatedFarm;
     } catch (error: unknown) {
       Logger.error(`Failed to update farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -238,6 +275,153 @@ class FarmService implements IFarmService {
     } catch (error: unknown) {
       Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
       throw error;
+    }
+  }
+
+  private getRejectedSnapshot(
+    farmJson: Record<string, unknown>,
+    farmBeforeUpdate: FarmDTO
+  ): Partial<FarmDTO> {
+    const rejectionSnapshot = farmJson.rejection_snapshot;
+    if (
+      rejectionSnapshot &&
+      typeof rejectionSnapshot === 'object' &&
+      !Array.isArray(rejectionSnapshot)
+    ) {
+      return rejectionSnapshot as Partial<FarmDTO>;
+    }
+
+    return farmBeforeUpdate;
+  }
+
+  private getRejectionReason(farmJson: Record<string, unknown>): string {
+    const reasonFields = [
+      'rejection_reason',
+      'rejectionReason',
+      'rejection_notes',
+      'rejectionNotes',
+    ];
+    for (const field of reasonFields) {
+      const value = farmJson[field];
+      if (typeof value === 'string' && value.trim().length > 0) {
+        return value.trim();
+      }
+    }
+
+    return 'Not provided';
+  }
+
+  private generateFieldLevelDiffAgainstPersisted(
+    previousSnapshot: Partial<FarmDTO>,
+    currentFarm: FarmDTO,
+    updatedPayload: UpdateFarmInput
+  ): FarmFieldDiff[] {
+    const diff: FarmFieldDiff[] = [];
+    const keys = Object.keys(updatedPayload).sort();
+
+    for (const key of keys) {
+      if (EXCLUDED_RESUBMISSION_DIFF_FIELDS.has(key)) {
+        continue;
+      }
+
+      if (updatedPayload[key as keyof UpdateFarmInput] === undefined) {
+        continue;
+      }
+
+      const previousValue = previousSnapshot[key as keyof FarmDTO];
+      const currentValue = currentFarm[key as keyof FarmDTO];
+      if (!this.valuesAreEqual(previousValue, currentValue)) {
+        diff.push({
+          field: key,
+          previous: previousValue ?? null,
+          current: currentValue,
+        });
+      }
+    }
+
+    return diff;
+  }
+
+  private valuesAreEqual(a: unknown, b: unknown): boolean {
+    return this.stableSerialize(a) === this.stableSerialize(b);
+  }
+
+  private stableSerialize(value: unknown): string {
+    if (value === null || value === undefined) {
+      return 'null';
+    }
+
+    if (Array.isArray(value)) {
+      return `[${value.map((entry) => this.stableSerialize(entry)).join(',')}]`;
+    }
+
+    if (typeof value === 'object') {
+      const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+        a.localeCompare(b)
+      );
+      return `{${entries
+        .map(([key, entryValue]) => `${JSON.stringify(key)}:${this.stableSerialize(entryValue)}`)
+        .join(',')}}`;
+    }
+
+    return JSON.stringify(value);
+  }
+
+  private formatDiffSummary(diff: FarmFieldDiff[]): string {
+    if (diff.length === 0) {
+      return '<li>No field-level changes detected.</li>';
+    }
+
+    return diff
+      .map((change) => {
+        const fieldLabel = this.formatFieldLabel(change.field);
+        return `<li><strong>${fieldLabel}</strong>: ${this.formatDiffValue(
+          change.previous
+        )} &rarr; ${this.formatDiffValue(change.current)}</li>`;
+      })
+      .join('');
+  }
+
+  private formatFieldLabel(field: string): string {
+    return field
+      .split('_')
+      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+      .join(' ');
+  }
+
+  private formatDiffValue(value: unknown): string {
+    if (value === null || value === undefined) {
+      return '<em>null</em>';
+    }
+
+    if (typeof value === 'string') {
+      return value.length > 0 ? value : '<em>empty string</em>';
+    }
+
+    return `<code>${this.stableSerialize(value)}</code>`;
+  }
+
+  private async notifyAdminsAboutResubmission(
+    farm: FarmDTO,
+    rejectionReason: string,
+    diff: FarmFieldDiff[]
+  ): Promise<void> {
+    const subject = `Farm Resubmitted: ${farm.farm_name}`;
+    const emailBody = `<h2>Farm Resubmitted for Review</h2>
+      <p><strong>Farm:</strong> ${farm.farm_name}</p>
+      <p><strong>Farm ID:</strong> ${farm.id}</p>
+      <p><strong>Previous rejection reason:</strong> ${rejectionReason}</p>
+      <p><strong>Farmer changes:</strong></p>
+      <ul>
+        ${this.formatDiffSummary(diff)}
+      </ul>`;
+
+    try {
+      await emailService.sendEmail(ADMIN_RESUBMISSION_EMAIL, subject, emailBody);
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm resubmission email failed but update succeeded. Reason = ${getErrorMessage(error)}`
+      );
     }
   }
 }
