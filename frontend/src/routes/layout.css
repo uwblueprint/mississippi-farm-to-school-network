@@ -13,3 +13,9 @@
 	background-color: var(--color-surface-50-950);
 	color: var(--color-surface-950-50);
 }
+
+body {
+	font-family: 'DM Sans', sans-serif;
+	background-color: #f5f5f5;
+	color: #111;
+}
