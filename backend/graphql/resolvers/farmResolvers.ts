@@ -26,7 +26,20 @@ const farmResolvers = {
       if (radiusKm <= 0) throw new Error('radiusKm must be positive');
       return farmService.getFarmsByProximity(lat, lng, radiusKm);
     },
-    farms: async (_parent: undefined, { filter }: { filter?: FarmFilter }) => {
+    farms: async (
+      _parent: undefined,
+      { filter }: { filter?: FarmFilter },
+      context: AuthContext
+    ) => {
+      const isAdmin = await authHelper
+        .requireRole(context, [Role.ADMIN])
+        .then(() => true)
+        .catch(() => false);
+
+      if (!isAdmin) {
+        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+      }
+
       return farmService.getFarms(filter);
     },
     farmById: async (

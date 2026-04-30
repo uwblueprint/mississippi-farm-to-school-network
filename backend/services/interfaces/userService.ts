@@ -1,4 +1,11 @@
-import { CreateUserDTO, Role, UpdateUserDTO, UserDTO, SignUpMethod } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  UpdateUserDTO,
+  UserDTO,
+  SignUpMethod,
+} from '@/types';
 
 interface IUserService {
   /**
@@ -98,6 +105,14 @@ interface IUserService {
    * @throws Error if user not found or already verified
    */
   verifyUserEmail(email: string): Promise<UserDTO>;
+
+  /*
+   * Complete user's profile during onboarding, updates user record
+   * @param CompleteUserProfileInput includes firebase_uid, email, firstname, lastname, phone
+   * @returns updated UserDTO
+   * @throws Error if user not found or improper/missing inputs
+   */
+  completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO>;
 }
 
 export default IUserService;

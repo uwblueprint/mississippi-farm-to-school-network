@@ -53,6 +53,14 @@ export type UpdateUserDTO = {
   phone?: string;
 };
 
+export type CompleteUserProfileInput = {
+  firebase_uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
+
 export type RegisterUserDTO = {
   email: string;
   password: string;
