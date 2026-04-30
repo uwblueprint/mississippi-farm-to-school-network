@@ -1,6 +1,13 @@
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
-import { CreateUserDTO, Role, SignUpMethod, UpdateUserDTO, UserDTO } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  SignUpMethod,
+  UpdateUserDTO,
+  UserDTO,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import User from '@/models/user.model';
@@ -286,6 +293,65 @@ class UserService implements IUserService {
       };
     } catch (error: unknown) {
       Logger.error(`Failed to update user. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
+    try {
+      if (
+        !input.firebase_uid ||
+        !input.email ||
+        !input.firstName ||
+        !input.lastName ||
+        !input.phone
+      ) {
+        throw new Error(
+          'All fields are required: firebase_uid, email, firstName, lastName, phone.'
+        );
+      }
+
+      if (!input.firstName.trim() || !input.lastName.trim()) {
+        throw new Error('First name and last name must not be empty.');
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input.email)) {
+        throw new Error('Invalid email format.');
+      }
+
+      const digits = input.phone.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        throw new Error('Phone number must contain exactly 10 digits.');
+      }
+
+      const existingUser = await User.findOne({ where: { firebase_uid: input.firebase_uid } });
+      if (!existingUser) {
+        throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
+      }
+
+      const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
+
+      await existingUser.update({
+        email: input.email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: digits,
+        role,
+      });
+
+      return {
+        id: existingUser.id,
+        firebase_uid: existingUser.firebase_uid,
+        email: existingUser.email,
+        role: existingUser.role,
+        is_verified: existingUser.is_verified,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        phone: existingUser.phone,
+      };
+    } catch (error: unknown) {
+      Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
