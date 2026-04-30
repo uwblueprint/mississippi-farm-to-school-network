@@ -88,7 +88,14 @@ class FarmService implements IFarmService {
             ),
           ],
         },
-        order: [[literal(`ST_Distance(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography)`), 'ASC']],
+        order: [
+          [
+            literal(
+              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography)`
+            ),
+            'ASC',
+          ],
+        ],
       });
 
       return this.convertToFarmDTOs(farms);
