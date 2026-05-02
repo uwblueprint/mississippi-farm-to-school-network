@@ -169,6 +169,34 @@ export interface FarmFilter {
   approved?: boolean;
 }
 
+export type AnnouncementDTO = {
+  id: string;
+  message: string;
+  start_date: string;
+  end_date?: string;
+  created_by: string;
+  deleted_at?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAnnouncementDTO = {
+  message: string;
+  start_date: string;
+  end_date?: string;
+};
+
+export type UpdateAnnouncementDTO = {
+  message?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+export type CreateAnnouncementResult = {
+  announcement: AnnouncementDTO;
+  overlappingAnnouncements: AnnouncementDTO[];
+};
+
 export type StoredFileDTO = {
   id: string;
   storage_key: string;
