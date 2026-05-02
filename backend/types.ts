@@ -195,7 +195,7 @@ export type UpdateAnnouncementDTO = {
 export type CreateAnnouncementResult = {
   announcement: AnnouncementDTO;
   overlappingAnnouncements: AnnouncementDTO[];
-}
+};
 
 export type StoredFileDTO = {
   id: string;
