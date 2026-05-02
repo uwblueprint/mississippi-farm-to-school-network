@@ -53,6 +53,14 @@ export type UpdateUserDTO = {
   phone?: string;
 };
 
+export type CompleteUserProfileInput = {
+  firebase_uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
+};
+
 export type RegisterUserDTO = {
   email: string;
   password: string;
@@ -187,4 +195,13 @@ export type UpdateAnnouncementDTO = {
 export type CreateAnnouncementResult = {
   announcement: AnnouncementDTO;
   overlappingAnnouncements: AnnouncementDTO[];
+}
+
+export type StoredFileDTO = {
+  id: string;
+  storage_key: string;
+  original_file_name: string;
+  owner_user_id: string;
+  farm_id: string;
+  content_type: string | null;
 };
