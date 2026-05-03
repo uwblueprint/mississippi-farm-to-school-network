@@ -1,4 +1,4 @@
-import { Op, UniqueConstraintError } from 'sequelize';
+import { Op, literal, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import IFarmService from '@/services/interfaces/farmService';
 import {
@@ -71,6 +71,36 @@ class FarmService implements IFarmService {
         throw new Error('Farm with that USDA farm ID already exists.');
       }
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
+    try {
+      const radiusMeters = radiusKm * 1000;
+
+      const farms = await Farm.findAll({
+        where: {
+          status: FarmStatus.APPROVED,
+          [Op.and]: [
+            literal(
+              `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography, ${Number(radiusMeters)})`
+            ),
+          ],
+        },
+        order: [
+          [
+            literal(
+              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography)`
+            ),
+            'ASC',
+          ],
+        ],
+      });
+
+      return this.convertToFarmDTOs(farms);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farms by proximity. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

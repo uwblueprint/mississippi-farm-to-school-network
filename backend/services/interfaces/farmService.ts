@@ -12,6 +12,16 @@ interface IFarmService {
   createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO>;
 
   /**
+   * Farm search within radius of certain point
+   * @param lat latitude of position
+   * @param lng longitude of position
+   * @param radiusKm search radius in km
+   * @returns array of FarmDTOs within radius
+   * @throws Error if failure
+   */
+  getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]>;
+
+  /**
    * Get farms with optional filtering
    * @param filter optional farm filter criteria
    * @returns array of FarmDTOs
