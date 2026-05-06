@@ -14,6 +14,7 @@ const userType = gql`
     deleteUserById(id: ID!): Boolean!
     deleteUserByEmail(email: String!): Boolean!
     verifyUserEmail(email: String!): UserDTO!
+    completeUserProfile(input: CompleteUserProfileInput!): UserDTO!
   }
 
   enum Role {
@@ -31,6 +32,14 @@ const userType = gql`
     firstName: String
     lastName: String
     phone: String
+  }
+
+  input CompleteUserProfileInput {
+    firebase_uid: String!
+    email: String!
+    firstName: String!
+    lastName: String!
+    phone: String!
   }
 
   input CreateUserDTO {
