@@ -71,6 +71,11 @@ export type LocationDTO = {
   lng: number;
 };
 
+export type GeoJSONPointDTO = {
+  type: 'Point';
+  coordinates: [number, number];
+};
+
 export type FarmDTO = {
   id: string;
   owner_user_id: string;
@@ -100,6 +105,28 @@ export type FarmDTO = {
   status: FarmStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type FarmSnapshotDTO = Omit<FarmDTO, 'location'> & {
+  location: GeoJSONPointDTO;
+};
+
+export enum FarmRejectionResolutionType {
+  RESUBMITTED = 'RESUBMITTED',
+  APPROVED = 'APPROVED',
+  WITHDRAWN = 'WITHDRAWN',
+}
+
+export type FarmRejectionDTO = {
+  id: string;
+  farm_id: string;
+  rejected_by_user_id: string;
+  rejection_reason: string;
+  farm_snapshot: FarmSnapshotDTO;
+  farm_snapshot_updated_at: string;
+  created_at: string;
+  resolved_at: string | null;
+  resolution_type: FarmRejectionResolutionType | null;
 };
 
 export type CreateFarmInput = {
@@ -168,3 +195,40 @@ export interface FarmFilter {
   food_categories?: string[];
   approved?: boolean;
 }
+
+export type AnnouncementDTO = {
+  id: string;
+  message: string;
+  start_date: string;
+  end_date?: string;
+  created_by: string;
+  deleted_at?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CreateAnnouncementDTO = {
+  message: string;
+  start_date: string;
+  end_date?: string;
+};
+
+export type UpdateAnnouncementDTO = {
+  message?: string;
+  start_date?: string;
+  end_date?: string;
+};
+
+export type CreateAnnouncementResult = {
+  announcement: AnnouncementDTO;
+  overlappingAnnouncements: AnnouncementDTO[];
+};
+
+export type StoredFileDTO = {
+  id: string;
+  storage_key: string;
+  original_file_name: string;
+  owner_user_id: string;
+  farm_id: string;
+  content_type: string | null;
+};
