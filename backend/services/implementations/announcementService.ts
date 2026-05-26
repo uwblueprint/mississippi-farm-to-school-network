@@ -92,15 +92,12 @@ class AnnouncementService implements IAnnouncementService {
       throw new Error('Start date cannot be in the past');
     }
 
-    if (newAnnouncement.end_date) {
-      // ! is safe to use here since if newAnnouncement.end_date exists, so does endDate
-      if (isPast(endDate!)) {
-        throw new Error('End date cannot be in the past');
-      }
+    if (newAnnouncement.end_date && endDate && isPast(endDate)) {
+      throw new Error('End date cannot be in the past');
+    }
 
-      if (endDate! < startDate) {
-        throw new Error('End date cannot be before start date');
-      }
+    if (endDate && endDate < startDate) {
+      throw new Error('End date cannot be before start date');
     }
 
     try {

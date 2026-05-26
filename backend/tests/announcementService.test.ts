@@ -1,18 +1,24 @@
 import Announcement from '@/models/announcement.model';
 import AnnouncementService from '@/services/implementations/announcementService';
+import { DateTime } from 'luxon';
 import { Op } from 'sequelize';
 
 jest.mock('@/models/announcement.model');
 
 const MockAnnouncement = Announcement as jest.Mocked<typeof Announcement>;
 
+const CST = 'America/Chicago';
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-const offsetDate = (days: number): string => {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  return d.toISOString().split('T')[0];
-};
+const offsetDate = (days: number): string =>
+  DateTime.now().setZone(CST).plus({ days }).toISODate()!;
+
+const toStartOfDayCST = (dateStr: string): Date =>
+  DateTime.fromISO(dateStr, { zone: CST }).startOf('day').toJSDate();
+
+const toEndOfDayCST = (dateStr: string): Date =>
+  DateTime.fromISO(dateStr, { zone: CST }).endOf('day').toJSDate();
 
 const TODAY = offsetDate(0);
 const YESTERDAY = offsetDate(-1);
@@ -24,8 +30,8 @@ const makeAnnouncementInstance = (overrides: Partial<Record<string, unknown>> = 
   const data: Record<string, unknown> = {
     id: 'announcement-1',
     message: 'Test announcement',
-    start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
-    end_date: new Date(`${NEXT_WEEK}T23:59:59.999-06:00`),
+    start_date: toStartOfDayCST(TODAY),
+    end_date: toEndOfDayCST(NEXT_WEEK),
     created_by: 'user-1',
     deleted_at: null,
     createdAt: new Date(TODAY),
@@ -62,6 +68,16 @@ describe('AnnouncementService.createAnnouncement', () => {
     ).rejects.toThrow('Start date cannot be in the past');
   });
 
+  test('past end_date throws an error', async () => {
+    await expect(
+      service.createAnnouncement('user-1', {
+        message: 'Hello',
+        start_date: TODAY,
+        end_date: YESTERDAY,
+      })
+    ).rejects.toThrow('End date cannot be in the past');
+  });
+
   test('end_date before start_date throws an error', async () => {
     await expect(
       service.createAnnouncement('user-1', {
@@ -75,7 +91,7 @@ describe('AnnouncementService.createAnnouncement', () => {
   test("today's start_date succeeds", async () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
     const instance = makeAnnouncementInstance({
-      start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
+      start_date: toStartOfDayCST(TODAY),
       end_date: null,
     });
     MockAnnouncement.create.mockResolvedValue(instance as any);
@@ -92,8 +108,8 @@ describe('AnnouncementService.createAnnouncement', () => {
   test('1 day announcement', async () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
     const instance = makeAnnouncementInstance({
-      start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
-      end_date: null,
+      start_date: toStartOfDayCST(TODAY),
+      end_date: toEndOfDayCST(TODAY),
     });
     MockAnnouncement.create.mockResolvedValue(instance as any);
 
@@ -164,6 +180,18 @@ describe('AnnouncementService.updateAnnouncement', () => {
     await expect(service.updateAnnouncement('nonexistent', { message: 'Updated' })).rejects.toThrow(
       'Announcement not found'
     );
+  });
+
+  test('updating start_date to after existing end_date throws an error', async () => {
+    const announcement = makeAnnouncementInstance({
+      start_date: toStartOfDayCST(TODAY),
+      end_date: toEndOfDayCST(TOMORROW),
+    });
+    MockAnnouncement.findByPk.mockResolvedValue(announcement as any);
+
+    await expect(
+      service.updateAnnouncement('announcement-1', { start_date: NEXT_WEEK })
+    ).rejects.toThrow('End date cannot be before start date');
   });
 });
 
@@ -250,11 +278,11 @@ describe('AnnouncementService.getLiveAndUpcomingAnnouncements', () => {
   test('returns live and upcoming announcements ordered by start_date ASC', async () => {
     const upcoming = makeAnnouncementInstance({
       id: 'announcement-2',
-      start_date: new Date(`${NEXT_WEEK}T00:00:00.000-06:00`),
+      start_date: toStartOfDayCST(NEXT_WEEK),
     });
     const live = makeAnnouncementInstance({
       id: 'announcement-1',
-      start_date: new Date(`${TODAY}T00:00:00.000-06:00`),
+      start_date: toStartOfDayCST(TODAY),
     });
     MockAnnouncement.findAll.mockResolvedValue([live, upcoming] as any);
 
@@ -279,7 +307,7 @@ describe('AnnouncementService.getPastAnnouncements', () => {
 
   test('returns expired announcements', async () => {
     const expired = makeAnnouncementInstance({
-      end_date: new Date(`${YESTERDAY}T23:59:59.999-06:00`),
+      end_date: toEndOfDayCST(YESTERDAY),
     });
     MockAnnouncement.findAll.mockResolvedValue([expired] as any);
 
@@ -325,8 +353,8 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
     MockAnnouncement.findAll.mockResolvedValue([overlapping] as any);
 
     const result = await service.getOverlappingAnnouncements(
-      new Date(`${TODAY}T00:00:00.000-06:00`),
-      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`)
+      toStartOfDayCST(TODAY),
+      toEndOfDayCST(NEXT_WEEK)
     );
 
     expect(result).toHaveLength(1);
@@ -337,8 +365,8 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
 
     const result = await service.getOverlappingAnnouncements(
-      new Date(`${TODAY}T00:00:00.000-06:00`),
-      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`)
+      toStartOfDayCST(TODAY),
+      toEndOfDayCST(NEXT_WEEK)
     );
 
     expect(result).toEqual([]);
@@ -348,8 +376,8 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
     MockAnnouncement.findAll.mockResolvedValue([]);
 
     await service.getOverlappingAnnouncements(
-      new Date(`${TODAY}T00:00:00.000-06:00`),
-      new Date(`${NEXT_WEEK}T23:59:59.999-06:00`),
+      toStartOfDayCST(TODAY),
+      toEndOfDayCST(NEXT_WEEK),
       'announcement-1'
     );
 
@@ -364,10 +392,7 @@ describe('AnnouncementService.getOverlappingAnnouncements', () => {
     const overlapping = makeAnnouncementInstance({ end_date: null });
     MockAnnouncement.findAll.mockResolvedValue([overlapping] as any);
 
-    const result = await service.getOverlappingAnnouncements(
-      new Date(`${TODAY}T00:00:00.000-06:00`),
-      null
-    );
+    const result = await service.getOverlappingAnnouncements(toStartOfDayCST(TODAY), null);
 
     expect(result).toHaveLength(1);
   });
