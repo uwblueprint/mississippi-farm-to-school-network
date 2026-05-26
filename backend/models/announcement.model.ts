@@ -10,20 +10,20 @@ export default class Announcement extends Model {
   @Column({ type: DataType.TEXT, allowNull: false })
   message!: string;
 
-  @Column({ type: DataType.DATE, allowNull: false, field: 'start_date' })
-  startDate!: Date;
+  @Column({ type: DataType.DATE, allowNull: false })
+  start_date!: Date;
 
-  @Column({ type: DataType.DATE, allowNull: true, field: 'end_date' })
-  endDate!: Date | null;
+  @Column({ type: DataType.DATE, allowNull: true })
+  end_date!: Date | null;
 
-  @Column({ type: DataType.DATE, allowNull: true, field: 'deleted_at' })
-  deletedAt!: Date | null;
+  @Column({ type: DataType.DATE, allowNull: true })
+  deleted_at!: Date | null;
 
   @ForeignKey(() => User)
-  @Column({ type: DataType.UUID, allowNull: false, field: 'created_by' })
-  createdBy!: string;
+  @Column({ type: DataType.UUID, allowNull: false })
+  created_by!: string;
 
-  @BelongsTo(() => User, 'createdBy')
+  @BelongsTo(() => User, 'created_by')
   creator!: User;
 
   @Column({ type: DataType.DATE, allowNull: false })
@@ -35,11 +35,11 @@ export default class Announcement extends Model {
   get status(): 'LIVE' | 'UPCOMING' | 'PAST' {
     const now = new Date();
 
-    if (this.deletedAt !== null || (this.endDate !== null && this.endDate < now)) {
+    if (this.deleted_at !== null || (this.end_date !== null && this.end_date < now)) {
       return 'PAST';
     }
 
-    if (this.startDate > now) {
+    if (this.start_date > now) {
       return 'UPCOMING';
     }
 
