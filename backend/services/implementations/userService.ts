@@ -1,6 +1,13 @@
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
-import { CreateUserDTO, Role, SignUpMethod, UpdateUserDTO, UserDTO } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  SignUpMethod,
+  UpdateUserDTO,
+  UserDTO,
+} from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import User from '@/models/user.model';
@@ -12,7 +19,7 @@ class UserService implements IUserService {
     try {
       const user = await User.findByPk(userId);
       if (!user) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       return {
@@ -21,6 +28,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -35,7 +45,7 @@ class UserService implements IUserService {
       });
 
       if (!user) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
 
       return {
@@ -44,6 +54,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
@@ -58,10 +71,10 @@ class UserService implements IUserService {
       });
 
       if (!user) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
       if (user.is_verified) {
-        throw new Error(`user with email ${email} is already verified.`);
+        throw new Error(`User with email ${email} is already verified.`);
       }
 
       await user.update({ is_verified: true });
@@ -72,6 +85,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: true,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to verify user. Reason = ${getErrorMessage(error)}`);
@@ -85,7 +101,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return user.role;
     } catch (error: unknown) {
@@ -100,7 +116,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return user.id;
     } catch (error: unknown) {
@@ -113,7 +129,7 @@ class UserService implements IUserService {
     try {
       const user = await User.findByPk(userId);
       if (!user) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
       return user.firebase_uid;
     } catch (error: unknown) {
@@ -128,7 +144,7 @@ class UserService implements IUserService {
         where: { firebase_uid: firebaseUid },
       });
       if (!user) {
-        throw new Error(`user with firebase_uid ${firebaseUid} not found.`);
+        throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
       return {
         id: user.id,
@@ -136,6 +152,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
@@ -152,6 +171,9 @@ class UserService implements IUserService {
         email: user.email,
         role: user.role,
         is_verified: user.is_verified,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        phone: user.phone,
       }));
     } catch (error: unknown) {
       Logger.error(`Failed to get users. Reason = ${getErrorMessage(error)}`);
@@ -172,7 +194,7 @@ class UserService implements IUserService {
         // Create Firebase user
         if (signUpMethod === SignUpMethod.PASSWORD) {
           if (!user.password) {
-            throw new Error('Password is required for password signup');
+            throw new Error('Password is required for password signup.');
           }
           const firebaseUser = await firebaseAdmin.auth().createUser({
             email: user.email,
@@ -180,7 +202,7 @@ class UserService implements IUserService {
           });
           resolvedFirebaseUid = firebaseUser.uid;
         } else {
-          throw new Error(`Unsupported signup method: ${signUpMethod}`);
+          throw new Error(`Unsupported signup method: ${signUpMethod}.`);
         }
       } else {
         // Verify Firebase user exists
@@ -194,6 +216,9 @@ class UserService implements IUserService {
           email: user.email,
           role: user.role,
           is_verified: false,
+          firstName: user.firstName ?? null,
+          lastName: user.lastName ?? null,
+          phone: user.phone ?? null,
         });
       } catch (postgresError) {
         // Rollback Firebase user creation if Postgres fails
@@ -224,6 +249,9 @@ class UserService implements IUserService {
       email: newUser.email,
       role: newUser.role,
       is_verified: newUser.is_verified,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      phone: newUser.phone,
     };
   }
 
@@ -231,7 +259,7 @@ class UserService implements IUserService {
     try {
       const existingUser = await User.findByPk(userId);
       if (!existingUser) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       // Update email in Firebase if it changed
@@ -247,6 +275,10 @@ class UserService implements IUserService {
       // Update in Postgres
       await existingUser.update({
         email: user.email,
+        role: user.role,
+        firstName: user.firstName ?? existingUser.firstName,
+        lastName: user.lastName ?? existingUser.lastName,
+        phone: user.phone ?? existingUser.phone,
       });
 
       return {
@@ -255,9 +287,71 @@ class UserService implements IUserService {
         email: existingUser.email,
         role: existingUser.role,
         is_verified: existingUser.is_verified,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        phone: existingUser.phone,
       };
     } catch (error: unknown) {
       Logger.error(`Failed to update user. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
+    try {
+      if (
+        !input.firebase_uid ||
+        !input.email ||
+        !input.firstName ||
+        !input.lastName ||
+        !input.phone
+      ) {
+        throw new Error(
+          'All fields are required: firebase_uid, email, firstName, lastName, phone.'
+        );
+      }
+
+      if (!input.firstName.trim() || !input.lastName.trim()) {
+        throw new Error('First name and last name must not be empty.');
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(input.email)) {
+        throw new Error('Invalid email format.');
+      }
+
+      const digits = input.phone.replace(/\D/g, '');
+      if (digits.length !== 10) {
+        throw new Error('Phone number must contain exactly 10 digits.');
+      }
+
+      const existingUser = await User.findOne({ where: { firebase_uid: input.firebase_uid } });
+      if (!existingUser) {
+        throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
+      }
+
+      const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
+
+      await existingUser.update({
+        email: input.email,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: digits,
+        role,
+      });
+
+      return {
+        id: existingUser.id,
+        firebase_uid: existingUser.firebase_uid,
+        email: existingUser.email,
+        role: existingUser.role,
+        is_verified: existingUser.is_verified,
+        firstName: existingUser.firstName,
+        lastName: existingUser.lastName,
+        phone: existingUser.phone,
+      };
+    } catch (error: unknown) {
+      Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
@@ -267,7 +361,7 @@ class UserService implements IUserService {
       const deletedUser = await User.findByPk(userId);
 
       if (!deletedUser) {
-        throw new Error(`userId ${userId} not found.`);
+        throw new Error(`User with id ${userId} not found.`);
       }
 
       // Delete from Postgres first
@@ -287,6 +381,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [
@@ -313,7 +410,7 @@ class UserService implements IUserService {
       });
 
       if (!deletedUser) {
-        throw new Error(`user with email ${email} not found.`);
+        throw new Error(`User with email ${email} not found.`);
       }
 
       // Delete from Postgres first
@@ -333,6 +430,9 @@ class UserService implements IUserService {
             email: deletedUser.email,
             role: deletedUser.role,
             is_verified: deletedUser.is_verified,
+            firstName: deletedUser.firstName,
+            lastName: deletedUser.lastName,
+            phone: deletedUser.phone,
           });
         } catch (postgresError: unknown) {
           const errorMessage = [

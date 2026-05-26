@@ -4,8 +4,8 @@ import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
+import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, Role } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
-import { CreateFarmInput, FarmDTO, FarmFilter, UpdateFarmInput, Role } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import EmailService from '@/services/implementations/emailService';
 import IEmailService from '@/services/interfaces/emailService';
@@ -17,8 +17,37 @@ const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const farmResolvers = {
   Query: {
-    farms: async (_parent: undefined, { filter }: { filter?: FarmFilter }) => {
+    farms: async (
+      _parent: undefined,
+      { filter }: { filter?: FarmFilter },
+      context: AuthContext
+    ) => {
+      const isAdmin = await authHelper
+        .requireRole(context, [Role.ADMIN])
+        .then(() => true)
+        .catch(() => false);
+
+      if (!isAdmin) {
+        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+      }
+
       return farmService.getFarms(filter);
+    },
+    farmById: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmById(id);
+    },
+    farmsByStatus: async (
+      _parent: undefined,
+      { status }: { status: FarmStatus },
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmsByStatus(status);
     },
   },
 
@@ -35,8 +64,7 @@ const farmResolvers = {
       const emailBody = `<h2>New Farm Application Submitted</h2>
                       <p>A new farm application has been submitted for ${input.farm_name}.</p>
                       <p>Please review the application and approve or reject it.</p>`;
-      const adminEmail = 'mfsn@uwblueprint.org';
-      await emailService.sendEmail(adminEmail, subject, emailBody);
+      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
 
       return createdFarm;
     },

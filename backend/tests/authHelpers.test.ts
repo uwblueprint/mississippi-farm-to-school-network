@@ -18,6 +18,9 @@ const makeUser = (overrides: Partial<UserDTO> = {}): UserDTO => ({
   email: 'user@example.com',
   role: Role.FARMER,
   is_verified: true,
+  firstName: null,
+  lastName: null,
+  phone: null,
   ...overrides,
 });
 

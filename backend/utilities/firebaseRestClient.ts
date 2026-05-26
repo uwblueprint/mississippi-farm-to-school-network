@@ -53,8 +53,7 @@ type RequestError = {
   error: {
     code: number;
     message: string;
-    /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-    errors: any;
+    errors: unknown[];
   };
 };
 
@@ -87,7 +86,7 @@ const FirebaseRestClient = {
       ];
       Logger.error(errorMessage.join(' '));
 
-      throw new Error('Failed to sign-in via Firebase REST API');
+      throw new Error('Failed to sign in via Firebase REST API.');
     }
 
     return {
@@ -125,7 +124,7 @@ const FirebaseRestClient = {
       ];
       Logger.error(errorMessage.join(' '));
 
-      throw new Error('Failed to sign-in via Firebase REST API');
+      throw new Error('Failed to sign in via Firebase REST API.');
     }
 
     return responseJson as OAuthSignInResponse;
@@ -155,7 +154,7 @@ const FirebaseRestClient = {
       ];
       Logger.error(errorMessage.join(' '));
 
-      throw new Error('Failed to refresh token via Firebase REST API');
+      throw new Error('Failed to refresh token via Firebase REST API.');
     }
 
     return {

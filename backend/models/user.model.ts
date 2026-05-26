@@ -22,6 +22,15 @@ export default class User extends Model {
   @Column({ type: DataType.BOOLEAN, defaultValue: false })
   is_verified!: boolean;
 
+  @Column({ type: DataType.STRING, allowNull: true })
+  firstName!: string | null;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  lastName!: string | null;
+
+  @Column({ type: DataType.STRING(20), allowNull: true })
+  phone!: string | null;
+
   @Column({ type: DataType.DATE, allowNull: false })
   createdAt!: Date;
 

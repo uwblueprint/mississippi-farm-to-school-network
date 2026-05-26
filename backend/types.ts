@@ -31,16 +31,34 @@ export type UserDTO = {
   email: string;
   role: Role;
   is_verified: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
 };
 
 export type CreateUserDTO = {
   email: string;
   role: Role;
   password?: string;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
 };
 
 export type UpdateUserDTO = {
   email: string;
+  role: Role;
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+};
+
+export type CompleteUserProfileInput = {
+  firebase_uid: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone: string;
 };
 
 export type RegisterUserDTO = {
@@ -51,6 +69,11 @@ export type RegisterUserDTO = {
 export type LocationDTO = {
   lat: number;
   lng: number;
+};
+
+export type GeoJSONPointDTO = {
+  type: 'Point';
+  coordinates: [number, number];
 };
 
 export type FarmDTO = {
@@ -82,6 +105,28 @@ export type FarmDTO = {
   status: FarmStatus;
   createdAt: string;
   updatedAt: string;
+};
+
+export type FarmSnapshotDTO = Omit<FarmDTO, 'location'> & {
+  location: GeoJSONPointDTO;
+};
+
+export enum FarmRejectionResolutionType {
+  RESUBMITTED = 'RESUBMITTED',
+  APPROVED = 'APPROVED',
+  WITHDRAWN = 'WITHDRAWN',
+}
+
+export type FarmRejectionDTO = {
+  id: string;
+  farm_id: string;
+  rejected_by_user_id: string;
+  rejection_reason: string;
+  farm_snapshot: FarmSnapshotDTO;
+  farm_snapshot_updated_at: string;
+  created_at: string;
+  resolved_at: string | null;
+  resolution_type: FarmRejectionResolutionType | null;
 };
 
 export type CreateFarmInput = {
@@ -150,3 +195,12 @@ export interface FarmFilter {
   food_categories?: string[];
   approved?: boolean;
 }
+
+export type StoredFileDTO = {
+  id: string;
+  storage_key: string;
+  original_file_name: string;
+  owner_user_id: string;
+  farm_id: string;
+  content_type: string | null;
+};

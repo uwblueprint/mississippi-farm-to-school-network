@@ -7,7 +7,7 @@ import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
 import { AuthContext } from '@/middlewares/auth';
-import { CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
+import { CompleteUserProfileInput, CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
 import Farm from '@/models/farm.model';
 import authHelper from '@/utilities/authHelpers';
 
@@ -90,6 +90,17 @@ const userResolvers = {
       }
 
       return userService.verifyUserEmail(email);
+    },
+    completeUserProfile: async (
+      _parent: undefined,
+      { input }: { input: CompleteUserProfileInput },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      const currentUser = await authHelper.requireAuth(context);
+      if (currentUser.firebase_uid !== input.firebase_uid) {
+        throw new ForbiddenError('You do not have permission to access or modify this resource.');
+      }
+      return userService.completeUserProfile(input);
     },
   },
   UserDTO: {

@@ -1,4 +1,11 @@
-import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput, FarmStatus } from '@/types';
+import {
+  CreateFarmInput,
+  FarmFilter,
+  FarmDTO,
+  FarmRejectionDTO,
+  UpdateFarmInput,
+  FarmStatus,
+} from '@/types';
 import Farm from '@/models/farm.model';
 
 interface IFarmService {
@@ -44,15 +51,29 @@ interface IFarmService {
    */
   approveFarm(id: string): Promise<FarmDTO>;
 
+  getFarmById(farmId: string): Promise<FarmDTO>;
+
   /**
-   * Update a farm's status to REJECTED & attempt to email farm owner
-   * @param id farm's id
-   * @param rejectionReason reason for rejecting the farm application
-   * @param rejectedByUserId id of the user rejecting the farm application
-   * @returns a FarmDTO with the updated farm's information
-   * @throws Error if farm update fails
+   * Create a rejection record for a farm
+   * @param farmId farm's id
+   * @param rejectedByUserId id of the user rejecting the farm
+   * @param rejectionReason reason for the rejection
+   * @returns a FarmRejectionDTO with the created rejection's information
+   * @throws Error if farm rejection creation fails
    */
-  rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO>;
+  createFarmRejection(
+    farmId: string,
+    rejectedByUserId: string,
+    rejectionReason: string
+  ): Promise<FarmRejectionDTO>;
+
+  /**
+   * Get the latest rejection for a farm
+   * @param farmId farm's id
+   * @returns the latest FarmRejectionDTO or null when no rejection exists
+   * @throws Error if farm rejection retrieval fails
+   */
+  getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null>;
 }
 
 export default IFarmService;

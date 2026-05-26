@@ -23,7 +23,7 @@ class FileStorageService implements IFileStorageService {
       const [exists] = await currentBlob.exists();
 
       if (!exists) {
-        throw new Error(`File name ${fileName} does not exist`);
+        throw new Error(`File with name ${fileName} not found.`);
       }
 
       const [signedUrl] = await currentBlob.getSignedUrl({
@@ -49,7 +49,7 @@ class FileStorageService implements IFileStorageService {
       const [exists] = await currentBlob.exists();
 
       if (exists) {
-        throw new Error(`File name ${fileName} already exists`);
+        throw new Error(`File with name ${fileName} already exists.`);
       }
 
       await bucket.upload(filePath, {
@@ -73,7 +73,7 @@ class FileStorageService implements IFileStorageService {
       const [exists] = await currentBlob.exists();
 
       if (!exists) {
-        throw new Error(`File name ${fileName} does not exist`);
+        throw new Error(`File with name ${fileName} not found.`);
       }
 
       await bucket.upload(filePath, {
@@ -93,7 +93,7 @@ class FileStorageService implements IFileStorageService {
       const [exists] = await currentBlob.exists();
 
       if (!exists) {
-        throw new Error(`File name ${fileName} does not exist`);
+        throw new Error(`File with name ${fileName} not found.`);
       }
 
       await currentBlob.delete();
