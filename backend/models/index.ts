@@ -2,6 +2,9 @@ import * as path from 'path';
 
 import dotenv from 'dotenv';
 import { Sequelize } from 'sequelize-typescript';
+import Farm from './farm.model';
+import FarmRejection from './farm_rejection.model';
+import User from './user.model';
 
 dotenv.config();
 
@@ -15,3 +18,5 @@ export const sequelize = new Sequelize(DATABASE_URL, {
   dialect: 'postgres',
   logging: false,
 });
+
+export { Farm, FarmRejection, User };
