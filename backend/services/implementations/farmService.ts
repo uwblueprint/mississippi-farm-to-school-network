@@ -1,4 +1,4 @@
-import { Op, UniqueConstraintError } from 'sequelize';
+import { Sequelize, Op, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import FarmRejection from '@/models/farm_rejection.model';
 import IFarmService from '@/services/interfaces/farmService';
@@ -446,6 +446,49 @@ class FarmService implements IFarmService {
     }
 
     return 'Not provided';
+  }
+
+  async rejectFarm(
+    farmId: string,
+    rejectedByUserId:
+    string, rejectionReason: string): Promise<FarmDTO> {
+    const sequelize = Farm.sequelize as Sequelize;
+
+    return await sequelize.transaction(async (transaction) => {
+      const farm = await Farm.findByPk(farmId, { transaction });
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+      const farmSnapshot = this.convertToFarmSnapshot(farm);
+      const farm_snapshot_updated_at = farm.updatedAt;
+
+      await FarmRejection.create({
+        farm_id: farmId,
+        rejected_by_user_id: rejectedByUserId,
+        rejection_reason: rejectionReason,
+        farm_snapshot: farmSnapshot,
+        farm_snapshot_updated_at,
+      }, { transaction });
+
+      farm.status = FarmStatus.REJECTED;
+      await farm.save({ transaction });
+      await farm.reload({ transaction });
+
+      try {
+        const owner = await userService.getUserById(farm.owner_user_id);
+        const subject = 'Your Farm Application Has Been Rejected';
+        const emailBody = `<h2>Your Farm Application Has Been Rejected</h2>
+          <p>Your farm application for <strong>${farm.farm_name}</strong> has been rejected.</p>
+          <p>Reason for rejection: ${rejectionReason}</p>`;
+        await emailService.sendEmail(owner.email, subject, emailBody);
+      } catch (error: unknown) {
+        Logger.warn(
+          `Farm rejected but failed to send rejection email. Reason = ${getErrorMessage(error)}`
+        );
+      }
+
+      return this.convertToFarmDTO(farm);
+    });
   }
 
   private generateFieldLevelDiffAgainstPersisted(
