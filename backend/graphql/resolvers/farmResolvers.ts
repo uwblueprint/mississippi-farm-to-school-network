@@ -96,12 +96,11 @@ const farmResolvers = {
     },
     rejectFarm: async (
       _parent: undefined,
-      { farmId, rejectedByUserId, rejectionReason }: { farmId: string; rejectedByUserId: string; rejectionReason: string },
+      { id, input }: { id: string; input: { rejection_reason: string } },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      await authHelper.requireRole(context, [Role.ADMIN]);
-      const rejectedFarm = await farmService.rejectFarm(farmId, rejectedByUserId, rejectionReason);
-      return rejectedFarm;
+      const currentUser = await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.rejectFarm(id, currentUser.id, input.rejection_reason);
     },
   },
 
