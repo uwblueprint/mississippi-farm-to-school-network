@@ -450,8 +450,9 @@ class FarmService implements IFarmService {
 
   async rejectFarm(
     farmId: string,
-    rejectedByUserId:
-    string, rejectionReason: string): Promise<FarmDTO> {
+    rejectedByUserId: string,
+    rejectionReason: string
+  ): Promise<FarmDTO> {
     const sequelize = Farm.sequelize as Sequelize;
 
     return await sequelize.transaction(async (transaction) => {
@@ -462,13 +463,16 @@ class FarmService implements IFarmService {
       const farmSnapshot = this.convertToFarmSnapshot(farm);
       const farm_snapshot_updated_at = farm.updatedAt;
 
-      await FarmRejection.create({
-        farm_id: farmId,
-        rejected_by_user_id: rejectedByUserId,
-        rejection_reason: rejectionReason,
-        farm_snapshot: farmSnapshot,
-        farm_snapshot_updated_at,
-      }, { transaction });
+      await FarmRejection.create(
+        {
+          farm_id: farmId,
+          rejected_by_user_id: rejectedByUserId,
+          rejection_reason: rejectionReason,
+          farm_snapshot: farmSnapshot,
+          farm_snapshot_updated_at,
+        },
+        { transaction }
+      );
 
       farm.status = FarmStatus.REJECTED;
       await farm.save({ transaction });
