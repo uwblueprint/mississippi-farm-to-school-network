@@ -1,7 +1,6 @@
-import { Op, UniqueConstraintError } from 'sequelize';
+import { Sequelize, Op, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import FarmRejection from '@/models/farm_rejection.model';
-import { sequelize } from '@/models';
 import IFarmService from '@/services/interfaces/farmService';
 import {
   CreateFarmInput,
@@ -454,6 +453,8 @@ class FarmService implements IFarmService {
     rejectedByUserId: string,
     rejectionReason: string
   ): Promise<FarmDTO> {
+    const sequelize = Farm.sequelize as Sequelize;
+
     return await sequelize.transaction(async (transaction) => {
       const farm = await Farm.findByPk(farmId, { transaction });
       if (!farm) {
