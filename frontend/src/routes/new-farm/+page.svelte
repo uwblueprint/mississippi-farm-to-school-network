@@ -1,12 +1,28 @@
 <script lang="ts">
-	export let data;
-
-	let phone = data.user?.phone ?? '';
-	let email = data.user?.email ?? '';
-
+	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import { COUNTIES } from '$lib/data/msCounties';
 
-	let selectedCounties: string[] = [];
+	let { data } = $props();
+
+	let phone = $state(data.user?.phone ?? '');
+	let email = $state(data.user?.email ?? '');
+
+	let selectedCounties = $state<string[]>([]);
+
+	// Image files the farmer selects for this farm, kept in the form's reactive state.
+	let selectedFiles = $state<File[]>([]);
+
+	function handleFileChange(details: { acceptedFiles: File[] }) {
+		selectedFiles = details.acceptedFiles;
+		// Verify files are being captured correctly.
+		console.log('selectedFiles', selectedFiles);
+	}
+
+	function formatSize(bytes: number) {
+		if (bytes < 1024) return `${bytes} B`;
+		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+	}
 </script>
 
 <div class="container">
@@ -127,10 +143,37 @@
 		<label>
 			*Optional: Upload photos of your farm, operations, and/or products here. (Optional)
 		</label>
-		<div class="upload-box">
-			<div class="upload-circle"></div>
-			<span>Upload</span>
-		</div>
+
+		<FileUpload
+			accept="image/*"
+			maxFiles={10}
+			acceptedFiles={selectedFiles}
+			onFileChange={handleFileChange}
+		>
+			<FileUpload.Label class="sr-only">Upload farm images</FileUpload.Label>
+			<FileUpload.Dropzone
+				class="flex min-h-30 cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[#bdbdbd] bg-[#dcdcdc] p-4 text-[#444]"
+			>
+				<span class="text-sm">Select images or drag them here</span>
+				<FileUpload.Trigger
+					class="rounded-md border-none bg-[#5f5f5f] px-4 py-2 text-sm text-white"
+				>
+					Upload
+				</FileUpload.Trigger>
+				<FileUpload.HiddenInput />
+			</FileUpload.Dropzone>
+		</FileUpload>
+
+		{#if selectedFiles.length > 0}
+			<ul class="file-list">
+				{#each selectedFiles as file (file.name + file.size)}
+					<li>
+						<span class="file-name">{file.name}</span>
+						<span class="file-size">{formatSize(file.size)}</span>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	</div>
 
 	<div class="form-group center submit-section">
@@ -242,22 +285,30 @@
 		min-height: 140px;
 	}
 
-	.upload-box {
-		background: #dcdcdc;
-		height: 120px;
-		border-radius: 8px;
+	.file-list {
+		list-style: none;
+		margin: 10px 0 0;
+		padding: 0;
 		display: flex;
 		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 8px;
+		gap: 6px;
 	}
 
-	.upload-circle {
-		width: 48px;
-		height: 48px;
-		background: #bdbdbd;
-		border-radius: 50%;
+	.file-list li {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		padding: 8px 12px;
+		border: 1px solid #dcdcdc;
+		border-radius: 6px;
+		background: #f8f8f8;
+		font-size: 14px;
+	}
+
+	.file-size {
+		color: #666;
+		font-size: 12px;
 	}
 
 	.submit {
