@@ -7,21 +7,24 @@ import userResolvers from '@/graphql/resolvers/userResolvers';
 import authResolvers from '@/graphql/resolvers/authResolvers';
 import farmResolvers from '@/graphql/resolvers/farmResolvers';
 import fileStorageResolvers from '@/graphql/resolvers/fileStorageResolvers';
+import announcementResolvers from '@/graphql/resolvers/announcementResolvers';
 import emailType from '@/graphql/types/emailType';
 import userType from '@/graphql/types/userType';
 import authType from '@/graphql/types/authType';
 import farmType from '@/graphql/types/farmType';
 import fileStorageType from '@/graphql/types/fileStorageType';
+import announcementType from '@/graphql/types/announcementType';
 
 const executableSchema = makeExecutableSchema({
-  typeDefs: [emailType, userType, authType, farmType, fileStorageType],
+  typeDefs: [emailType, userType, authType, farmType, fileStorageType, announcementType],
   resolvers: merge(
     { JSON: JSONResolver },
     emailResolvers,
     userResolvers,
     authResolvers,
     farmResolvers,
-    fileStorageResolvers
+    fileStorageResolvers,
+    announcementResolvers
   ),
 });
 
