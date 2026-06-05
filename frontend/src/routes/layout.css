@@ -5,6 +5,16 @@
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
 
+/* MFSN brand tokens — single source of truth for the design colors. */
+:root {
+	--mfsn-primary: #587244;
+	--mfsn-primary-hover: #688750; /* a touch lighter than primary, for hover */
+	--mfsn-primary-tint: rgba(88, 114, 68, 0.08); /* faint primary wash for outlined hover */
+	--mfsn-text-primary: #131927; /* primary text + icons */
+	--mfsn-icon-close: #414141;
+	--mfsn-surface: #ffffff;
+}
+
 /* Windows form styling fix (see Skeleton docs) */
 .select,
 .input,
@@ -18,4 +28,6 @@ body {
 	font-family: 'DM Sans', sans-serif;
 	background-color: #f5f5f5;
 	color: #111;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
 }
