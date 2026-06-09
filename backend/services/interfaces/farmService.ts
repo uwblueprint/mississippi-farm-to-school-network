@@ -19,12 +19,14 @@ interface IFarmService {
   createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO>;
 
   /**
-   * Get farms with optional filtering
+   * Get farms with optional filtering and pagination.
+   * @param pageNumber the page number to retrieve
+   * @param pageSize the number of farms per page
    * @param filter optional farm filter criteria
    * @returns array of FarmDTOs
    * @throws Error if farm retrieval fails
    */
-  getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>>;
+  getFarms(pageNumber: number, pageSize: number, filter?: FarmFilter): Promise<Array<FarmDTO>>;
 
   /**
    * Update a farm by id

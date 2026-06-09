@@ -96,7 +96,7 @@ class FarmService implements IFarmService {
     return createdFarm;
   }
 
-  async getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>> {
+  async getFarms(pageNumber: number, pageSize: number, filter?: FarmFilter): Promise<Array<FarmDTO>> {
     const where: Record<string, unknown> = {};
 
     try {
@@ -120,7 +120,7 @@ class FarmService implements IFarmService {
         where.food_categories = { [Op.overlap]: filter.food_categories };
       }
 
-      const farms = await Farm.findAll({ where });
+      const farms = await Farm.findAll({ where, limit: pageSize, offset: (pageNumber - 1) * pageSize });
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms. Reason = ${getErrorMessage(error)}`);
