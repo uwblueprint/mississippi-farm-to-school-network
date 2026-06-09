@@ -32,6 +32,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
+    home_county: String!
     location: Location!
     food_categories: [String!]!
     market_sales_data: [MarketSalesData!]
@@ -61,6 +62,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
+    home_county: String!
     location: LocationInput!
     food_categories: [String!]!
     market_sales_data: [MarketSalesDataInput!]
@@ -88,6 +90,7 @@ const farmType = gql`
 
   input FarmFilter {
     status: FarmStatus
+    home_county: String
     counties_served: [String!]
     cities_served: [String!]
     food_categories: [String!]
@@ -105,6 +108,7 @@ const farmType = gql`
     farm_address: String
     counties_served: [String!]
     cities_served: [String!]
+    home_county: String
     location: LocationInput
     food_categories: [String!]
     market_sales_data: [MarketSalesDataInput!]

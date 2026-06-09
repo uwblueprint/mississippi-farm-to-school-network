@@ -27,6 +27,7 @@ const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   farm_address: '123 Farm Rd',
   counties_served: ['Hinds', 'Madison'],
   cities_served: ['Jackson', 'Ridgeland'],
+  home_county: 'Hinds',
   location: { type: 'Point', coordinates: [-90.18, 32.3] },
   food_categories: ['Vegetables', 'Fruits'],
   market_sales_data: null,
@@ -141,6 +142,16 @@ describe('FarmService.getFarms', () => {
   });
 
   // ── array filters ─────────────────────────────────────────────────────────
+
+  test('filter by home_county: passes exact match to where clause', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms({ home_county: 'Hinds' });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { home_county: 'Hinds' },
+    });
+  });
 
   test('filter by counties_served: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
@@ -263,6 +274,7 @@ describe('FarmService.updateFarm', () => {
       farm_address: '123 Farm Rd',
       counties_served: ['Hinds'],
       cities_served: ['Jackson'],
+      home_county: 'Hinds',
       location: { type: 'Point', coordinates: [-90.18, 32.3] },
       food_categories: ['Vegetables'],
       market_sales_data: null,
