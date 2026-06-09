@@ -7,13 +7,9 @@ import Farm from '@/models/farm.model';
 import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, Role } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
-import EmailService from '@/services/implementations/emailService';
-import IEmailService from '@/services/interfaces/emailService';
-import nodemailerConfig from '@/nodemailer.config';
 
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
-const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const farmResolvers = {
   Query: {
@@ -67,15 +63,7 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       const currentUser = await authHelper.requireEmailVerified(context);
-      const createdFarm = await farmService.createFarm(currentUser.id, input);
-
-      const subject = 'New Farm Application Submitted';
-      const emailBody = `<h2>New Farm Application Submitted</h2>
-                      <p>A new farm application has been submitted for ${input.farm_name}.</p>
-                      <p>Please review the application and approve or reject it.</p>`;
-      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
-
-      return createdFarm;
+      return farmService.createFarm(currentUser.id, input);
     },
 
     updateFarm: async (

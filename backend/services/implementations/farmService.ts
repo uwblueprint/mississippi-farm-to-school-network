@@ -57,6 +57,8 @@ const convertFromPostGISPoint = (location: {
 
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
+    let createdFarm: FarmDTO;
+
     try {
       const farm = await Farm.create({
         owner_user_id: ownerUserId,
@@ -65,7 +67,7 @@ class FarmService implements IFarmService {
         status: FarmStatus.PENDING_APPROVAL,
       });
 
-      return this.convertToFarmDTO(farm);
+      createdFarm = this.convertToFarmDTO(farm);
     } catch (error: unknown) {
       if (error instanceof UniqueConstraintError) {
         Logger.warn(
@@ -76,6 +78,21 @@ class FarmService implements IFarmService {
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+
+    const subject = 'New Farm Application Submitted';
+    const emailBody = `<h2>New Farm Application Submitted</h2>
+                      <p>A new farm application has been submitted for ${createdFarm.farm_name}.</p>
+                      <p>Please review the application and approve or reject it.</p>`;
+
+    try {
+      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm created but failed to send admin notification email. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return createdFarm;
   }
 
   async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
