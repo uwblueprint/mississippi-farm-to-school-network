@@ -10,6 +10,15 @@ export const up: MigrationFn = async (params) => {
     type: DataTypes.STRING,
     allowNull: true,
   });
+
+  await queryInterface.sequelize.query(
+    "UPDATE farms SET home_county = '' WHERE home_county IS NULL"
+  );
+
+  await queryInterface.changeColumn('farms', 'home_county', {
+    type: DataTypes.STRING,
+    allowNull: false,
+  });
 };
 
 export const down: MigrationFn = async (params) => {
