@@ -124,12 +124,21 @@ const farmType = gql`
     farms(filter: FarmFilter): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
+    latestActiveFarmRejection(farmId: ID!): FarmRejectionDTO
   }
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
+    resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+  }
+
+  type FarmRejectionDTO {
+    id: ID!
+    farm_id: ID!
+    rejection_reason: String!
+    created_at: String!
   }
 `;
 

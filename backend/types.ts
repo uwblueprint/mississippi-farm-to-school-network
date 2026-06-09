@@ -168,3 +168,16 @@ export interface FarmFilter {
   food_categories?: string[];
   approved?: boolean;
 }
+
+export type FarmRejectionDTO = {
+  id: string;
+  farm_id: string;
+  rejection_reason: string;
+  created_at: string;
+};
+
+export enum ResolutionType {
+  RESUBMITTED = 'RESUBMITTED',
+  APPROVED = 'APPROVED',
+  WITHDRAWN = 'WITHDRAWN',
+}

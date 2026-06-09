@@ -1,4 +1,11 @@
-import { CreateFarmInput, FarmFilter, FarmDTO, UpdateFarmInput, FarmStatus } from '@/types';
+import {
+  CreateFarmInput,
+  FarmFilter,
+  FarmDTO,
+  UpdateFarmInput,
+  FarmStatus,
+  FarmRejectionDTO,
+} from '@/types';
 import Farm from '@/models/farm.model';
 
 interface IFarmService {
@@ -44,6 +51,13 @@ interface IFarmService {
    */
   approveFarm(id: string): Promise<FarmDTO>;
   getFarmById(farmId: string): Promise<FarmDTO>;
+
+  getLatestActiveRejection(farmId: string): Promise<FarmRejectionDTO | null>;
+  resubmitFarm(
+    farmId: string,
+    resubmittedByUserId: string,
+    input: UpdateFarmInput
+  ): Promise<FarmDTO>;
 }
 
 export default IFarmService;

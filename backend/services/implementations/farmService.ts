@@ -8,6 +8,7 @@ import {
   FarmStatus,
   UpdateFarmInput,
   LocationDTO,
+  FarmRejectionDTO,
 } from '@/types';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
@@ -423,6 +424,83 @@ class FarmService implements IFarmService {
         `Farm resubmission email failed but update succeeded. Reason = ${getErrorMessage(error)}`
       );
     }
+  }
+
+  async getLatestActiveRejection(farmId: string): Promise<FarmRejectionDTO | null> {
+    try {
+      const [rejection] = (await Farm.sequelize!.query(
+        `SELECT id, farm_id, rejection_reason, created_at 
+        FROM farm_rejections 
+        WHERE farm_id = :farmId AND resolved_at IS NULL 
+        ORDER BY created_at DESC 
+        LIMIT 1`,
+        {
+          replacements: { farmId },
+          type: 'SELECT',
+        }
+      )) as [any, unknown];
+
+      if (!rejection) {
+        return null;
+      }
+
+      return {
+        id: rejection.id,
+        farm_id: rejection.farm_id,
+        rejection_reason: rejection.rejection_reason,
+        created_at:
+          rejection.created_at instanceof Date
+            ? rejection.created_at.toISOString()
+            : new Date(rejection.created_at).toISOString(),
+      };
+    } catch (error: unknown) {
+      Logger.error(`Failed to get latest active rejection. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async resubmitFarm(
+    farmId: string,
+    resubmittedByUserId: string,
+    input: UpdateFarmInput
+  ): Promise<FarmDTO> {
+    return await Farm.sequelize!.transaction(async (t) => {
+      const farm = await Farm.findByPk(farmId, { transaction: t });
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (farm.status !== FarmStatus.REJECTED) {
+        throw new Error(
+          `Farm with id ${farmId} cannot be resubmitted because its status is ${farm.status}, not REJECTED.`
+        );
+      }
+
+      const updateValues = Object.fromEntries(
+        Object.entries(input).filter(([, value]) => value !== undefined)
+      ) as Partial<UpdateFarmInput>;
+
+      if (updateValues.location) {
+        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
+      }
+
+      Object.assign(farm, updateValues, { status: FarmStatus.PENDING_APPROVAL });
+      await farm.save({ transaction: t });
+
+      await Farm.sequelize!.query(
+        `UPDATE farm_rejections 
+         SET resolved_at = NOW(), 
+             resolution_type = 'RESUBMITTED' 
+         WHERE farm_id = :farmId AND resolved_at IS NULL`,
+        {
+          replacements: { farmId },
+          transaction: t,
+        }
+      );
+
+      await farm.reload({ transaction: t });
+      return this.convertToFarmDTO(farm);
+    });
   }
 }
 

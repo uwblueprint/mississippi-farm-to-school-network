@@ -4,7 +4,15 @@ import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
-import { CreateFarmInput, FarmDTO, FarmFilter, FarmStatus, UpdateFarmInput, Role } from '@/types';
+import {
+  CreateFarmInput,
+  FarmDTO,
+  FarmFilter,
+  FarmStatus,
+  UpdateFarmInput,
+  Role,
+  FarmRejectionDTO,
+} from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
 import EmailService from '@/services/implementations/emailService';
@@ -48,6 +56,19 @@ const farmResolvers = {
     ): Promise<FarmDTO[]> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.getFarmsByStatus(status);
+    },
+    latestActiveFarmRejection: async (
+      _parent: undefined,
+      { farmId }: { farmId: string },
+      context: AuthContext
+    ): Promise<FarmRejectionDTO | null> => {
+      await authHelper.requireEmailVerified(context);
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+      return farmService.getLatestActiveRejection(farmId);
     },
   },
 
@@ -93,6 +114,21 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.approveFarm(id);
+    },
+
+    resubmitFarm: async (
+      _parent: undefined,
+      { id, input }: { id: string; input: UpdateFarmInput },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      const currentUser = await authHelper.requireEmailVerified(context);
+      const farm = await Farm.findByPk(id);
+      if (!farm) {
+        throw new Error(`Farm with id ${id} not found.`);
+      }
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+
+      return farmService.resubmitFarm(id, currentUser.id, input);
     },
   },
 
