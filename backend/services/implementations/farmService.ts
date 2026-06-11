@@ -102,16 +102,14 @@ class FarmService implements IFarmService {
       const farms = await Farm.findAll({
         where: {
           status: FarmStatus.APPROVED,
-          [Op.and]: [
-            literal(
-              `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography, ${Number(radiusMeters)})`
-            ),
-          ],
+          location: literal(
+            `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
+          ),
         },
         order: [
           [
             literal(
-              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${Number(lng)}, ${Number(lat)}), 4326)::geography)`
+              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography)`
             ),
             'ASC',
           ],

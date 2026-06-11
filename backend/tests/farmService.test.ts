@@ -263,12 +263,12 @@ describe('FarmService.getFarmsByProximity', () => {
 
   const getProximitySql = () => {
     const call = getFindAllCall();
-    const andClauses = (call.where as Record<symbol, unknown[]>)[Op.and];
+    const dWithinClause = (call.where as Record<string, unknown>).location;
     const orderEntry = (call.order as [unknown, string][])[0];
 
     return {
       where: call.where,
-      dWithinSql: getLiteralSql(andClauses[0]),
+      dWithinSql: getLiteralSql(dWithinClause),
       distanceOrderSql: getLiteralSql(orderEntry[0]),
       distanceOrderDirection: orderEntry[1],
     };
