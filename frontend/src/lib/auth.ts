@@ -1,3 +1,4 @@
+import { FirebaseError } from 'firebase/app';
 import {
 	createUserWithEmailAndPassword,
 	sendPasswordResetEmail,
@@ -35,6 +36,22 @@ const FIREBASE_AUTH_ERRORS: Record<string, string> = {
 	'auth/weak-password': 'Password is too weak. Please meet all requirements below.'
 };
 
+const LOGIN_PASSWORD_ERROR_CODES = new Set([
+	'auth/wrong-password',
+	'auth/invalid-credential',
+	'auth/user-not-found'
+]);
+
+export const EMAIL_VERIFICATION_ERROR =
+	'Please check your email to verify your account before logging in';
+
+export const EMAIL_ALREADY_IN_USE_ERROR = 'An account with this email already exists.';
+
+export type LoginFieldError = {
+	field: 'email' | 'password';
+	message: string;
+};
+
 export function isEmailValid(email: string): boolean {
 	return email.length > 0 && EMAIL_REGEX.test(email);
 }
@@ -51,17 +68,6 @@ export function getAuthErrorMessage(error: unknown): string {
 	return 'Something went wrong. Please try again.';
 }
 
-export type LoginFieldError = {
-	field: 'email' | 'password';
-	message: string;
-};
-
-const LOGIN_PASSWORD_ERROR_CODES = new Set([
-	'auth/wrong-password',
-	'auth/invalid-credential',
-	'auth/user-not-found'
-]);
-
 export function getLoginFieldError(error: unknown): LoginFieldError | null {
 	if (!isAuthError(error)) {
 		return null;
@@ -74,22 +80,12 @@ export function getLoginFieldError(error: unknown): LoginFieldError | null {
 	return null;
 }
 
-export const EMAIL_VERIFICATION_ERROR =
-	'Please check your email to verify your account before logging in';
-
-export const EMAIL_ALREADY_IN_USE_ERROR = 'An account with this email already exists.';
-
 export function isEmailAlreadyInUseError(error: unknown): boolean {
 	return isAuthError(error) && error.code === 'auth/email-already-in-use';
 }
 
 function isAuthError(error: unknown): error is AuthError {
-	return (
-		typeof error === 'object' &&
-		error !== null &&
-		'code' in error &&
-		typeof (error as AuthError).code === 'string'
-	);
+	return error instanceof FirebaseError && error.code.startsWith('auth/');
 }
 
 export function isAdminEmail(email: string): boolean {
