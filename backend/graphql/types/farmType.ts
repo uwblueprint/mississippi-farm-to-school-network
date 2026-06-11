@@ -124,6 +124,10 @@ const farmType = gql`
     interested_in_f2s: Boolean
   }
 
+  input RejectFarmInput {
+    rejection_reason: String!
+  }
+
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
@@ -134,6 +138,7 @@ const farmType = gql`
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
+    rejectFarm(id: ID!, input: RejectFarmInput!): FarmDTO!
   }
 `;
 

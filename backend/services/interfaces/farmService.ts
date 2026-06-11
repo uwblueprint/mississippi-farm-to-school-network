@@ -74,6 +74,16 @@ interface IFarmService {
    * @throws Error if farm rejection retrieval fails
    */
   getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null>;
+
+  /**
+   * Reject a farm and create a rejection record
+   * @param farmId farm's id
+   * @param rejectedByUserId id of the user rejecting the farm
+   * @param rejectionReason reason for the rejection
+   * @returns a FarmDTO with the updated farm's information
+   * @throws Error if farm rejection fails
+   */
+  rejectFarm(farmId: string, rejectedByUserId: string, rejectionReason: string): Promise<FarmDTO>;
 }
 
 export default IFarmService;

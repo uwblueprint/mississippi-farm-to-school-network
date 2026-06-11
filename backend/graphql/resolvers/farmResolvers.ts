@@ -82,6 +82,14 @@ const farmResolvers = {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.approveFarm(id);
     },
+    rejectFarm: async (
+      _parent: undefined,
+      { id, input }: { id: string; input: { rejection_reason: string } },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      const currentUser = await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.rejectFarm(id, currentUser.id, input.rejection_reason);
+    },
   },
 
   FarmDTO: {
