@@ -67,7 +67,7 @@
 		<div class="auth-form-wrapper auth-form-wrapper--wide">
 			<h1 class="auth-heading">Forgot Password?</h1>
 			<p class="auth-subtitle auth-subtitle--left">
-				We'll send you an email to reset your password.
+				If an MFSN account with your email exists, we'll send you an email to reset your password.
 			</p>
 
 			<form class="auth-form" onsubmit={handleSubmit}>

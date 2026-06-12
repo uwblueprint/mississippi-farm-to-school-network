@@ -74,7 +74,7 @@ export function getLoginFieldError(error: unknown): LoginFieldError | null {
 	}
 
 	if (LOGIN_PASSWORD_ERROR_CODES.has(error.code)) {
-		return { field: 'password', message: 'Invalid Password' };
+		return { field: 'password', message: 'Invalid email or password ' };
 	}
 
 	return null;

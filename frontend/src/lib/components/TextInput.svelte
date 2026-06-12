@@ -61,9 +61,13 @@
 					fill="#ffffff"
 				/>
 			</svg>
-			<span>
-				{error}
-				{@render errorCTA?.()}
+			<span class="error-content">
+				<span>{error}</span>
+				{#if errorCTA}
+					<span class="error-cta">
+						{@render errorCTA()}
+					</span>
+				{/if}
 			</span>
 		</p>
 	{/if}
@@ -123,5 +127,11 @@
 		width: 0.875rem;
 		height: 0.875rem;
 		margin-top: 0.125rem;
+	}
+
+	.error-content {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
 	}
 </style>
