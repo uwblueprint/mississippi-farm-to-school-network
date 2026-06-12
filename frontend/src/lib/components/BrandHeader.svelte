@@ -7,7 +7,11 @@
 		logoAlt?: string;
 	}
 
-	let { title = DEFAULT_TITLE, logoSrc = '/images/mfsnLogo.svg', logoAlt = 'Mississippi Farm to School Network\'s logo' }: Props = $props();
+	let {
+		title = DEFAULT_TITLE,
+		logoSrc = '/images/mfsnLogo.svg',
+		logoAlt = "Mississippi Farm to School Network's logo"
+	}: Props = $props();
 </script>
 
 <div class="brand-header">

@@ -100,7 +100,11 @@
 					<p class="auth-status auth-status--error" role="alert">{formError}</p>
 				{/if}
 
-				<Button type="submit" disabled={isSubmitting} label={isSubmitting ? 'Logging in…' : 'Log In'} />
+				<Button
+					type="submit"
+					disabled={isSubmitting}
+					label={isSubmitting ? 'Logging in…' : 'Log In'}
+				/>
 			</form>
 
 			<p class="auth-footer">

@@ -98,7 +98,9 @@
 			</form>
 
 			<p class="auth-footer">
-				<a class="auth-return-link" href="/login"><span aria-hidden="true">‹</span> Return to Login</a>
+				<a class="auth-return-link" href="/login"
+					><span aria-hidden="true">‹</span> Return to Login</a
+				>
 			</p>
 		</div>
 	</div>
