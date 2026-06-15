@@ -3,8 +3,9 @@ import {
   FarmFilter,
   FarmDTO,
   FarmRejectionDTO,
-  UpdateFarmInput,
+  ActiveFarmRejectionDTO,
   FarmStatus,
+  UpdateFarmInput,
 } from '@/types';
 import Farm from '@/models/farm.model';
 
@@ -62,6 +63,28 @@ interface IFarmService {
   approveFarm(id: string): Promise<FarmDTO>;
 
   getFarmById(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Get the latest unresolved rejection for a farm
+   * @param farmId farm's id
+   * @returns the latest active FarmRejectionDTO or null if no active rejection exists
+   * @throws Error if retrieval fails
+   */
+  getLatestActiveRejection(farmId: string): Promise<ActiveFarmRejectionDTO | null>;
+
+  /**
+   * Resubmit a rejected farm with updated fields
+   * @param farmId farm's id
+   * @param resubmittedByUserId id of the user resubmitting the farm
+   * @param input the farm fields to update
+   * @returns a FarmDTO with status PENDING_APPROVAL
+   * @throws Error if farm is not in REJECTED status or update fails
+   */
+  resubmitFarm(
+    farmId: string,
+    resubmittedByUserId: string,
+    input: UpdateFarmInput
+  ): Promise<FarmDTO>;
 
   /**
    * Create a rejection record for a farm
