@@ -135,6 +135,10 @@ class FarmService implements IFarmService {
         where.status = filter.approved ? FarmStatus.APPROVED : { [Op.ne]: FarmStatus.APPROVED };
       }
 
+      if (filter?.home_county) {
+        where.home_county = filter.home_county;
+      }
+
       if (filter?.counties_served?.length) {
         where.counties_served = { [Op.overlap]: filter.counties_served };
       }
@@ -326,6 +330,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
+      home_county: data.home_county,
       location: {
         type: 'Point',
         coordinates: data.location.coordinates,
@@ -412,6 +417,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
+      home_county: data.home_county,
       location: convertFromPostGISPoint(data.location),
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
