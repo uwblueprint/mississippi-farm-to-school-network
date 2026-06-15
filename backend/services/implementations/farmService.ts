@@ -1,4 +1,4 @@
-import { Op, UniqueConstraintError } from 'sequelize';
+import { Op, literal, UniqueConstraintError } from 'sequelize';
 import Farm from '@/models/farm.model';
 import FarmRejection from '@/models/farm_rejection.model';
 import IFarmService from '@/services/interfaces/farmService';
@@ -95,6 +95,34 @@ class FarmService implements IFarmService {
     return createdFarm;
   }
 
+  async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
+    try {
+      const radiusMeters = radiusKm * 1000;
+
+      const farms = await Farm.findAll({
+        where: {
+          status: FarmStatus.APPROVED,
+          location: literal(
+            `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
+          ),
+        },
+        order: [
+          [
+            literal(
+              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography)`
+            ),
+            'ASC',
+          ],
+        ],
+      });
+
+      return this.convertToFarmDTOs(farms);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farms by proximity. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   async getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>> {
     const where: Record<string, unknown> = {};
 
@@ -105,6 +133,10 @@ class FarmService implements IFarmService {
 
       if (filter?.approved !== undefined && !filter.status) {
         where.status = filter.approved ? FarmStatus.APPROVED : { [Op.ne]: FarmStatus.APPROVED };
+      }
+
+      if (filter?.home_county) {
+        where.home_county = filter.home_county;
       }
 
       if (filter?.counties_served?.length) {
@@ -298,6 +330,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
+      home_county: data.home_county,
       location: {
         type: 'Point',
         coordinates: data.location.coordinates,
@@ -384,6 +417,7 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       counties_served: data.counties_served,
       cities_served: data.cities_served,
+      home_county: data.home_county,
       location: convertFromPostGISPoint(data.location),
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
