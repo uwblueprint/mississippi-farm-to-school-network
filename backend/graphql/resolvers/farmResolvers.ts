@@ -13,6 +13,18 @@ const userService: IUserService = new UserService();
 
 const farmResolvers = {
   Query: {
+    farmsByProximity: async (
+      _: unknown,
+      { lat, lng, radiusKm }: { lat: number; lng: number; radiusKm: number }
+    ) => {
+      if (!isFinite(lat) || !isFinite(lng) || !isFinite(radiusKm))
+        throw new Error('lat, lng, and radiusKm must be finite numbers');
+      if (lat < -90 || lat > 90) throw new Error('lat must be between -90 and 90');
+      if (lng < -180 || lng > 180) throw new Error('lng must be between -180 and 180');
+      if (radiusKm <= 0) throw new Error('radiusKm must be positive');
+      if (radiusKm > 40075) throw new Error('radiusKm exceeds maximum allowed value');
+      return farmService.getFarmsByProximity(lat, lng, radiusKm);
+    },
     farms: async (
       _parent: undefined,
       { filter }: { filter?: FarmFilter },
