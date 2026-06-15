@@ -3,6 +3,7 @@ import {
   FarmFilter,
   FarmDTO,
   FarmRejectionDTO,
+  ActiveFarmRejectionDTO,
   FarmStatus,
   UpdateFarmInput,
 } from '@/types';
@@ -69,7 +70,7 @@ interface IFarmService {
    * @returns the latest active FarmRejectionDTO or null if no active rejection exists
    * @throws Error if retrieval fails
    */
-  getLatestActiveRejection(farmId: string): Promise<FarmRejectionDTO | null>;
+  getLatestActiveRejection(farmId: string): Promise<ActiveFarmRejectionDTO | null>;
 
   /**
    * Resubmit a rejected farm with updated fields

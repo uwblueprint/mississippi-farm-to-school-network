@@ -10,7 +10,8 @@ import {
   UpdateFarmInput,
   LocationDTO,
   FarmRejectionDTO,
-  ResolutionType,
+  ActiveFarmRejectionDTO,
+  FarmRejectionResolutionType,
   FarmSnapshotDTO,
 } from '@/types';
 import UserService from '@/services/implementations/userService';
@@ -614,9 +615,16 @@ class FarmService implements IFarmService {
     }
   }
 
-  async getLatestActiveRejection(farmId: string): Promise<FarmRejectionDTO | null> {
+  async getLatestActiveRejection(farmId: string): Promise<ActiveFarmRejectionDTO | null> {
     try {
-      const [rejection] = (await Farm.sequelize!.query(
+      type ActiveRejectionRow = {
+        id: string;
+        farm_id: string;
+        rejection_reason: string;
+        created_at: Date | string;
+      };
+
+      const rows = (await Farm.sequelize!.query(
         `SELECT id, farm_id, rejection_reason, created_at 
         FROM farm_rejections 
         WHERE farm_id = :farmId AND resolved_at IS NULL 
@@ -626,7 +634,9 @@ class FarmService implements IFarmService {
           replacements: { farmId },
           type: 'SELECT',
         }
-      )) as [any, unknown];
+      )) as ActiveRejectionRow[];
+
+      const rejection = rows[0];
 
       if (!rejection) {
         return null;
@@ -681,7 +691,7 @@ class FarmService implements IFarmService {
              resolution_type = :resolutionType
          WHERE farm_id = :farmId AND resolved_at IS NULL`,
         {
-          replacements: { farmId, resolutionType: ResolutionType.RESUBMITTED },
+          replacements: { farmId, resolutionType: FarmRejectionResolutionType.RESUBMITTED },
           transaction: t,
         }
       );

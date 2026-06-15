@@ -200,18 +200,11 @@ export interface FarmFilter {
   approved?: boolean;
 }
 
-export type FarmRejectionDTO = {
-  id: string;
-  farm_id: string;
-  rejection_reason: string;
-  created_at: string;
-};
+export type ActiveFarmRejectionDTO = Pick<
+  FarmRejectionDTO,
+  'id' | 'farm_id' | 'rejection_reason' | 'created_at'
+>;
 
-export enum ResolutionType {
-  RESUBMITTED = 'RESUBMITTED',
-  APPROVED = 'APPROVED',
-  WITHDRAWN = 'WITHDRAWN',
-}
 export type AnnouncementDTO = {
   id: string;
   message: string;

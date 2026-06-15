@@ -15,9 +15,13 @@ import {
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
+import EmailService from '@/services/implementations/emailService';
+import IEmailService from '@/services/interfaces/emailService';
+import nodemailerConfig from '@/nodemailer.config';
 
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
+const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const farmResolvers = {
   Query: {
