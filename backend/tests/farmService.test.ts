@@ -254,6 +254,118 @@ describe('FarmService.getFarms', () => {
   });
 });
 
+// ─── FarmService.getFarmsByProximity ─────────────────────────────────────────
+
+describe('FarmService.getFarmsByProximity', () => {
+  let service: FarmService;
+
+  const lat = 32.3;
+  const lng = -90.18;
+  const radiusKm = 10;
+
+  const getFindAllCall = () => MockFarm.findAll.mock.calls[0][0] as Record<string, unknown>;
+
+  const getLiteralSql = (value: unknown): string => {
+    if (value && typeof value === 'object' && 'val' in value) {
+      return String((value as { val: string }).val);
+    }
+    return String(value);
+  };
+
+  const getProximitySql = () => {
+    const call = getFindAllCall();
+    const dWithinClause = (call.where as Record<string, unknown>).location;
+    const orderEntry = (call.order as [unknown, string][])[0];
+
+    return {
+      where: call.where,
+      dWithinSql: getLiteralSql(dWithinClause),
+      distanceOrderSql: getLiteralSql(orderEntry[0]),
+      distanceOrderDirection: orderEntry[1],
+    };
+  };
+
+  beforeEach(() => {
+    service = new FarmService();
+    MockFarm.findAll.mockReset();
+  });
+
+  test('queries approved farms within radius using ST_DWithin', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    const { where, dWithinSql } = getProximitySql();
+
+    expect(where).toMatchObject({ status: FarmStatus.APPROVED });
+    expect(dWithinSql).toContain('ST_DWithin');
+    expect(dWithinSql).toContain(`ST_MakePoint(${lng}, ${lat})`);
+    expect(dWithinSql).toContain('4326');
+    expect(dWithinSql).toContain(`${radiusKm * 1000}`);
+  });
+
+  test('sorts results by ST_Distance ascending', async () => {
+    MockFarm.findAll.mockResolvedValue([]);
+
+    await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    const { distanceOrderSql, distanceOrderDirection } = getProximitySql();
+
+    expect(distanceOrderSql).toContain('ST_Distance');
+    expect(distanceOrderSql).toContain(`ST_MakePoint(${lng}, ${lat})`);
+    expect(distanceOrderDirection).toBe('ASC');
+  });
+
+  test('returns farms inside the radius as FarmDTOs', async () => {
+    const nearbyFarm = makeFarmRow({ id: 'uuid-near', farm_name: 'Nearby Farm' });
+    MockFarm.findAll.mockResolvedValue([nearbyFarm] as any);
+
+    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: 'uuid-near',
+      farm_name: 'Nearby Farm',
+      location: { lat: 32.3, lng: -90.18 },
+    });
+  });
+
+  test('returns an empty array when no farms exist', async () => {
+    MockFarm.findAll.mockResolvedValue([]);
+
+    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    expect(result).toEqual([]);
+  });
+
+  test('returns an empty array when all farms are outside the radius', async () => {
+    MockFarm.findAll.mockResolvedValue([]);
+
+    const result = await service.getFarmsByProximity(lat, lng, 1);
+
+    expect(result).toEqual([]);
+    expect(getProximitySql().dWithinSql).toContain('1000');
+  });
+
+  test('preserves findAll result order (closest first)', async () => {
+    const farther = makeFarmRow({ id: 'uuid-far', farm_name: 'Farther Farm' });
+    const closer = makeFarmRow({ id: 'uuid-close', farm_name: 'Closer Farm' });
+    MockFarm.findAll.mockResolvedValue([closer, farther] as any);
+
+    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    expect(result.map((farm) => farm.id)).toEqual(['uuid-close', 'uuid-far']);
+  });
+
+  test('propagates database errors', async () => {
+    MockFarm.findAll.mockRejectedValue(new Error('PostGIS query failed'));
+
+    await expect(service.getFarmsByProximity(lat, lng, radiusKm)).rejects.toThrow(
+      'PostGIS query failed'
+    );
+  });
+});
+
 // ─── FarmService.updateFarm ──────────────────────────────────────────────────
 
 describe('FarmService.updateFarm', () => {
