@@ -200,6 +200,11 @@ export interface FarmFilter {
   approved?: boolean;
 }
 
+export type ActiveFarmRejectionDTO = Pick<
+  FarmRejectionDTO,
+  'id' | 'farm_id' | 'rejection_reason' | 'created_at'
+>;
+
 export type AnnouncementDTO = {
   id: string;
   message: string;
