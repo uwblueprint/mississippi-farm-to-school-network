@@ -85,7 +85,11 @@ const farmResolvers = {
       const emailBody = `<h2>New Farm Application Submitted</h2>
                       <p>A new farm application has been submitted for ${input.farm_name}.</p>
                       <p>Please review the application and approve or reject it.</p>`;
-      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
+      try {
+        await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
+      } catch {
+        // email failure should not fail the mutation
+      }
 
       return createdFarm;
     },

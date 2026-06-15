@@ -9,6 +9,7 @@ import {
   UpdateFarmInput,
   LocationDTO,
   FarmRejectionDTO,
+  ResolutionType,
 } from '@/types';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
@@ -488,12 +489,12 @@ class FarmService implements IFarmService {
       await farm.save({ transaction: t });
 
       await Farm.sequelize!.query(
-        `UPDATE farm_rejections 
-         SET resolved_at = NOW(), 
-             resolution_type = 'RESUBMITTED' 
+        `UPDATE farm_rejections
+         SET resolved_at = NOW(),
+             resolution_type = :resolutionType
          WHERE farm_id = :farmId AND resolved_at IS NULL`,
         {
-          replacements: { farmId },
+          replacements: { farmId, resolutionType: ResolutionType.RESUBMITTED },
           transaction: t,
         }
       );
