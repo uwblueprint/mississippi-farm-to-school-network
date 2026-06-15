@@ -2,6 +2,7 @@ import { gql } from 'apollo-server';
 
 const farmType = gql`
   scalar JSON
+
   enum FarmStatus {
     PENDING_APPROVAL
     APPROVED
@@ -32,6 +33,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
+    home_county: String!
     location: Location!
     food_categories: [String!]!
     market_sales_data: [MarketSalesData!]
@@ -61,6 +63,7 @@ const farmType = gql`
     farm_address: String!
     counties_served: [String!]!
     cities_served: [String!]!
+    home_county: String!
     location: LocationInput!
     food_categories: [String!]!
     market_sales_data: [MarketSalesDataInput!]
@@ -88,6 +91,7 @@ const farmType = gql`
 
   input FarmFilter {
     status: FarmStatus
+    home_county: String
     counties_served: [String!]
     cities_served: [String!]
     food_categories: [String!]
@@ -105,6 +109,7 @@ const farmType = gql`
     farm_address: String
     counties_served: [String!]
     cities_served: [String!]
+    home_county: String
     location: LocationInput
     food_categories: [String!]
     market_sales_data: [MarketSalesDataInput!]
@@ -122,6 +127,7 @@ const farmType = gql`
 
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
+    farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
     latestActiveFarmRejection(farmId: ID!): FarmRejectionDTO

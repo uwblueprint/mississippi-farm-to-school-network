@@ -5,6 +5,9 @@ import {
   UpdateFarmInput,
   FarmStatus,
   FarmRejectionDTO,
+  FarmRejectionDTO,
+  UpdateFarmInput,
+  FarmStatus,
 } from '@/types';
 import Farm from '@/models/farm.model';
 
@@ -17,6 +20,16 @@ interface IFarmService {
    * @throws Error if farm creation fails
    */
   createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO>;
+
+  /**
+   * Farm search within radius of certain point
+   * @param lat latitude of position
+   * @param lng longitude of position
+   * @param radiusKm search radius in km
+   * @returns array of FarmDTOs within radius
+   * @throws Error if failure
+   */
+  getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]>;
 
   /**
    * Get farms with optional filtering
@@ -50,6 +63,7 @@ interface IFarmService {
    * @throws Error if farm update fails
    */
   approveFarm(id: string): Promise<FarmDTO>;
+
   getFarmById(farmId: string): Promise<FarmDTO>;
 
   /**
@@ -73,6 +87,26 @@ interface IFarmService {
     resubmittedByUserId: string,
     input: UpdateFarmInput
   ): Promise<FarmDTO>;
+   * Create a rejection record for a farm
+   * @param farmId farm's id
+   * @param rejectedByUserId id of the user rejecting the farm
+   * @param rejectionReason reason for the rejection
+   * @returns a FarmRejectionDTO with the created rejection's information
+   * @throws Error if farm rejection creation fails
+   */
+  createFarmRejection(
+    farmId: string,
+    rejectedByUserId: string,
+    rejectionReason: string
+  ): Promise<FarmRejectionDTO>;
+
+  /**
+   * Get the latest rejection for a farm
+   * @param farmId farm's id
+   * @returns the latest FarmRejectionDTO or null when no rejection exists
+   * @throws Error if farm rejection retrieval fails
+   */
+  getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null>;
 }
 
 export default IFarmService;

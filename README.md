@@ -1,14 +1,14 @@
 # Mississippi Farm to School Network
 
-The Mississippi Farm to School Network (MFSN) is a statewide non-profit organization focused on increasing access to fresh, local produce for schools and other organizations. 
+The [Mississippi Farm to School Network (MFSN)](https://www.mississippifarmtoschool.org/) is a statewide non-profit organization focused on increasing access to fresh, local produce for schools and other organizations. 
 
 ## What is the MFSN Platform?
 
 This is a full-stack and mobile-friendly web application for the MFSN. Their focus is to help schools and farmers navigate procurement processes and strengthen local food systems across Mississippi. Our solution helps schools find local agricultural producers, manage farm-to-school programs, and promotes agricultural education while supporting local farmers and providing fresh, healthy food options for students.
 
 ### Technical Stack
-- Frontend: Svelte
-- Backend: Express
+- Frontend: React
+- Backend: Express + GraphQL
 - Database: PostgreSQL
 
 ## Getting Started
