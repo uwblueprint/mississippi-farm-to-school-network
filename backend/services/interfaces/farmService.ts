@@ -2,12 +2,9 @@ import {
   CreateFarmInput,
   FarmFilter,
   FarmDTO,
-  UpdateFarmInput,
-  FarmStatus,
   FarmRejectionDTO,
-  FarmRejectionDTO,
-  UpdateFarmInput,
   FarmStatus,
+  UpdateFarmInput,
 } from '@/types';
 import Farm from '@/models/farm.model';
 
@@ -87,6 +84,8 @@ interface IFarmService {
     resubmittedByUserId: string,
     input: UpdateFarmInput
   ): Promise<FarmDTO>;
+
+  /**
    * Create a rejection record for a farm
    * @param farmId farm's id
    * @param rejectedByUserId id of the user rejecting the farm
