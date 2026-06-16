@@ -29,7 +29,7 @@
 	const count = $derived(announcements.length);
 
 	let availW = $state(0);
-	let contentH = $state(0);
+	let maxH = $state(0);
 	let active = $state(false);
 	let frameEl: HTMLDivElement | undefined = $state();
 
@@ -74,11 +74,7 @@
 	</svg>
 {/snippet}
 
-<div
-	class="promo-root"
-	bind:clientWidth={availW}
-	style="--avail:{availW}px; --content-h:{contentH}px;"
->
+<div class="promo-root" bind:clientWidth={availW} style="--avail:{availW}px; --max-h:{maxH}px;">
 	<div
 		class="promo-frame"
 		class:open
@@ -89,7 +85,7 @@
 		onfocusin={() => (active = true)}
 		onfocusout={onFocusOut}
 	>
-		<div class="promo-layout" bind:clientHeight={contentH}>
+		<div class="promo-layout">
 			<span class="promo-icon">{@render alertIcon()}</span>
 
 			<div class="promo-content">
@@ -120,6 +116,27 @@
 			{/if}
 		</div>
 	</div>
+
+	<div class="promo-measure" aria-hidden="true" bind:clientHeight={maxH}>
+		{#each announcements as a (a.title)}
+			<div class="promo-layout">
+				<span class="promo-icon">{@render alertIcon()}</span>
+
+				<div class="promo-content">
+					<p class="promo-title">{a.title}</p>
+					<p class="promo-caption">{a.date}</p>
+				</div>
+
+				{#if count > 1}
+					<div class="promo-pager">
+						<span class="promo-chevron">{@render chevron()}</span>
+						<span class="promo-count">{index + 1}/{count}</span>
+						<span class="promo-chevron promo-chevron-right">{@render chevron()}</span>
+					</div>
+				{/if}
+			</div>
+		{/each}
+	</div>
 </div>
 
 <style>
@@ -142,7 +159,7 @@
 
 	.promo-frame.open {
 		width: var(--avail);
-		height: var(--content-h);
+		height: var(--max-h);
 		transition:
 			width 350ms ease,
 			height 350ms ease;
@@ -150,10 +167,27 @@
 
 	.promo-layout {
 		width: var(--avail);
+		min-height: var(--max-h);
 		display: flex;
 		align-items: flex-start;
 		gap: 0.75rem;
 		padding: 1.5rem;
+	}
+
+	.promo-measure {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: var(--avail);
+		display: grid;
+		visibility: hidden;
+		pointer-events: none;
+	}
+
+	.promo-measure .promo-layout {
+		grid-column: 1;
+		grid-row: 1;
+		min-height: 0;
 	}
 
 	.promo-icon {
