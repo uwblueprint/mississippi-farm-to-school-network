@@ -291,6 +291,8 @@
 	}
 
 	.promo-count {
+		min-width: 1.5rem;
+		text-align: center;
 		font-family: var(--type-c1-font);
 		font-weight: var(--type-c1-weight);
 		font-size: var(--type-c1-size);
