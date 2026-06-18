@@ -31,9 +31,29 @@
 	let availW = $state(0);
 	let maxH = $state(0);
 	let active = $state(false);
+	let canHover = $state(true);
 	let frameEl: HTMLDivElement | undefined = $state();
 
 	const open = $derived(expanded || active);
+
+	$effect(() => {
+		const mq = window.matchMedia('(hover: hover)');
+		const sync = () => (canHover = mq.matches);
+		sync();
+		mq.addEventListener('change', sync);
+		return () => mq.removeEventListener('change', sync);
+	});
+
+	$effect(() => {
+		if (!open) return;
+		const onDocPointerDown = (event: PointerEvent) => {
+			if (!frameEl?.contains(event.target as Node | null)) {
+				active = false;
+			}
+		};
+		document.addEventListener('pointerdown', onDocPointerDown);
+		return () => document.removeEventListener('pointerdown', onDocPointerDown);
+	});
 
 	function prev() {
 		index = (index - 1 + count) % count;
@@ -41,6 +61,12 @@
 
 	function next() {
 		index = (index + 1) % count;
+	}
+
+	function onPointerUp(event: PointerEvent) {
+		if (event.pointerType === 'mouse') return;
+		if ((event.target as HTMLElement).closest('button')) return;
+		active = !active;
 	}
 
 	function onFocusOut(event: FocusEvent) {
@@ -80,8 +106,9 @@
 		class:open
 		bind:this={frameEl}
 		role="group"
-		onmouseenter={() => (active = true)}
-		onmouseleave={() => (active = false)}
+		onmouseenter={() => canHover && (active = true)}
+		onmouseleave={() => canHover && (active = false)}
+		onpointerup={onPointerUp}
 		onfocusin={() => (active = true)}
 		onfocusout={onFocusOut}
 	>
