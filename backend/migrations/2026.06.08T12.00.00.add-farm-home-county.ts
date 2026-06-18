@@ -6,7 +6,7 @@ export const up: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
   const queryInterface = sequelize.getQueryInterface();
 
-  await queryInterface.changeColumn('farms', 'home_county', {
+  await queryInterface.addColumn('farms', 'home_county', {
     type: DataTypes.STRING,
     allowNull: false,
   });
