@@ -4,6 +4,18 @@
 	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
+
+	const announcements = [
+		{
+			title:
+				'The Regional Mississippi Farming Convention is happening this Sunday! Come drop by and meet all the other farmers!',
+			date: 'June 11, 2026'
+		},
+		{
+			title: 'New seasonal produce listings are now open for the summer term.',
+			date: 'June 14, 2026'
+		}
+	];
 </script>
 
 {#snippet section(title: string, body: Snippet)}
@@ -30,11 +42,11 @@
 			<div class="space-y-8">
 				<div class="space-y-2">
 					<p class="text-sm text-surface-600-400">Hover to expand</p>
-					<PromoBanner />
+					<PromoBanner {announcements} />
 				</div>
 				<div class="space-y-2">
 					<p class="text-sm text-surface-600-400">Expanded (static)</p>
-					<PromoBanner expanded={true} />
+					<PromoBanner {announcements} expanded={true} />
 				</div>
 			</div>
 		{/snippet}

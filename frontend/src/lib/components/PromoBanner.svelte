@@ -5,30 +5,16 @@
 	}
 
 	interface Props {
-		announcements?: Announcement[];
+		announcements: Announcement[];
 		expanded?: boolean;
 	}
 
-	let {
-		announcements = [
-			{
-				title:
-					'The Regional Mississippi Farming Convention is happening this Sunday! Come drop by and meet all the other farmers!',
-				date: 'June 11, 2026'
-			},
-			{
-				title: 'New seasonal produce listings are now open for the summer term.',
-				date: 'June 14, 2026'
-			}
-		],
-		expanded = false
-	}: Props = $props();
+	let { announcements, expanded = false }: Props = $props();
 
 	let index = $state(0);
 	const current = $derived(announcements[index]);
 	const count = $derived(announcements.length);
 
-	let availW = $state(0);
 	let maxH = $state(0);
 	let active = $state(false);
 	let canHover = $state(true);
@@ -100,7 +86,7 @@
 	</svg>
 {/snippet}
 
-<div class="promo-root" bind:clientWidth={availW} style="--avail:{availW}px; --max-h:{maxH}px;">
+<div class="promo-root" style="--max-h:{maxH}px;">
 	<div
 		class="promo-frame"
 		class:open
@@ -169,7 +155,8 @@
 <style>
 	.promo-root {
 		position: relative;
-		width: 100%;
+		width: fit-content;
+		--avail: min(85vw, 60rem);
 	}
 
 	.promo-frame {
