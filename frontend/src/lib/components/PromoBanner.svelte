@@ -313,6 +313,19 @@
 		color: var(--color-neutral-500);
 	}
 
+	@media (max-width: 640px) {
+		.promo-layout {
+			flex-wrap: wrap;
+			align-content: space-between;
+		}
+
+		.promo-pager {
+			flex-basis: 100%;
+			justify-content: flex-end;
+			align-self: auto;
+		}
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		.promo-frame,
 		.promo-frame.open,
