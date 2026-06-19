@@ -9,6 +9,7 @@ export const up: MigrationFn = async (params) => {
   await queryInterface.addColumn('farms', 'home_county', {
     type: DataTypes.STRING,
     allowNull: false,
+    defaultValue: '',
   });
 };
 
