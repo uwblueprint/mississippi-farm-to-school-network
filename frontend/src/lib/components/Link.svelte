@@ -15,7 +15,8 @@
 
 <style>
 	.mfsn-link {
-		font-weight: 700;
+		font-family: 'DM Sans', sans-serif;
+		font-weight: 500;
 		color: var(--color-link);
 		text-decoration: none;
 	}
@@ -27,6 +28,6 @@
 	.mfsn-link--small {
 		display: inline-block;
 		margin-top: 0.5rem;
-		font-size: 0.875rem;
+		font-size: 1.09rem; /* 17px */
 	}
 </style>

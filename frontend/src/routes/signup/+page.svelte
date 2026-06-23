@@ -1,18 +1,18 @@
 <script lang="ts">
-	import '$lib/styles/auth-form.css';
+	import '$lib/styles/auth/auth-form.css';
 	import BrandHeader from '$lib/components/BrandHeader.svelte';
+	import AuthStatusMessage from '$lib/components/auth/AuthStatusMessage.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Link from '$lib/components/Link.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
 	import { goto } from '$app/navigation';
+	import PasswordRequirements from '$lib/components/auth/PasswordRequirements.svelte';
 	import {
 		EMAIL_ALREADY_IN_USE_ERROR,
 		getAuthErrorMessage,
-		isAdminEmail,
 		isEmailAlreadyInUseError,
 		isEmailValid,
 		isPasswordValid,
-		PASSWORD_REQUIREMENTS,
 		signupWithEmail
 	} from '$lib/auth';
 
@@ -52,7 +52,7 @@
 
 		try {
 			await signupWithEmail(trimmedEmail, password);
-			await goto(isAdminEmail(trimmedEmail) ? '/admin' : '/onboarding');
+			await goto('/verify-email');
 		} catch (error) {
 			if (isEmailAlreadyInUseError(error)) {
 				emailError = EMAIL_ALREADY_IN_USE_ERROR;
@@ -70,73 +70,73 @@
 	<title>Sign Up</title>
 </svelte:head>
 
-<div class="auth-page">
+<div class="auth-page--signup">
 	<div class="auth-content">
-		<div class="auth-main">
-			<BrandHeader title="" />
+		<div class="auth-main auth-main--signup">
+			<div class="signup-stack">
+				<BrandHeader title="" />
 
-			<div class="auth-form-wrapper">
-				<h1 class="auth-heading auth-heading--centered">Create Your Account</h1>
-				<p class="auth-subtitle">Add your farm to the map.</p>
-
-				<form class="auth-form" novalidate onsubmit={handleSubmit}>
-					<TextInput
-						label="Email Address"
-						type="email"
-						name="email"
-						autocomplete="email"
-						placeholder="farmer@gmail.com"
-						required
-						bind:value={email}
-						error={emailError}
-					>
-						{#snippet errorCTA()}
-							{#if showEmailExistsActions}
-								<Link href="/login" label="Log in" />
-								·
-								<Link href="/forgot-password" label="Reset Password" />
-							{/if}
-						{/snippet}
-					</TextInput>
-
-					<TextInput
-						label="Password"
-						type="password"
-						name="password"
-						autocomplete="new-password"
-						placeholder="Enter Password"
-						required
-						bind:value={password}
-					/>
-
-					<div class="auth-requirements-box">
-						<p class="auth-requirements-title">Your password must contain:</p>
-						<ul class="auth-requirements" aria-label="Password requirements">
-							{#each PASSWORD_REQUIREMENTS as requirement (requirement.id)}
-								{@const met = requirement.test(password)}
-								<li class="auth-requirement" class:auth-requirement--met={met}>
-									<span aria-hidden="true">{met ? '✓' : '✕'}</span>
-									{requirement.label}
-								</li>
-							{/each}
-						</ul>
+				<div class="signup-content">
+					<div class="signup-header">
+						<h1 class="signup-heading">Create Your Account</h1>
+						<p class="signup-subtitle">Add your farm to the map.</p>
 					</div>
 
-					{#if errorMessage}
-						<p class="auth-status auth-status--error" role="alert">{errorMessage}</p>
-					{/if}
+					<div class="signup-form-section">
+						<form class="auth-form" novalidate onsubmit={handleSubmit}>
+							<TextInput
+								label="Email Address"
+								type="email"
+								name="email"
+								autocomplete="email"
+								placeholder="farmer@gmail.com"
+								required
+								bind:value={email}
+								error={emailError}
+							>
+								{#snippet errorCTA()}
+									{#if showEmailExistsActions}
+										<Link href="/login" label="Log in" />
+										·
+										<Link href="/forgot-password" label="Reset Password" />
+									{/if}
+								{/snippet}
+							</TextInput>
 
-					<Button
-						type="submit"
-						disabled={!canSubmit}
-						label={isSubmitting ? 'Continuing…' : 'Continue'}
-					/>
-				</form>
+							<div class="password-field-group">
+								<TextInput
+									label="Password"
+									type="password"
+									name="password"
+									autocomplete="new-password"
+									placeholder="Enter Password"
+									required
+									showPasswordToggle
+									bind:value={password}
+								/>
 
-				<p class="auth-footer">
-					Have an account?
-					<Link href="/login" label="Log in" />
-				</p>
+								<PasswordRequirements {password} />
+							</div>
+
+							{#if errorMessage}
+								<AuthStatusMessage message={errorMessage} />
+							{/if}
+
+							<div class="auth-form-actions">
+								<Button
+									type="submit"
+									disabled={!canSubmit}
+									label={isSubmitting ? 'Continuing…' : 'Continue'}
+								/>
+
+								<p class="auth-footer auth-footer--signup">
+									<span>Have an account?</span>
+									<Link href="/login" label="Log in" />
+								</p>
+							</div>
+						</form>
+					</div>
+				</div>
 			</div>
 		</div>
 

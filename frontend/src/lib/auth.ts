@@ -1,9 +1,11 @@
 import { FirebaseError } from 'firebase/app';
 import {
 	createUserWithEmailAndPassword,
+	sendEmailVerification,
 	sendPasswordResetEmail,
 	signInWithEmailAndPassword,
 	type AuthError,
+	type User,
 	type UserCredential
 } from 'firebase/auth';
 import { getFirebaseAuth } from '$lib/firebase';
@@ -33,7 +35,9 @@ const FIREBASE_AUTH_ERRORS: Record<string, string> = {
 	'auth/too-many-requests': 'Too many attempts. Please try again later.',
 	'auth/network-request-failed': 'Network error. Check your connection and try again.',
 	'auth/email-already-in-use': 'An account with this email already exists.',
-	'auth/weak-password': 'Password is too weak. Please meet all requirements below.'
+	'auth/weak-password': 'Password is too weak. Please meet all requirements below.',
+	'auth/invalid-action-code': 'This verification link is invalid or has already been used.',
+	'auth/expired-action-code': 'This verification link has expired. Please request a new one.'
 };
 
 const LOGIN_PASSWORD_ERROR_CODES = new Set([
@@ -41,9 +45,6 @@ const LOGIN_PASSWORD_ERROR_CODES = new Set([
 	'auth/invalid-credential',
 	'auth/user-not-found'
 ]);
-
-export const EMAIL_VERIFICATION_ERROR =
-	'Please check your email to verify your account before logging in';
 
 export const EMAIL_ALREADY_IN_USE_ERROR = 'An account with this email already exists.';
 
@@ -74,7 +75,7 @@ export function getLoginFieldError(error: unknown): LoginFieldError | null {
 	}
 
 	if (LOGIN_PASSWORD_ERROR_CODES.has(error.code)) {
-		return { field: 'password', message: 'Invalid email or password ' };
+		return { field: 'password', message: 'Invalid email or password' };
 	}
 
 	return null;
@@ -92,17 +93,40 @@ export function isAdminEmail(email: string): boolean {
 	return email.toLowerCase().endsWith(ADMIN_EMAIL_DOMAIN);
 }
 
+export function getPostAuthDestination(email: string, context: 'login' | 'verified'): string {
+	if (isAdminEmail(email)) {
+		return '/admin';
+	}
+
+	return context === 'login' ? '/farmer' : '/onboarding';
+}
+
 export async function loginWithEmail(email: string, password: string): Promise<UserCredential> {
 	const auth = getFirebaseAuth();
 	return signInWithEmailAndPassword(auth, email, password);
 }
 
-export async function signupWithEmail(email: string, password: string) {
+export async function signupWithEmail(email: string, password: string): Promise<UserCredential> {
 	const auth = getFirebaseAuth();
 	return createUserWithEmailAndPassword(auth, email, password);
 }
 
-export async function sendPasswordReset(email: string) {
+export async function sendEmailVerificationHandler(user?: User) {
 	const auth = getFirebaseAuth();
-	return sendPasswordResetEmail(auth, email);
+	const targetUser = user ?? auth.currentUser;
+
+	if (!targetUser) {
+		throw new Error('No signed-in user.');
+	}
+
+	return sendEmailVerification(targetUser, {
+		url: `${window.location.origin}/verify-email/success`
+	});
+}
+
+export async function sendPasswordResetEmailHandler(email: string) {
+	const auth = getFirebaseAuth();
+	return sendPasswordResetEmail(auth, email, {
+		url: `${window.location.origin}/reset-password/success`
+	});
 }

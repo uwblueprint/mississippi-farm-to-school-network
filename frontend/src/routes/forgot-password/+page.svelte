@@ -1,14 +1,15 @@
 <script lang="ts">
-	import '$lib/styles/auth-form.css';
-	import BrandHeader from '$lib/components/BrandHeader.svelte';
+	import '$lib/styles/auth/auth-form.css';
+	import AuthPageLayout from '$lib/components/auth/AuthPageLayout.svelte';
+	import AuthStatusMessage from '$lib/components/auth/AuthStatusMessage.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
-	import { getAuthErrorMessage, sendPasswordReset } from '$lib/auth';
+	import { getAuthErrorMessage, sendPasswordResetEmailHandler } from '$lib/auth';
 
 	const RETRY_COOLDOWN_SECONDS = 30;
 
 	let email = $state('');
-	let statusMessage = $state('');
+	let errorMessage = $state('');
 	let isSuccess = $state(false);
 	let isSubmitting = $state(false);
 	let retrySecondsRemaining = $state(0);
@@ -38,17 +39,15 @@
 			return;
 		}
 
-		statusMessage = '';
-		isSuccess = false;
+		errorMessage = '';
 		isSubmitting = true;
 
 		try {
-			await sendPasswordReset(email.trim());
-			statusMessage =
-				'A password reset link has been sent to your email.\nCheck spam/junk if you do not see the email.';
+			await sendPasswordResetEmailHandler(email.trim());
 			isSuccess = true;
 		} catch (error) {
-			statusMessage = getAuthErrorMessage(error);
+			isSuccess = false;
+			errorMessage = getAuthErrorMessage(error);
 		} finally {
 			isSubmitting = false;
 			retrySecondsRemaining = RETRY_COOLDOWN_SECONDS;
@@ -60,48 +59,57 @@
 	<title>Forgot Password</title>
 </svelte:head>
 
-<div class="auth-page auth-page--centered">
-	<div class="auth-stack">
-		<BrandHeader />
-
-		<div class="auth-form-wrapper auth-form-wrapper--wide">
-			<h1 class="auth-heading">Forgot Password?</h1>
-			<p class="auth-subtitle auth-subtitle--left">
-				If an MFSN account with your email exists, we'll send you an email to reset your password.
-			</p>
-
-			<form class="auth-form" onsubmit={handleSubmit}>
-				<TextInput
-					label="Email Address"
-					type="email"
-					name="email"
-					autocomplete="email"
-					placeholder="farmer@gmail.com"
-					required
-					bind:value={email}
-				/>
-
-				{#if statusMessage}
-					<p
-						class="auth-status {isSuccess ? 'auth-status--success' : 'auth-status--error'}"
-						role={isSuccess ? 'status' : 'alert'}
-					>
-						{statusMessage}
-					</p>
-				{/if}
-
-				<Button
-					type="submit"
-					disabled={isSubmitting || retrySecondsRemaining > 0}
-					label={buttonLabel}
-				/>
-			</form>
-
-			<p class="auth-footer">
-				<a class="auth-return-link" href="/login"
-					><span aria-hidden="true">‹</span> Return to Login</a
-				>
-			</p>
+<AuthPageLayout>
+	<div class="auth-form-section">
+		<div class="auth-title-group">
+			<h1 class="auth-title">Forgot Password?</h1>
+			<p class="auth-body-text">We'll send you an email to reset your password.</p>
 		</div>
+
+		<form id="forgot-password-form" class="auth-form" onsubmit={handleSubmit}>
+			<TextInput
+				label="Email Address"
+				type="email"
+				name="email"
+				autocomplete="email"
+				placeholder="farmer@gmail.com"
+				required
+				bind:value={email}
+			/>
+
+			{#if errorMessage}
+				<AuthStatusMessage message={errorMessage} />
+			{/if}
+		</form>
 	</div>
-</div>
+
+	{#snippet actions()}
+		{#if isSuccess}
+			<p class="auth-body-text">
+				A password reset link has been sent to your email. Check spam/junk if you do not see the
+				email.
+			</p>
+		{/if}
+
+		<Button
+			type="submit"
+			form="forgot-password-form"
+			disabled={isSubmitting || retrySecondsRemaining > 0}
+			label={buttonLabel}
+		/>
+
+		<a class="auth-return-link" href="/login">
+			<!-- chevron (<) -->
+			<svg class="auth-return-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<path
+					d="M15 18L9 12L15 6"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
+			</svg>
+			Return to Login
+		</a>
+	{/snippet}
+</AuthPageLayout>

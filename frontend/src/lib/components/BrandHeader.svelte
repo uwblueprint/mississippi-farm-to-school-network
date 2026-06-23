@@ -16,7 +16,9 @@
 
 <div class="brand-header">
 	<img class="logo" src={logoSrc} alt={logoAlt} />
-	<p class="title">{title}</p>
+	{#if title}
+		<p class="title">{title}</p>
+	{/if}
 </div>
 
 <style>
@@ -24,8 +26,7 @@
 		display: flex;
 		flex-direction: column;
 		align-items: center;
-		gap: 0.75rem;
-		margin-bottom: 1.5rem;
+		gap: 1.8125rem; /* 29px */
 		width: max-content;
 		max-width: 100%;
 		align-self: center;
@@ -33,14 +34,16 @@
 	}
 
 	.logo {
-		width: 5.5rem;
-		height: 5.5rem;
+		width: 6.25rem; /* 100px */
+		height: 6.25rem;
 	}
 
 	.title {
 		margin: 0;
-		font-size: 1.6rem;
-		font-weight: 400;
+		font-family: 'Figtree', sans-serif;
+		font-size: 2rem; /* 32px */
+		font-weight: 500;
+		line-height: 2.375rem; /* 38px */
 		color: #000000;
 	}
 </style>

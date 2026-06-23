@@ -1,31 +1,29 @@
 <script lang="ts">
-	import '$lib/styles/auth-form.css';
-	import BrandHeader from '$lib/components/BrandHeader.svelte';
+	import '$lib/styles/auth/auth-form.css';
+	import AuthPageLayout from '$lib/components/auth/AuthPageLayout.svelte';
+	import AuthStatusMessage from '$lib/components/auth/AuthStatusMessage.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Link from '$lib/components/Link.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
 	import { goto } from '$app/navigation';
 	import {
-		EMAIL_VERIFICATION_ERROR,
 		getAuthErrorMessage,
 		getLoginFieldError,
-		isAdminEmail,
+		getPostAuthDestination,
 		loginWithEmail
 	} from '$lib/auth';
-	import { getFirebaseAuth } from '$lib/firebase';
-	import { signOut } from 'firebase/auth';
 
 	let email = $state('');
 	let password = $state('');
 	let emailError = $state('');
 	let passwordError = $state('');
-	let formError = $state('');
+	let errorMessage = $state('');
 	let isSubmitting = $state(false);
 
 	function clearErrors() {
 		emailError = '';
 		passwordError = '';
-		formError = '';
+		errorMessage = '';
 	}
 
 	async function handleSubmit(event: SubmitEvent) {
@@ -39,19 +37,18 @@
 			const credential = await loginWithEmail(trimmedEmail, password);
 
 			if (!credential.user.emailVerified) {
-				await signOut(getFirebaseAuth());
-				emailError = EMAIL_VERIFICATION_ERROR;
+				await goto('/verify-email');
 				return;
 			}
 
-			await goto(isAdminEmail(trimmedEmail) ? '/admin' : '/farmer');
+			await goto(getPostAuthDestination(trimmedEmail, 'login'));
 		} catch (error) {
 			const fieldError = getLoginFieldError(error);
 
 			if (fieldError?.field === 'password') {
 				passwordError = fieldError.message;
 			} else {
-				formError = getAuthErrorMessage(error);
+				errorMessage = getAuthErrorMessage(error);
 			}
 		} finally {
 			isSubmitting = false;
@@ -63,54 +60,53 @@
 	<title>Login</title>
 </svelte:head>
 
-<div class="auth-page auth-page--centered">
-	<div class="auth-stack">
-		<BrandHeader />
+<AuthPageLayout>
+	<div class="auth-form-section auth-form-section--start">
+		<h1 class="auth-title">Welcome Back</h1>
 
-		<div class="auth-form-wrapper">
-			<h1 class="auth-heading">Welcome Back</h1>
+		<form class="auth-form" onsubmit={handleSubmit}>
+			<TextInput
+				label="Email Address"
+				type="email"
+				name="email"
+				autocomplete="email"
+				placeholder="farmer@gmail.com"
+				required
+				bind:value={email}
+				error={emailError}
+			/>
 
-			<form class="auth-form" onsubmit={handleSubmit}>
+			<div class="auth-password-group">
 				<TextInput
-					label="Email Address"
-					type="email"
-					name="email"
-					autocomplete="email"
-					placeholder="farmer@gmail.com"
+					label="Password"
+					type="password"
+					name="password"
+					autocomplete="current-password"
+					placeholder="Enter Password"
 					required
-					bind:value={email}
-					error={emailError}
+					showPasswordToggle
+					bind:value={password}
+					error={passwordError}
 				/>
+				<Link href="/forgot-password" label="Forgot password?" variant="small" />
+			</div>
 
-				<div>
-					<TextInput
-						label="Password"
-						type="password"
-						name="password"
-						autocomplete="current-password"
-						placeholder="Enter Password"
-						required
-						bind:value={password}
-						error={passwordError}
-					/>
-					<Link href="/forgot-password" label="Forgot password?" variant="small" />
-				</div>
+			{#if errorMessage}
+				<AuthStatusMessage message={errorMessage} />
+			{/if}
 
-				{#if formError}
-					<p class="auth-status auth-status--error" role="alert">{formError}</p>
-				{/if}
-
+			<div class="auth-form-actions">
 				<Button
 					type="submit"
 					disabled={isSubmitting}
 					label={isSubmitting ? 'Logging in…' : 'Log In'}
 				/>
-			</form>
 
-			<p class="auth-footer">
-				Don't have an account?
-				<Link href="/signup" label="Create account" />
-			</p>
-		</div>
+				<p class="auth-footer auth-footer--login">
+					<span>Don't have an account?&nbsp;</span>
+					<Link href="/signup" label="Create account" />
+				</p>
+			</div>
+		</form>
 	</div>
-</div>
+</AuthPageLayout>

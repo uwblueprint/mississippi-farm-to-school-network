@@ -31,14 +31,16 @@
 
 <style>
 	.mfsn-button {
-		padding: 0.75rem 1rem;
+		min-height: 3.125rem; /* 50px */
+		padding: 0.4375rem 1.5rem;
 		border: none;
-		border-radius: 0.5rem;
+		border-radius: 0.5rem; /* 8px */
 		background-color: var(--mfsn-button-color, var(--color-primary-button));
 		color: #ffffff;
-		font-size: 1rem;
-		font-weight: 700;
-		font-family: inherit;
+		font-family: 'DM Sans', sans-serif;
+		font-size: 1.25rem; /* 20px */
+		font-weight: 600;
+		line-height: 1.5rem; /* 24px */
 		cursor: pointer;
 	}
 
