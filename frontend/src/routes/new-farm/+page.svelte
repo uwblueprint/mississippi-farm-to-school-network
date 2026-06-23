@@ -7,39 +7,172 @@
 	let usdaFarmId = $state('');
 	let farmName = $state('');
 	let farmAddress = $state('');
-	let countiesCities = $state('');
+	let county = $state('');
+	let countyFocused = $state(false);
+
 	let phone = $state(untrack(() => data.user?.phone ?? ''));
 	let email = $state(untrack(() => data.user?.email ?? ''));
-	let socialMedia = $state('');
+	let instagram = $state('');
+	let facebook = $state('');
+	let website = $state('');
+	let otherSocial = $state('');
 
 	let growingPractices = $state<string[]>([]);
-	let seasonalProducts = $state('');
-	let bipocOwned = $state<boolean | null>(null);
-	let gapCertified = $state<boolean | null>(null);
-	let foodSafetyPlan = $state<boolean | null>(null);
-	let agritourism = $state<boolean | null>(null);
-	let marketParticipation = $state<boolean | null>(null);
-	let csaAvailable = $state<boolean | null>(null);
-	let onlineSales = $state<boolean | null>(null);
+	let productCategories = $state<string[]>([]);
+	let specificProducts = $state('');
+	let foodSafetyCertifications = $state<string[]>([]);
+	let farmExperiences = $state<string[]>([]);
+	let farmCharacteristics = $state<string[]>([]);
+	let farmToSchoolSales = $state<string[]>([]);
+	let f2sExperience = $state('');
+	let minimumOrder = $state('');
 	let deliveryDetails = $state('');
 
-	let f2sExperience = $state('');
-	let interestedInF2s = $state<boolean | null>(null);
-	let minimumOrder = $state('');
+	let coverPhoto = $state<File[]>([]);
+	let carouselPhotos = $state<File[]>([]);
 
-	let selectedFiles = $state<File[]>([]);
+	const NONE = 'None of the above';
+	const DELIVERY_AVAILABLE = 'Delivery Available';
 
-	const GROWING_PRACTICES = ['Organic', 'Conventional', 'Hydroponic', 'Regenerative', 'Mixed'];
+	const GROWING_PRACTICES = [
+		'Organic Practices',
+		'Conventional',
+		'Regenerative',
+		'Hydroponic',
+		'Aquaponic',
+		'Biodynamic'
+	];
+	const PRODUCT_CATEGORIES = ['Dairy', 'Fruits and Vegetables', 'Beef', 'Poultry', 'Fish', 'Other'];
+	const FOOD_SAFETY_CERTIFICATIONS = [
+		'Food Safety Plan in Place',
+		'GAP Certified',
+		'Certified Organic',
+		'Certified Naturally Grown'
+	];
+	const FARM_EXPERIENCES = [
+		'CSA Available',
+		'U-Pick Available',
+		'Farm Stand On-Site',
+		'Farm Tours/Field Trips Welcome',
+		'Equipment Rental Available'
+	];
+	const FARM_CHARACTERISTICS = [
+		'BIPOC-Owned Farm',
+		'Veteran-Owned Farm',
+		'Woman-Owned Farm',
+		'Multi-Generational Farm',
+		'Beginning Farmer (10 years or less)',
+		'Young Farmer (Age 40 or Under)'
+	];
+	const FARM_TO_SCHOOL_SALES = [
+		'Interested in Selling to K-12 Schools',
+		'Interested in Selling to Early Care and Education Programs',
+		'Online Ordering Available',
+		'Delivery Available'
+	];
+
+	const MS_COUNTIES = [
+		'Adams',
+		'Alcorn',
+		'Amite',
+		'Attala',
+		'Benton',
+		'Bolivar',
+		'Calhoun',
+		'Carroll',
+		'Chickasaw',
+		'Choctaw',
+		'Claiborne',
+		'Clarke',
+		'Clay',
+		'Coahoma',
+		'Copiah',
+		'Covington',
+		'DeSoto',
+		'Forrest',
+		'Franklin',
+		'George',
+		'Greene',
+		'Grenada',
+		'Hancock',
+		'Harrison',
+		'Hinds',
+		'Holmes',
+		'Humphreys',
+		'Issaquena',
+		'Itawamba',
+		'Jackson',
+		'Jasper',
+		'Jefferson',
+		'Jefferson Davis',
+		'Jones',
+		'Kemper',
+		'Lafayette',
+		'Lamar',
+		'Lauderdale',
+		'Lawrence',
+		'Leake',
+		'Lee',
+		'Leflore',
+		'Lincoln',
+		'Lowndes',
+		'Madison',
+		'Marion',
+		'Marshall',
+		'Monroe',
+		'Montgomery',
+		'Neshoba',
+		'Newton',
+		'Noxubee',
+		'Oktibbeha',
+		'Panola',
+		'Pearl River',
+		'Perry',
+		'Pike',
+		'Pontotoc',
+		'Prentiss',
+		'Quitman',
+		'Rankin',
+		'Scott',
+		'Sharkey',
+		'Simpson',
+		'Smith',
+		'Stone',
+		'Sunflower',
+		'Tallahatchie',
+		'Tate',
+		'Tippah',
+		'Tishomingo',
+		'Tunica',
+		'Union',
+		'Walthall',
+		'Warren',
+		'Washington',
+		'Wayne',
+		'Webster',
+		'Wilkinson',
+		'Winston',
+		'Yalobusha',
+		'Yazoo'
+	];
+
 	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+	const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 
 	let touched = $state<Record<string, boolean>>({});
+
+	const filteredCounties = $derived(
+		MS_COUNTIES.filter((name) => name.toLowerCase().includes(county.trim().toLowerCase()))
+	);
+
+	const f2sSelected = $derived(farmToSchoolSales.length > 0);
+	const deliverySelected = $derived(farmToSchoolSales.includes(DELIVERY_AVAILABLE));
 
 	const errors = $derived({
 		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm ID is required.' : '',
 		farmName: farmName.trim() === '' ? 'Farm name is required.' : '',
 		farmAddress: farmAddress.trim() === '' ? 'Farm address is required.' : '',
-		countiesCities:
-			countiesCities.trim() === '' ? 'Counties and/or cities served is required.' : '',
+		county: county.trim() === '' ? 'County is required.' : '',
 		phone:
 			phone === ''
 				? 'Phone number is required.'
@@ -52,33 +185,23 @@
 				: !emailPattern.test(email)
 					? 'Enter a valid email address.'
 					: '',
-		socialMedia: socialMedia.trim() === '' ? 'Social media is required.' : '',
+		website: website.trim() !== '' && !urlPattern.test(website.trim()) ? 'Enter a valid URL.' : '',
 		growingPractices: growingPractices.length === 0 ? 'Select at least one growing practice.' : '',
-		seasonalProducts: seasonalProducts.trim() === '' ? 'This field is required.' : '',
-		bipocOwned: bipocOwned === null ? 'Please select an option.' : '',
-		gapCertified: gapCertified === null ? 'Please select an option.' : '',
-		foodSafetyPlan: foodSafetyPlan === null ? 'Please select an option.' : '',
-		agritourism: agritourism === null ? 'Please select an option.' : '',
-		marketParticipation: marketParticipation === null ? 'Please select an option.' : '',
-		csaAvailable: csaAvailable === null ? 'Please select an option.' : '',
-		onlineSales: onlineSales === null ? 'Please select an option.' : '',
-		deliveryDetails: deliveryDetails.trim() === '' ? 'This field is required.' : '',
-		f2sExperience: f2sExperience.trim() === '' ? 'This field is required.' : '',
-		interestedInF2s: interestedInF2s === null ? 'Please select an option.' : '',
-		minimumOrder: minimumOrder.trim() === '' ? 'Minimum order is required.' : ''
+		productCategories:
+			productCategories.length === 0 ? 'Select at least one product category.' : '',
+		specificProducts: specificProducts.trim() === '' ? 'This field is required.' : '',
+		foodSafetyCertifications:
+			foodSafetyCertifications.length === 0 ? 'Select at least one option.' : '',
+		f2sExperience: f2sSelected && f2sExperience.trim() === '' ? 'This field is required.' : '',
+		minimumOrder: f2sSelected && minimumOrder.trim() === '' ? 'Minimum order is required.' : '',
+		deliveryDetails:
+			deliverySelected && deliveryDetails.trim() === '' ? 'This field is required.' : ''
 	});
 
 	const isValid = $derived(Object.values(errors).every((message) => message === ''));
 
 	function digitsOnly(value: string) {
 		return value.replace(/\D/g, '');
-	}
-
-	function handleFarmIdInput(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const cleaned = digitsOnly(input.value).slice(0, 10);
-		usdaFarmId = cleaned;
-		input.value = cleaned;
 	}
 
 	function handlePhoneInput(event: Event) {
@@ -88,15 +211,29 @@
 		input.value = cleaned;
 	}
 
-	function toggleGrowingPractice(practice: string, checked: boolean) {
-		growingPractices = checked
-			? [...growingPractices, practice]
-			: growingPractices.filter((p) => p !== practice);
-		touched.growingPractices = true;
+	function toggleInGroup(current: string[], option: string, checked: boolean, hasNone: boolean) {
+		if (hasNone && option === NONE) {
+			return checked ? [NONE] : [];
+		}
+		let next = checked ? [...current, option] : current.filter((item) => item !== option);
+		if (hasNone) {
+			next = next.filter((item) => item !== NONE);
+		}
+		return next;
 	}
 
-	function handleFileChange(details: { acceptedFiles: File[] }) {
-		selectedFiles = details.acceptedFiles;
+	function selectCounty(name: string) {
+		county = name;
+		countyFocused = false;
+		touched.county = true;
+	}
+
+	function handleCoverChange(details: { acceptedFiles: File[] }) {
+		coverPhoto = details.acceptedFiles;
+	}
+
+	function handleCarouselChange(details: { acceptedFiles: File[] }) {
+		carouselPhotos = details.acceptedFiles;
 	}
 
 	function handleSubmit() {
@@ -113,38 +250,59 @@
 	}
 </script>
 
-{#snippet yesNo(field: string, value: boolean | null, set: (v: boolean) => void)}
+{#snippet checkboxGroup(
+	field: string,
+	options: string[],
+	selected: string[],
+	set: (next: string[]) => void,
+	hasNone: boolean
+)}
 	<div
 		class="choice-list"
 		class:group-error={touched[field] && errors[field as keyof typeof errors]}
 	>
-		<label class="choice">
-			<input
-				type="radio"
-				name={field}
-				checked={value === true}
-				onchange={() => {
-					set(true);
-					touched[field] = true;
-				}}
-			/>
-			<span>Yes</span>
-		</label>
-		<label class="choice">
-			<input
-				type="radio"
-				name={field}
-				checked={value === false}
-				onchange={() => {
-					set(false);
-					touched[field] = true;
-				}}
-			/>
-			<span>No</span>
-		</label>
+		{#each options as option}
+			<label class="choice">
+				<input
+					type="checkbox"
+					checked={selected.includes(option)}
+					onchange={(e) => {
+						set(toggleInGroup(selected, option, e.currentTarget.checked, hasNone));
+						touched[field] = true;
+					}}
+				/>
+				<span>{option}</span>
+			</label>
+		{/each}
+		{#if hasNone}
+			<label class="choice">
+				<input
+					type="checkbox"
+					checked={selected.includes(NONE)}
+					onchange={(e) => {
+						set(toggleInGroup(selected, NONE, e.currentTarget.checked, hasNone));
+						touched[field] = true;
+					}}
+				/>
+				<span>{NONE}</span>
+			</label>
+		{/if}
 	</div>
 	{#if touched[field] && errors[field as keyof typeof errors]}
 		<span class="error-text">{errors[field as keyof typeof errors]}</span>
+	{/if}
+{/snippet}
+
+{#snippet fileList(files: File[])}
+	{#if files.length > 0}
+		<ul class="file-list">
+			{#each files as file (file.name + file.size)}
+				<li>
+					<span class="file-name">{file.name}</span>
+					<span class="file-size">{formatSize(file.size)}</span>
+				</li>
+			{/each}
+		</ul>
 	{/if}
 {/snippet}
 
@@ -171,15 +329,13 @@
 	<h2 class="section-title">Farm Basics</h2>
 
 	<div class="form-group">
-		<label class="field-label" for="usda-farm-id">Farm ID#</label>
+		<label class="field-label" for="usda-farm-id">Government Issued Farm ID</label>
 		<input
 			id="usda-farm-id"
 			class="field"
 			class:input-error={touched.usdaFarmId && errors.usdaFarmId}
-			inputmode="numeric"
 			placeholder="e.g. 32486126374"
-			value={usdaFarmId}
-			oninput={handleFarmIdInput}
+			bind:value={usdaFarmId}
 			onblur={() => (touched.usdaFarmId = true)}
 		/>
 		{#if touched.usdaFarmId && errors.usdaFarmId}
@@ -203,7 +359,7 @@
 	</div>
 
 	<div class="form-group">
-		<label class="field-label" for="farm-address">Farm address</label>
+		<label class="field-label" for="farm-address">Farm Address</label>
 		<div class="search-field">
 			<svg
 				width="18"
@@ -233,17 +389,58 @@
 	</div>
 
 	<div class="form-group">
-		<label class="field-label" for="counties-cities">Counties and/or Cities Served</label>
-		<input
-			id="counties-cities"
-			class="field"
-			class:input-error={touched.countiesCities && errors.countiesCities}
-			placeholder="e.g. Bolivar County, Coahoma County"
-			bind:value={countiesCities}
-			onblur={() => (touched.countiesCities = true)}
-		/>
-		{#if touched.countiesCities && errors.countiesCities}
-			<span class="error-text">{errors.countiesCities}</span>
+		<label class="field-label" for="county">County it is located in</label>
+		<div class="combobox">
+			<div class="search-field">
+				<svg
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<circle cx="11" cy="11" r="7" />
+					<path d="M21 21l-4.35-4.35" />
+				</svg>
+				<input
+					id="county"
+					class="field"
+					class:input-error={touched.county && errors.county}
+					placeholder="Start typing your county"
+					autocomplete="off"
+					bind:value={county}
+					oninput={() => (countyFocused = true)}
+					onfocus={() => (countyFocused = true)}
+					onblur={() => {
+						touched.county = true;
+						countyFocused = false;
+					}}
+				/>
+			</div>
+			{#if countyFocused && filteredCounties.length > 0}
+				<ul class="combobox-list">
+					{#each filteredCounties as name}
+						<li>
+							<button
+								type="button"
+								class="combobox-option"
+								onmousedown={(e) => {
+									e.preventDefault();
+									selectCounty(name);
+								}}
+							>
+								{name}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
+		</div>
+		{#if touched.county && errors.county}
+			<span class="error-text">{errors.county}</span>
 		{/if}
 	</div>
 
@@ -284,163 +481,261 @@
 		</div>
 	</div>
 
-	<div class="form-group">
-		<label class="field-label" for="social-media">Social Media</label>
-		<input
-			id="social-media"
-			class="field"
-			class:input-error={touched.socialMedia && errors.socialMedia}
-			placeholder="e.g. Instagram, X"
-			bind:value={socialMedia}
-			onblur={() => (touched.socialMedia = true)}
-		/>
-		{#if touched.socialMedia && errors.socialMedia}
-			<span class="error-text">{errors.socialMedia}</span>
-		{/if}
+	<div class="row">
+		<div class="form-group">
+			<label class="field-label" for="instagram"
+				>Instagram <span class="optional">(Optional)</span></label
+			>
+			<input
+				id="instagram"
+				class="field"
+				placeholder="e.g. @twobrooksfarm"
+				bind:value={instagram}
+			/>
+		</div>
+
+		<div class="form-group">
+			<label class="field-label" for="facebook"
+				>Facebook <span class="optional">(Optional)</span></label
+			>
+			<input
+				id="facebook"
+				class="field"
+				placeholder="e.g. facebook.com/twobrooksfarm"
+				bind:value={facebook}
+			/>
+		</div>
+	</div>
+
+	<div class="row">
+		<div class="form-group">
+			<label class="field-label" for="website"
+				>Website URL <span class="optional">(Optional)</span></label
+			>
+			<input
+				id="website"
+				class="field"
+				class:input-error={touched.website && errors.website}
+				placeholder="e.g. https://twobrooksfarm.com"
+				bind:value={website}
+				onblur={() => (touched.website = true)}
+			/>
+			{#if touched.website && errors.website}
+				<span class="error-text">{errors.website}</span>
+			{/if}
+		</div>
+
+		<div class="form-group">
+			<label class="field-label" for="other-social">
+				Other Social Media <span class="optional">(Optional)</span>
+			</label>
+			<input
+				id="other-social"
+				class="field"
+				placeholder="e.g. X: @twobrooksfarm"
+				bind:value={otherSocial}
+			/>
+		</div>
 	</div>
 
 	<h2 class="section-title">Farm Profile</h2>
 
 	<div class="form-group">
 		<span class="field-label">Growing Practices</span>
-		<div
-			class="choice-list"
-			class:group-error={touched.growingPractices && errors.growingPractices}
+		{@render checkboxGroup(
+			'growingPractices',
+			GROWING_PRACTICES,
+			growingPractices,
+			(next) => (growingPractices = next),
+			true
+		)}
+	</div>
+
+	<div class="form-group">
+		<span class="field-label">Product Categories Offered</span>
+		{@render checkboxGroup(
+			'productCategories',
+			PRODUCT_CATEGORIES,
+			productCategories,
+			(next) => (productCategories = next),
+			false
+		)}
+	</div>
+
+	<div class="form-group">
+		<label class="field-label" for="specific-products">Specific Products</label>
+		<textarea
+			id="specific-products"
+			class="field"
+			class:input-error={touched.specificProducts && errors.specificProducts}
+			rows="3"
+			placeholder="Enter the specific product items you offer on your farm"
+			bind:value={specificProducts}
+			onblur={() => (touched.specificProducts = true)}
+		></textarea>
+		{#if touched.specificProducts && errors.specificProducts}
+			<span class="error-text">{errors.specificProducts}</span>
+		{/if}
+	</div>
+
+	<div class="form-group">
+		<span class="field-label">Food Safety + Certifications</span>
+		{@render checkboxGroup(
+			'foodSafetyCertifications',
+			FOOD_SAFETY_CERTIFICATIONS,
+			foodSafetyCertifications,
+			(next) => (foodSafetyCertifications = next),
+			true
+		)}
+	</div>
+
+	<div class="form-group">
+		<span class="field-label"
+			>Farm Experiences + Services <span class="optional">(Optional)</span></span
 		>
-			{#each GROWING_PRACTICES as practice}
-				<label class="choice">
-					<input
-						type="checkbox"
-						checked={growingPractices.includes(practice)}
-						onchange={(e) => toggleGrowingPractice(practice, e.currentTarget.checked)}
-					/>
-					<span>{practice}</span>
-				</label>
-			{/each}
+		{@render checkboxGroup(
+			'farmExperiences',
+			FARM_EXPERIENCES,
+			farmExperiences,
+			(next) => (farmExperiences = next),
+			false
+		)}
+	</div>
+
+	<div class="form-group">
+		<span class="field-label">Farm Characteristics <span class="optional">(Optional)</span></span>
+		{@render checkboxGroup(
+			'farmCharacteristics',
+			FARM_CHARACTERISTICS,
+			farmCharacteristics,
+			(next) => (farmCharacteristics = next),
+			false
+		)}
+	</div>
+
+	<div class="form-group">
+		<span class="field-label">Farm to School Sales <span class="optional">(Optional)</span></span>
+		{@render checkboxGroup(
+			'farmToSchoolSales',
+			FARM_TO_SCHOOL_SALES,
+			farmToSchoolSales,
+			(next) => (farmToSchoolSales = next),
+			false
+		)}
+	</div>
+
+	{#if f2sSelected}
+		<div class="form-group">
+			<label class="field-label" for="f2s-experience"
+				>Previous Farm to School or ECE experience</label
+			>
+			<textarea
+				id="f2s-experience"
+				class="field"
+				class:input-error={touched.f2sExperience && errors.f2sExperience}
+				rows="3"
+				placeholder="Describe any previous experience working with schools or ECEs..."
+				bind:value={f2sExperience}
+				onblur={() => (touched.f2sExperience = true)}
+			></textarea>
+			{#if touched.f2sExperience && errors.f2sExperience}
+				<span class="error-text">{errors.f2sExperience}</span>
+			{/if}
 		</div>
-		{#if touched.growingPractices && errors.growingPractices}
-			<span class="error-text">{errors.growingPractices}</span>
-		{/if}
-	</div>
+
+		<div class="form-group">
+			<label class="field-label" for="minimum-order">Minimum order for schools/ECEs</label>
+			<input
+				id="minimum-order"
+				class="field"
+				class:input-error={touched.minimumOrder && errors.minimumOrder}
+				placeholder="e.g. $50 minimum or 5 cases per delivery"
+				bind:value={minimumOrder}
+				onblur={() => (touched.minimumOrder = true)}
+			/>
+			{#if touched.minimumOrder && errors.minimumOrder}
+				<span class="error-text">{errors.minimumOrder}</span>
+			{/if}
+		</div>
+	{/if}
+
+	{#if deliverySelected}
+		<div class="form-group">
+			<label class="field-label" for="delivery-details"
+				>Delivery details (area, fees, minimums)</label
+			>
+			<textarea
+				id="delivery-details"
+				class="field"
+				class:input-error={touched.deliveryDetails && errors.deliveryDetails}
+				rows="3"
+				placeholder="Service area, delivery fees, and minimum order amounts..."
+				bind:value={deliveryDetails}
+				onblur={() => (touched.deliveryDetails = true)}
+			></textarea>
+			{#if touched.deliveryDetails && errors.deliveryDetails}
+				<span class="error-text">{errors.deliveryDetails}</span>
+			{/if}
+		</div>
+	{/if}
 
 	<div class="form-group">
-		<label class="field-label" for="seasonal-products">Seasonal product and products offered</label>
-		<textarea
-			id="seasonal-products"
-			class="field"
-			class:input-error={touched.seasonalProducts && errors.seasonalProducts}
-			rows="3"
-			placeholder="Describe your produce offerings by season..."
-			bind:value={seasonalProducts}
-			onblur={() => (touched.seasonalProducts = true)}
-		></textarea>
-		{#if touched.seasonalProducts && errors.seasonalProducts}
-			<span class="error-text">{errors.seasonalProducts}</span>
-		{/if}
-	</div>
+		<span class="field-label">Display Photo <span class="optional">(Optional)</span></span>
+		<p class="field-help">
+			This cover image appears on the Mississippi Farm Fresh Map. If you don’t upload one, a default
+			cover photo is used.
+		</p>
 
-	<div class="form-group">
-		<span class="field-label">Does your farm identify as BIPOC-owned?</span>
-		{@render yesNo('bipocOwned', bipocOwned, (v) => (bipocOwned = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Are you GAP/GHP Certified?</span>
-		{@render yesNo('gapCertified', gapCertified, (v) => (gapCertified = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Written food safety plan (if not GAP/GHP certified)</span>
-		{@render yesNo('foodSafetyPlan', foodSafetyPlan, (v) => (foodSafetyPlan = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Agritourism / field trips</span>
-		{@render yesNo('agritourism', agritourism, (v) => (agritourism = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Farmers market participation</span>
-		{@render yesNo('marketParticipation', marketParticipation, (v) => (marketParticipation = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">CSA box available</span>
-		{@render yesNo('csaAvailable', csaAvailable, (v) => (csaAvailable = v))}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Online sales</span>
-		{@render yesNo('onlineSales', onlineSales, (v) => (onlineSales = v))}
-	</div>
-
-	<div class="form-group">
-		<label class="field-label" for="delivery-details">Delivery details (area, fees, minimums)</label
+		<FileUpload
+			accept="image/*"
+			maxFiles={1}
+			acceptedFiles={coverPhoto}
+			onFileChange={handleCoverChange}
 		>
-		<textarea
-			id="delivery-details"
-			class="field"
-			class:input-error={touched.deliveryDetails && errors.deliveryDetails}
-			rows="3"
-			placeholder="Service area, delivery fees, and minimum order amounts..."
-			bind:value={deliveryDetails}
-			onblur={() => (touched.deliveryDetails = true)}
-		></textarea>
-		{#if touched.deliveryDetails && errors.deliveryDetails}
-			<span class="error-text">{errors.deliveryDetails}</span>
-		{/if}
-	</div>
+			<FileUpload.Label class="sr-only">Upload cover photo</FileUpload.Label>
+			<FileUpload.Dropzone
+				class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
+			>
+				<svg
+					width="28"
+					height="28"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="#131927"
+					stroke-width="1.6"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M12 16V4" />
+					<path d="M8 8l4-4 4 4" />
+					<path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+				</svg>
+				<FileUpload.Trigger
+					class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
+				>
+					Upload cover photo
+				</FileUpload.Trigger>
+				<span class="text-xs text-[#9aa0a6]">JPG or PNG, up to 10 MB</span>
+				<FileUpload.HiddenInput />
+			</FileUpload.Dropzone>
+		</FileUpload>
 
-	<h2 class="section-title">School &amp; ECE Interest</h2>
-
-	<div class="form-group">
-		<label class="field-label" for="f2s-experience">Farm to School or ECE experience</label>
-		<textarea
-			id="f2s-experience"
-			class="field"
-			class:input-error={touched.f2sExperience && errors.f2sExperience}
-			rows="3"
-			placeholder="Describe any previous experience working with schools or ECEs..."
-			bind:value={f2sExperience}
-			onblur={() => (touched.f2sExperience = true)}
-		></textarea>
-		{#if touched.f2sExperience && errors.f2sExperience}
-			<span class="error-text">{errors.f2sExperience}</span>
-		{/if}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Interest in selling to schools/ECEs</span>
-		{@render yesNo('interestedInF2s', interestedInF2s, (v) => (interestedInF2s = v))}
+		{@render fileList(coverPhoto)}
 	</div>
 
 	<div class="form-group">
-		<label class="field-label" for="minimum-order">Minimum order for schools/ECEs</label>
-		<input
-			id="minimum-order"
-			class="field"
-			class:input-error={touched.minimumOrder && errors.minimumOrder}
-			placeholder="e.g. $25 or $50"
-			bind:value={minimumOrder}
-			onblur={() => (touched.minimumOrder = true)}
-		/>
-		{#if touched.minimumOrder && errors.minimumOrder}
-			<span class="error-text">{errors.minimumOrder}</span>
-		{/if}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">
-			*Optional: Upload photos of your farm, operations, and/or products here. (Optional)
-		</span>
+		<span class="field-label">Photo Carousel <span class="optional">(Optional)</span></span>
+		<p class="field-help">
+			Add up to 10 photos of your farm, operations, and products for educators to browse.
+		</p>
 
 		<FileUpload
 			accept="image/*"
 			maxFiles={10}
-			acceptedFiles={selectedFiles}
-			onFileChange={handleFileChange}
+			acceptedFiles={carouselPhotos}
+			onFileChange={handleCarouselChange}
 		>
-			<FileUpload.Label class="sr-only">Upload farm images</FileUpload.Label>
+			<FileUpload.Label class="sr-only">Upload farm photos</FileUpload.Label>
 			<FileUpload.Dropzone
 				class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
 			>
@@ -468,16 +763,7 @@
 			</FileUpload.Dropzone>
 		</FileUpload>
 
-		{#if selectedFiles.length > 0}
-			<ul class="file-list">
-				{#each selectedFiles as file (file.name + file.size)}
-					<li>
-						<span class="file-name">{file.name}</span>
-						<span class="file-size">{formatSize(file.size)}</span>
-					</li>
-				{/each}
-			</ul>
-		{/if}
+		{@render fileList(carouselPhotos)}
 	</div>
 
 	<div class="submit-section">
@@ -554,6 +840,18 @@
 		color: #131927;
 	}
 
+	.optional {
+		color: #9aa0a6;
+		font-weight: 400;
+	}
+
+	.field-help {
+		margin: 0 0 8px;
+		font-size: 13px;
+		color: #666;
+		line-height: 1.4;
+	}
+
 	.field {
 		width: 100%;
 		box-sizing: border-box;
@@ -610,6 +908,45 @@
 		padding-left: 40px;
 	}
 
+	.combobox {
+		position: relative;
+	}
+
+	.combobox-list {
+		position: absolute;
+		z-index: 5;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		max-height: 220px;
+		overflow-y: auto;
+		margin: 0;
+		padding: 4px;
+		list-style: none;
+		background: #fff;
+		border: 1px solid #d8d8d8;
+		border-radius: 8px;
+		box-shadow: 0 8px 24px rgba(20, 28, 16, 0.12);
+	}
+
+	.combobox-option {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 8px 10px;
+		border: none;
+		border-radius: 6px;
+		background: none;
+		font-family: inherit;
+		font-size: 14px;
+		color: #131927;
+		cursor: pointer;
+	}
+
+	.combobox-option:hover {
+		background: var(--mfsn-primary-tint, #f0f5ec);
+	}
+
 	.row {
 		display: flex;
 		gap: 20px;
@@ -635,11 +972,45 @@
 		cursor: pointer;
 	}
 
-	.choice input {
+	.choice input[type='checkbox'] {
+		appearance: none;
+		-webkit-appearance: none;
+		display: inline-grid;
+		place-content: center;
+		flex-shrink: 0;
 		width: 16px;
 		height: 16px;
+		margin: 0;
+		border: 1px solid #9ea0ad;
+		border-radius: 2px;
+		background: #fff;
 		cursor: pointer;
-		accent-color: var(--mfsn-primary);
+		transition:
+			background-color 120ms ease,
+			border-color 120ms ease;
+	}
+
+	.choice input[type='checkbox']::before {
+		content: '';
+		width: 10px;
+		height: 10px;
+		transform: scale(0);
+		transition: transform 120ms ease;
+		background: #fff;
+		clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+	}
+
+	.choice input[type='checkbox']:hover {
+		background: #e2e8d9;
+	}
+
+	.choice input[type='checkbox']:checked {
+		background: #455d32;
+		border-color: #455d32;
+	}
+
+	.choice input[type='checkbox']:checked::before {
+		transform: scale(1);
 	}
 
 	.group-error input {
