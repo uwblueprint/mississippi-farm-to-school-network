@@ -4,9 +4,22 @@
 
 	let { data } = $props();
 
+	interface AddressSuggestion {
+		formatted: string;
+		lat: number | null;
+		lon: number | null;
+		placeId: string;
+	}
+
 	let usdaFarmId = $state('');
 	let farmName = $state('');
 	let farmAddress = $state('');
+	let addressFocused = $state(false);
+	let addressLoading = $state(false);
+	let addressSuggestions = $state<AddressSuggestion[]>([]);
+	let addressLat = $state<number | null>(null);
+	let addressLng = $state<number | null>(null);
+	let addressTimer: ReturnType<typeof setTimeout> | undefined;
 	let county = $state('');
 	let countyFocused = $state(false);
 
@@ -222,6 +235,54 @@
 		return next;
 	}
 
+	function handleAddressInput() {
+		addressFocused = true;
+		addressLat = null;
+		addressLng = null;
+
+		if (addressTimer) {
+			clearTimeout(addressTimer);
+		}
+
+		const query = farmAddress.trim();
+
+		if (query.length < 3) {
+			addressSuggestions = [];
+			addressLoading = false;
+			return;
+		}
+
+		addressLoading = true;
+		addressTimer = setTimeout(() => fetchAddressSuggestions(query), 300);
+	}
+
+	async function fetchAddressSuggestions(query: string) {
+		try {
+			const res = await fetch(`/api/address-autocomplete?text=${encodeURIComponent(query)}`);
+
+			if (!res.ok) {
+				addressSuggestions = [];
+				return;
+			}
+
+			const data = await res.json();
+			addressSuggestions = data.results ?? [];
+		} catch {
+			addressSuggestions = [];
+		} finally {
+			addressLoading = false;
+		}
+	}
+
+	function selectAddress(suggestion: AddressSuggestion) {
+		farmAddress = suggestion.formatted;
+		addressLat = suggestion.lat;
+		addressLng = suggestion.lon;
+		addressSuggestions = [];
+		addressFocused = false;
+		touched.farmAddress = true;
+	}
+
 	function selectCounty(name: string) {
 		county = name;
 		countyFocused = false;
@@ -360,28 +421,57 @@
 
 	<div class="form-group">
 		<label class="field-label" for="farm-address">Farm Address</label>
-		<div class="search-field">
-			<svg
-				width="18"
-				height="18"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<circle cx="11" cy="11" r="7" />
-				<path d="M21 21l-4.35-4.35" />
-			</svg>
-			<input
-				id="farm-address"
-				class="field"
-				class:input-error={touched.farmAddress && errors.farmAddress}
-				placeholder="Search Farm Address"
-				bind:value={farmAddress}
-				onblur={() => (touched.farmAddress = true)}
-			/>
+		<div class="combobox">
+			<div class="search-field">
+				<svg
+					width="18"
+					height="18"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<circle cx="11" cy="11" r="7" />
+					<path d="M21 21l-4.35-4.35" />
+				</svg>
+				<input
+					id="farm-address"
+					class="field"
+					class:input-error={touched.farmAddress && errors.farmAddress}
+					placeholder="Search Farm Address"
+					autocomplete="off"
+					bind:value={farmAddress}
+					oninput={handleAddressInput}
+					onfocus={() => (addressFocused = true)}
+					onblur={() => {
+						touched.farmAddress = true;
+						addressFocused = false;
+					}}
+				/>
+			</div>
+			{#if addressFocused && (addressLoading || addressSuggestions.length > 0)}
+				<ul class="combobox-list">
+					{#if addressLoading && addressSuggestions.length === 0}
+						<li class="combobox-empty">Searching…</li>
+					{/if}
+					{#each addressSuggestions as suggestion (suggestion.placeId)}
+						<li>
+							<button
+								type="button"
+								class="combobox-option"
+								onmousedown={(e) => {
+									e.preventDefault();
+									selectAddress(suggestion);
+								}}
+							>
+								{suggestion.formatted}
+							</button>
+						</li>
+					{/each}
+				</ul>
+			{/if}
 		</div>
 		{#if touched.farmAddress && errors.farmAddress}
 			<span class="error-text">{errors.farmAddress}</span>
@@ -945,6 +1035,12 @@
 
 	.combobox-option:hover {
 		background: var(--mfsn-primary-tint, #f0f5ec);
+	}
+
+	.combobox-empty {
+		padding: 8px 10px;
+		font-size: 14px;
+		color: #9aa0a6;
 	}
 
 	.row {
