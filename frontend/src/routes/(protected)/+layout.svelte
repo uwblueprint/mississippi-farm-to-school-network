@@ -12,7 +12,9 @@
 
 		const unsubscribe = onAuthStateChanged(auth, (user) => {
 			if (!user) {
-				goto('/');
+				goto('/login');
+			} else if (!user.emailVerified) {
+				goto('/verify-email');
 			} else {
 				isAuthenticated = true;
 			}
