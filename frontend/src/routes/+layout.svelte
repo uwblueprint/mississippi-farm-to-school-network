@@ -1,4 +1,6 @@
 <script lang="ts">
+	import '@fontsource-variable/dm-sans';
+	import '@fontsource-variable/figtree';
 	import './layout.css';
 	import favicon from '$lib/assets/favicon.svg';
 

@@ -15,7 +15,9 @@
 }
 
 body {
-	font-family: 'DM Sans', sans-serif;
-	background-color: #f5f5f5;
+	font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+	background-color: #ffffff;
 	color: #111;
+	-webkit-font-smoothing: antialiased; /* match Figma's grayscale rendering (avoids bold-looking text on macOS) */
+	-moz-osx-font-smoothing: grayscale;
 }

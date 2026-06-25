@@ -66,6 +66,14 @@ const authResolvers = {
       await authService.resetPassword(email);
       return true;
     },
+    sendEmailVerificationLink: async (
+      _parent: undefined,
+      { email }: { email: string }
+    ): Promise<boolean> => {
+      await userService.getUserByEmail(email); // throws if the user does not exist
+      await authService.sendEmailVerificationLink(email);
+      return true;
+    },
   },
 };
 
