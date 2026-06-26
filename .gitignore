@@ -54,3 +54,6 @@ docker-compose.override.yml
 # Coverage reports
 **/coverage
 **/.nyc_output
+
+# Design reference
+/design
