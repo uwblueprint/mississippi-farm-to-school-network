@@ -193,12 +193,17 @@
 	}
 
 	.farm-card__subtitle {
+		width: 100%;
 		color: #61636d;
 		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
 		font-size: 14px;
 		font-style: normal;
 		font-weight: 500;
 		line-height: 16px; /* 114.286% */
+		/* one line + ellipsis so every card in a row is the same height */
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.farm-card__subtitle--muted {

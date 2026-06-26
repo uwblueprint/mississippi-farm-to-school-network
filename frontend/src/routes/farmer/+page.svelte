@@ -89,7 +89,9 @@
 
 <style>
 	.farms-page {
-		padding: 60px;
+		/* side padding scales with the main area: 110px at the 1600px Figma width,
+		   easing down to 32px on small screens (8cqi ≈ 110px when main ≈ 1350px). */
+		padding: 60px clamp(32px, 8cqi, 110px);
 		display: flex;
 		flex-direction: column;
 		gap: 32px;
@@ -148,9 +150,12 @@
 
 	.farm-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 486px));
-		gap: 24px;
-		justify-content: start;
+		/* 1fr max (not a fixed 486px) lets the grid form an extra column and gently
+		   shrink the cards to share the row; each card's own max-width: 486px caps it. */
+		grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+		/* inter-card gap scales in step with the side padding: 92px at the Figma
+		   width, easing to 24px on small screens (6.8cqi ≈ 92px when main ≈ 1350px). */
+		gap: clamp(24px, 6.8cqi, 92px);
 		align-items: start; /* don't stretch shorter cards to match a taller one */
 	}
 </style>
