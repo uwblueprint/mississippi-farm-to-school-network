@@ -11,7 +11,7 @@ import {
   FarmStatus,
   UpdateFarmInput,
   Role,
-  FarmRejectionDTO,
+  ActiveFarmRejectionDTO,
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
@@ -73,7 +73,7 @@ const farmResolvers = {
       _parent: undefined,
       { farmId }: { farmId: string },
       context: AuthContext
-    ): Promise<FarmRejectionDTO | null> => {
+    ): Promise<ActiveFarmRejectionDTO | null> => {
       await authHelper.requireEmailVerified(context);
       const farm = await Farm.findByPk(farmId);
       if (!farm) {
