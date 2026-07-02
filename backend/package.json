@@ -16,6 +16,7 @@
   "dependencies": {
     "@graphql-tools/schema": "^10.0.0",
     "apollo-server": "^3.13.0",
+    "csv-parse": "^7.0.0",
     "dotenv": "^17.3.1",
     "firebase-admin": "^12.7.0",
     "graphql": "^16.9.0",
