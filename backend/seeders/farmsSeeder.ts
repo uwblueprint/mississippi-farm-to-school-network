@@ -63,7 +63,7 @@ function initializeFirestore(): admin.firestore.Firestore {
       });
     } else {
       throw new Error(
-        'Missing Firebase credentials. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_PROJECT_ID/FIREBASE_SVC_ACCOUNT_PRIVATE_KEY/FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL.',
+        'Missing Firebase credentials. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_PROJECT_ID/FIREBASE_SVC_ACCOUNT_PRIVATE_KEY/FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL.'
       );
     }
   }
@@ -88,14 +88,20 @@ function getDeterministicDocId(uniqueValue: string): string {
 function mapCsvRowToFarmDocument(row: RawCsvRow): FarmDocument {
   const farmName = parseString(row['Farm Name']);
   if (!farmName) {
-    throw new Error('Missing required unique field "Farm Name" for row. Each row must include a farm name.');
+    throw new Error(
+      'Missing required unique field "Farm Name" for row. Each row must include a farm name.'
+    );
   }
 
   return {
     id: getDeterministicDocId(farmName),
     data: {
-      interestedInSellingToSchoolsOrECECenters: parseBoolean(row['Interested in Selling to Schools or ECE Centers?']),
-      willingToHostFieldTripsOrOnFarmEducation: parseBoolean(row['Willing to Host Field Trips or On-Farm Education?']),
+      interestedInSellingToSchoolsOrECECenters: parseBoolean(
+        row['Interested in Selling to Schools or ECE Centers?']
+      ),
+      willingToHostFieldTripsOrOnFarmEducation: parseBoolean(
+        row['Willing to Host Field Trips or On-Farm Education?']
+      ),
       county: parseString(row['County']),
       otherCountyOrCitysServed: parseString(row['Other County or Citys Served']),
       address: parseString(row['Address']),
@@ -106,12 +112,18 @@ function mapCsvRowToFarmDocument(row: RawCsvRow): FarmDocument {
       website: parseString(row['Website (if applicable)']),
       socialMedia: parseString(row['Social Media (if applicable)']),
       productsGrownSold: parseString(row['Products Grown/Sold (Contact for Availability)']),
-      growingPractices: parseString(row['Growing Practices (e.g., organic, certified naturally grown, conventional, regenerative, hydroponic)']),
+      growingPractices: parseString(
+        row[
+          'Growing Practices (e.g., organic, certified naturally grown, conventional, regenerative, hydroponic)'
+        ]
+      ),
       csaAvailable: parseBoolean(row['CSA Available?']),
-      farmersMarketSales: parseString(row['Farmer\'s Market Sales (Which markets/days)']),
+      farmersMarketSales: parseString(row["Farmer's Market Sales (Which markets/days)"]),
       onlineSalesOrderingAvailable: parseString(row['Online Sales/Ordering Available']),
       minimumOrderRequirements: parseString(row['Minimum Order Requirements (for schools/ECEs)']),
-      experienceWithFarmToSchoolSales: parseString(row['Experience with Farm to School/ECE Sales?']),
+      experienceWithFarmToSchoolSales: parseString(
+        row['Experience with Farm to School/ECE Sales?']
+      ),
       gapGhpCertified: parseBoolean(row['GAP/GHP Certified']),
       bipocOwned: parseBoolean(row['Does your farm identify as a BIPOC-Owened?']),
       offersAgritourismOpportunities: parseBoolean(row['Offers Agritourism Opportunities?']),
@@ -133,7 +145,7 @@ function readCsvFile(): RawCsvRow[] {
 
 async function commitBatches(
   db: admin.firestore.Firestore,
-  writes: Array<(batch: admin.firestore.WriteBatch) => void>,
+  writes: Array<(batch: admin.firestore.WriteBatch) => void>
 ): Promise<void> {
   let batch = db.batch();
   let count = 0;
@@ -174,7 +186,9 @@ export async function unseed(): Promise<void> {
   const ids = rows.map((row) => {
     const farmName = parseString(row['Farm Name']);
     if (!farmName) {
-      throw new Error('Missing required unique field "Farm Name" for row. Each row must include a farm name.');
+      throw new Error(
+        'Missing required unique field "Farm Name" for row. Each row must include a farm name.'
+      );
     }
     return getDeterministicDocId(farmName);
   });
@@ -205,4 +219,4 @@ if (require.main === module) {
     console.error('Usage: tsx seeders/farmsSeeder.ts seed|unseed');
     process.exit(1);
   }
-} 
+}
