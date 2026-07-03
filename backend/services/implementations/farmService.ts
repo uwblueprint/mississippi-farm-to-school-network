@@ -239,7 +239,9 @@ class FarmService implements IFarmService {
 
     try {
       const owner = await userService.getUserById(updatedFarm.owner_user_id);
-      const greeting = owner.firstName ? `Congratulations, ${owner.firstName}!` : 'Congratulations!';
+      const greeting = owner.firstName
+        ? `Congratulations, ${owner.firstName}!`
+        : 'Congratulations!';
       const emailBody = `<h2>Your Farm Has Been Approved!</h2>
                       <p>${greeting} Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
                       <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
