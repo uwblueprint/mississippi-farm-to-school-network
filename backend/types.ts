@@ -89,6 +89,7 @@ export type FarmDTO = {
   farm_address: string;
   counties_served: string[];
   cities_served: string[];
+  home_county: string;
   location: LocationDTO;
   food_categories: string[];
   market_sales_data: { market: string; times: string }[] | null;
@@ -140,6 +141,7 @@ export type CreateFarmInput = {
   usda_farm_id: number;
   counties_served: string[];
   cities_served: string[];
+  home_county: string;
   location: LocationDTO;
   food_categories: string[];
   market_sales_data?: { market: string; times: string }[];
@@ -173,6 +175,7 @@ export type UpdateFarmInput = {
   farm_address?: string;
   counties_served?: string[];
   cities_served?: string[];
+  home_county?: string;
   location?: LocationDTO;
   food_categories?: string[];
   market_sales_data?: { market: string; times: string }[];
@@ -190,11 +193,17 @@ export type UpdateFarmInput = {
 
 export interface FarmFilter {
   status?: FarmStatus;
+  home_county?: string;
   counties_served?: string[];
   cities_served?: string[];
   food_categories?: string[];
   approved?: boolean;
 }
+
+export type ActiveFarmRejectionDTO = Pick<
+  FarmRejectionDTO,
+  'id' | 'farm_id' | 'rejection_reason' | 'created_at'
+>;
 
 export type AnnouncementDTO = {
   id: string;
