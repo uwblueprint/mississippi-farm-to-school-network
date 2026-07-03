@@ -39,7 +39,11 @@ const farmResolvers = {
     },
     farms: async (
       _parent: undefined,
-      { filter }: { filter?: FarmFilter },
+      {
+        filter,
+        pageNumber = 1,
+        pageSize = 50,
+      }: { filter?: FarmFilter; pageNumber?: number; pageSize?: number },
       context: AuthContext
     ) => {
       const isAdmin = await authHelper
@@ -48,10 +52,13 @@ const farmResolvers = {
         .catch(() => false);
 
       if (!isAdmin) {
-        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+        return farmService.getFarms(pageNumber, pageSize, {
+          ...filter,
+          status: FarmStatus.APPROVED,
+        });
       }
 
-      return farmService.getFarms(filter);
+      return farmService.getFarms(pageNumber, pageSize, filter);
     },
     farmById: async (
       _parent: undefined,

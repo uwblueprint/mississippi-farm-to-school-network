@@ -57,6 +57,11 @@ const convertFromPostGISPoint = (location: {
   };
 };
 
+const FARM_LIST_ORDER: [string, string][] = [
+  ['home_county', 'ASC'],
+  ['farm_name', 'ASC'],
+];
+
 class FarmService implements IFarmService {
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     let createdFarm: FarmDTO;
@@ -125,7 +130,11 @@ class FarmService implements IFarmService {
     }
   }
 
-  async getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>> {
+  async getFarms(
+    pageNumber?: number,
+    pageSize?: number,
+    filter?: FarmFilter
+  ): Promise<Array<FarmDTO>> {
     const where: Record<string, unknown> = {};
 
     try {
@@ -153,7 +162,14 @@ class FarmService implements IFarmService {
         where.food_categories = { [Op.overlap]: filter.food_categories };
       }
 
-      const farms = await Farm.findAll({ where });
+      const options: Record<string, unknown> = { where, order: FARM_LIST_ORDER };
+
+      if (pageNumber !== undefined && pageSize !== undefined) {
+        options.limit = pageSize;
+        options.offset = (pageNumber - 1) * pageSize;
+      }
+
+      const farms = await Farm.findAll(options);
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms. Reason = ${getErrorMessage(error)}`);
