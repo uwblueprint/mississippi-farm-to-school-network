@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
+import { dev } from '$app/environment';
 
 const ME_QUERY = `
   query Me {
@@ -15,6 +16,10 @@ const ME_QUERY = `
 `;
 
 export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
+	if (dev) {
+		return { user: null };
+	}
+
 	const token = cookies.get('token');
 
 	if (!token) {

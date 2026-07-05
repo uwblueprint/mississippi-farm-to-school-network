@@ -55,7 +55,13 @@
 		'Aquaponic',
 		'Biodynamic'
 	];
-	const PRODUCT_CATEGORIES = ['Dairy', 'Fruits and Vegetables', 'Beef', 'Poultry', 'Fish', 'Other'];
+	const PRODUCT_CATEGORIES = [
+		'Dairy and Eggs',
+		'Fruits and Vegetables',
+		'Herbs',
+		'Meat (Beef, Poultry, Fish)',
+		'Other (Honey, Mushrooms, Flowers, Seedlings & Plants, Grains, Value-Added Products)'
+	];
 	const FOOD_SAFETY_CERTIFICATIONS = [
 		'Food Safety Plan in Place',
 		'GAP Certified',
@@ -63,7 +69,7 @@
 		'Certified Naturally Grown'
 	];
 	const FARM_EXPERIENCES = [
-		'CSA Available',
+		'CSA (Community Supported Agriculture) Available',
 		'U-Pick Available',
 		'Farm Stand On-Site',
 		'Farm Tours/Field Trips Welcome',
@@ -74,7 +80,7 @@
 		'Veteran-Owned Farm',
 		'Woman-Owned Farm',
 		'Multi-Generational Farm',
-		'Beginning Farmer (10 years or less)',
+		'Beginning Farmer (10 years or less in farming)',
 		'Young Farmer (Age 40 or Under)'
 	];
 	const FARM_TO_SCHOOL_SALES = [
@@ -724,7 +730,7 @@
 				class="field"
 				class:input-error={touched.f2sExperience && errors.f2sExperience}
 				rows="3"
-				placeholder="Describe any previous experience working with schools or ECEs..."
+				placeholder="N/A"
 				bind:value={f2sExperience}
 				onblur={() => (touched.f2sExperience = true)}
 			></textarea>
@@ -739,7 +745,7 @@
 				id="minimum-order"
 				class="field"
 				class:input-error={touched.minimumOrder && errors.minimumOrder}
-				placeholder="e.g. $50 minimum or 5 cases per delivery"
+				placeholder="$30"
 				bind:value={minimumOrder}
 				onblur={() => (touched.minimumOrder = true)}
 			/>
@@ -759,7 +765,7 @@
 				class="field"
 				class:input-error={touched.deliveryDetails && errors.deliveryDetails}
 				rows="3"
-				placeholder="Service area, delivery fees, and minimum order amounts..."
+				placeholder="Minimum order amount of $30"
 				bind:value={deliveryDetails}
 				onblur={() => (touched.deliveryDetails = true)}
 			></textarea>
@@ -772,8 +778,8 @@
 	<div class="form-group">
 		<span class="field-label">Display Photo <span class="optional">(Optional)</span></span>
 		<p class="field-help">
-			This cover image appears on the Mississippi Farm Fresh Map. If you don’t upload one, a default
-			cover photo is used.
+			The image you upload here will be the cover image child nutrition directors, community
+			members, and educators will see when browsing farms on the Mississippi Farm Fresh Map.
 		</p>
 
 		<FileUpload
