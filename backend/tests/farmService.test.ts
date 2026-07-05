@@ -17,9 +17,9 @@ const MockFarm = Farm as jest.Mocked<typeof Farm>;
 const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'uuid-1',
   owner_user_id: 'owner-1',
-  usda_farm_id: 1001,
+  usda_farm_id: '1001',
   farm_name: 'Test Farm',
-  description: 'A test farm',
+  specific_products: 'A test farm',
   primary_phone: '555-0100',
   primary_email: 'farm@test.com',
   website: null,
@@ -30,16 +30,16 @@ const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   location: { type: 'Point', coordinates: [-90.18, 32.3] },
   food_categories: ['Vegetables', 'Fruits'],
   market_sales_data: null,
-  bipoc_owned: false,
-  gap_certified: false,
-  food_safety_plan: false,
-  agritourism: false,
-  sells_at_markets: false,
-  csa_boxes: false,
-  online_sales: false,
-  delivery: false,
-  f2s_experience: false,
-  interested_in_f2s: false,
+  growing_practices: [],
+  food_safety_certifications: [],
+  farm_experiences: [],
+  farm_characteristics: [],
+  farm_to_school_sales: [],
+  f2s_experience: null,
+  minimum_order: null,
+  delivery_details: null,
+  cover_photo: null,
+  carousel_photos: [],
   status: FarmStatus.APPROVED,
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-06-01'),
@@ -224,7 +224,7 @@ describe('FarmService.getFarms', () => {
     expect(dto).toMatchObject({
       id: 'uuid-1',
       owner_user_id: 'owner-1',
-      usda_farm_id: 1001,
+      usda_farm_id: '1001',
       farm_name: 'Test Farm',
       counties_served: ['Hinds', 'Madison'],
       food_categories: ['Vegetables', 'Fruits'],
@@ -253,9 +253,9 @@ describe('FarmService.updateFarm', () => {
     const data: Record<string, unknown> = {
       id: 'uuid-1',
       owner_user_id: 'owner-1',
-      usda_farm_id: 1001,
+      usda_farm_id: '1001',
       farm_name: 'Original Name',
-      description: 'Original description',
+      specific_products: 'Original description',
       primary_phone: '555-0100',
       primary_email: 'farm@test.com',
       website: null,
@@ -266,16 +266,16 @@ describe('FarmService.updateFarm', () => {
       location: { type: 'Point', coordinates: [-90.18, 32.3] },
       food_categories: ['Vegetables'],
       market_sales_data: null,
-      bipoc_owned: false,
-      gap_certified: false,
-      food_safety_plan: false,
-      agritourism: false,
-      sells_at_markets: false,
-      csa_boxes: false,
-      online_sales: false,
-      delivery: false,
-      f2s_experience: false,
-      interested_in_f2s: false,
+      growing_practices: [],
+      food_safety_certifications: [],
+      farm_experiences: [],
+      farm_characteristics: [],
+      farm_to_school_sales: [],
+      f2s_experience: null,
+      minimum_order: null,
+      delivery_details: null,
+      cover_photo: null,
+      carousel_photos: [],
       status: FarmStatus.PENDING_APPROVAL,
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-06-01'),
@@ -314,7 +314,7 @@ describe('FarmService.updateFarm', () => {
     expect(instance.save).toHaveBeenCalledTimes(1);
     expect(result.farm_name).toBe('New Name');
     // Other fields unchanged
-    expect(result.description).toBe('Original description');
+    expect(result.specific_products).toBe('Original description');
     expect(result.primary_phone).toBe('555-0100');
   });
 
@@ -324,12 +324,12 @@ describe('FarmService.updateFarm', () => {
 
     const result = await service.updateFarm('uuid-1', {
       farm_name: 'Updated Farm',
-      description: 'New description',
+      specific_products: 'New description',
       primary_phone: '555-9999',
     });
 
     expect(result.farm_name).toBe('Updated Farm');
-    expect(result.description).toBe('New description');
+    expect(result.specific_products).toBe('New description');
     expect(result.primary_phone).toBe('555-9999');
   });
 
@@ -370,7 +370,7 @@ describe('FarmService.updateFarm', () => {
 
     expect(instance.save).toHaveBeenCalledTimes(1);
     expect(result.farm_name).toBe('Original Name');
-    expect(result.description).toBe('Original description');
+    expect(result.specific_products).toBe('Original description');
   });
 
   // ── invalid farm id ───────────────────────────────────────────────────────
@@ -389,18 +389,16 @@ describe('FarmService.updateFarm', () => {
     const instance = makeFarmInstance();
     MockFarm.findByPk.mockResolvedValue(instance as any);
 
-    const updateInput = {
+    const dto = await service.updateFarm('uuid-1', {
       farm_name: 'Freshly Updated',
-      description: 'New desc',
-      bipoc_owned: true,
-    };
-
-    const dto = await service.updateFarm('uuid-1', updateInput);
+      specific_products: 'New desc',
+      farm_characteristics: ['BIPOC-Owned Farm'],
+    });
 
     expect(dto.id).toBe('uuid-1');
     expect(dto.farm_name).toBe('Freshly Updated');
-    expect(dto.description).toBe('New desc');
-    expect(dto.bipoc_owned).toBe(true);
+    expect(dto.specific_products).toBe('New desc');
+    expect(dto.farm_characteristics).toEqual(['BIPOC-Owned Farm']);
     expect(dto.updatedAt).toBe(new Date('2025-06-02T12:00:00.000Z').toISOString());
   });
 
@@ -429,7 +427,7 @@ describe('FarmService.updateFarm', () => {
 
     const result = await service.updateFarm('uuid-1', {
       farm_name: 'Resubmitted Farm Name',
-      description: 'Updated farm description',
+      specific_products: 'Updated farm description',
     });
 
     expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
@@ -442,7 +440,7 @@ describe('FarmService.updateFarm', () => {
     expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
     expect(htmlBody).toContain('Missing GAP documentation');
     expect(htmlBody).toContain('Farm Name');
-    expect(htmlBody).toContain('Description');
+    expect(htmlBody).toContain('Specific Products');
     expect(htmlBody).toContain('Original Name');
     expect(htmlBody).toContain('Resubmitted Farm Name');
   });

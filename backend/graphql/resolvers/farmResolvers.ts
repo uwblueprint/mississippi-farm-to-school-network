@@ -101,7 +101,7 @@ const farmResolvers = {
       farm: FarmDTO,
       _args: unknown,
       context: AuthContext
-    ): Promise<number | null> => {
+    ): Promise<string | null> => {
       try {
         await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
         return farm.usda_farm_id;

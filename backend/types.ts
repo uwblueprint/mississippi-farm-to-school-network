@@ -1,3 +1,12 @@
+import type {
+  GrowingPractice,
+  ProductCategory,
+  FoodSafetyCertification,
+  FarmExperience,
+  FarmCharacteristic,
+  FarmToSchoolSale,
+} from '@/constants/farmOptions';
+
 export type NodemailerConfig = {
   service: 'gmail';
   auth: {
@@ -79,9 +88,9 @@ export type GeoJSONPointDTO = {
 export type FarmDTO = {
   id: string;
   owner_user_id: string;
-  usda_farm_id: number | null;
+  usda_farm_id: string | null;
   farm_name: string;
-  description: string;
+  specific_products: string;
   primary_phone: string;
   primary_email: string;
   website: string | null;
@@ -90,18 +99,18 @@ export type FarmDTO = {
   counties_served: string[];
   cities_served: string[];
   location: LocationDTO;
-  food_categories: string[];
+  food_categories: ProductCategory[];
+  growing_practices: GrowingPractice[];
+  food_safety_certifications: FoodSafetyCertification[];
+  farm_experiences: FarmExperience[];
+  farm_characteristics: FarmCharacteristic[];
+  farm_to_school_sales: FarmToSchoolSale[];
   market_sales_data: { market: string; times: string }[] | null;
-  bipoc_owned: boolean;
-  gap_certified: boolean;
-  food_safety_plan: boolean;
-  agritourism: boolean;
-  sells_at_markets: boolean;
-  csa_boxes: boolean;
-  online_sales: boolean;
-  delivery: boolean;
-  f2s_experience: boolean;
-  interested_in_f2s: boolean;
+  f2s_experience: string | null;
+  minimum_order: string | null;
+  delivery_details: string | null;
+  cover_photo: string | null;
+  carousel_photos: string[];
   status: FarmStatus;
   createdAt: string;
   updatedAt: string;
@@ -131,28 +140,28 @@ export type FarmRejectionDTO = {
 
 export type CreateFarmInput = {
   farm_name: string;
-  description: string;
+  specific_products: string;
   primary_phone: string;
   primary_email: string;
   website?: string;
   social_media?: Record<string, unknown>;
   farm_address: string;
-  usda_farm_id: number;
+  usda_farm_id: string;
   counties_served: string[];
-  cities_served: string[];
+  cities_served?: string[];
   location: LocationDTO;
-  food_categories: string[];
+  food_categories: ProductCategory[];
+  growing_practices: GrowingPractice[];
+  food_safety_certifications: FoodSafetyCertification[];
+  farm_experiences?: FarmExperience[];
+  farm_characteristics?: FarmCharacteristic[];
+  farm_to_school_sales?: FarmToSchoolSale[];
   market_sales_data?: { market: string; times: string }[];
-  bipoc_owned?: boolean;
-  gap_certified?: boolean;
-  food_safety_plan?: boolean;
-  agritourism?: boolean;
-  sells_at_markets?: boolean;
-  csa_boxes?: boolean;
-  online_sales?: boolean;
-  delivery?: boolean;
-  f2s_experience?: boolean;
-  interested_in_f2s?: boolean;
+  f2s_experience?: string;
+  minimum_order?: string;
+  delivery_details?: string;
+  cover_photo?: string;
+  carousel_photos?: string[];
 };
 
 export type AuthDTO = Token & UserDTO;
@@ -163,9 +172,9 @@ export enum SignUpMethod {
 }
 
 export type UpdateFarmInput = {
-  usda_farm_id?: number;
+  usda_farm_id?: string;
   farm_name?: string;
-  description?: string;
+  specific_products?: string;
   primary_phone?: string;
   primary_email?: string;
   website?: string;
@@ -174,18 +183,18 @@ export type UpdateFarmInput = {
   counties_served?: string[];
   cities_served?: string[];
   location?: LocationDTO;
-  food_categories?: string[];
+  food_categories?: ProductCategory[];
+  growing_practices?: GrowingPractice[];
+  food_safety_certifications?: FoodSafetyCertification[];
+  farm_experiences?: FarmExperience[];
+  farm_characteristics?: FarmCharacteristic[];
+  farm_to_school_sales?: FarmToSchoolSale[];
   market_sales_data?: { market: string; times: string }[];
-  bipoc_owned?: boolean;
-  gap_certified?: boolean;
-  food_safety_plan?: boolean;
-  agritourism?: boolean;
-  sells_at_markets?: boolean;
-  csa_boxes?: boolean;
-  online_sales?: boolean;
-  delivery?: boolean;
-  f2s_experience?: boolean;
-  interested_in_f2s?: boolean;
+  f2s_experience?: string;
+  minimum_order?: string;
+  delivery_details?: string;
+  cover_photo?: string;
+  carousel_photos?: string[];
 };
 
 export interface FarmFilter {

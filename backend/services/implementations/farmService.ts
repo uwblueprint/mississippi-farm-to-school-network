@@ -12,6 +12,15 @@ import {
   FarmRejectionDTO,
   FarmSnapshotDTO,
 } from '@/types';
+import {
+  GROWING_PRACTICES,
+  PRODUCT_CATEGORIES,
+  FOOD_SAFETY_CERTIFICATIONS,
+  FARM_EXPERIENCES,
+  FARM_CHARACTERISTICS,
+  FARM_TO_SCHOOL_SALES,
+  assertAllowedValues,
+} from '@/constants/farmOptions';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
 import IUserService from '@/services/interfaces/userService';
@@ -56,7 +65,34 @@ const convertFromPostGISPoint = (location: {
 };
 
 class FarmService implements IFarmService {
+  private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
+    if (input.food_categories !== undefined) {
+      assertAllowedValues(input.food_categories, PRODUCT_CATEGORIES, 'food_categories');
+    }
+    if (input.growing_practices !== undefined) {
+      assertAllowedValues(input.growing_practices, GROWING_PRACTICES, 'growing_practices');
+    }
+    if (input.food_safety_certifications !== undefined) {
+      assertAllowedValues(
+        input.food_safety_certifications,
+        FOOD_SAFETY_CERTIFICATIONS,
+        'food_safety_certifications'
+      );
+    }
+    if (input.farm_experiences !== undefined) {
+      assertAllowedValues(input.farm_experiences, FARM_EXPERIENCES, 'farm_experiences');
+    }
+    if (input.farm_characteristics !== undefined) {
+      assertAllowedValues(input.farm_characteristics, FARM_CHARACTERISTICS, 'farm_characteristics');
+    }
+    if (input.farm_to_school_sales !== undefined) {
+      assertAllowedValues(input.farm_to_school_sales, FARM_TO_SCHOOL_SALES, 'farm_to_school_sales');
+    }
+  }
+
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
+    this.validateFarmOptionArrays(input);
+
     let createdFarm: FarmDTO;
 
     try {
@@ -129,6 +165,8 @@ class FarmService implements IFarmService {
 
   async updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO> {
     try {
+      this.validateFarmOptionArrays(input);
+
       const farm = farmToUpdate ?? (await Farm.findByPk(id));
       if (!farm) {
         throw new Error(`Farm with id ${id} not found.`);
@@ -290,30 +328,30 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
-      description: data.description,
+      specific_products: data.specific_products,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
       counties_served: data.counties_served,
-      cities_served: data.cities_served,
+      cities_served: data.cities_served ?? [],
       location: {
         type: 'Point',
         coordinates: data.location.coordinates,
       },
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
-      bipoc_owned: data.bipoc_owned,
-      gap_certified: data.gap_certified,
-      food_safety_plan: data.food_safety_plan,
-      agritourism: data.agritourism,
-      sells_at_markets: data.sells_at_markets,
-      csa_boxes: data.csa_boxes,
-      online_sales: data.online_sales,
-      delivery: data.delivery,
-      f2s_experience: data.f2s_experience,
-      interested_in_f2s: data.interested_in_f2s,
+      growing_practices: data.growing_practices,
+      food_safety_certifications: data.food_safety_certifications,
+      farm_experiences: data.farm_experiences,
+      farm_characteristics: data.farm_characteristics,
+      farm_to_school_sales: data.farm_to_school_sales,
+      f2s_experience: data.f2s_experience ?? null,
+      minimum_order: data.minimum_order ?? null,
+      delivery_details: data.delivery_details ?? null,
+      cover_photo: data.cover_photo ?? null,
+      carousel_photos: data.carousel_photos,
       status: data.status,
       createdAt:
         data.createdAt instanceof Date
@@ -376,27 +414,27 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
-      description: data.description,
+      specific_products: data.specific_products,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
       counties_served: data.counties_served,
-      cities_served: data.cities_served,
+      cities_served: data.cities_served ?? [],
       location: convertFromPostGISPoint(data.location),
       food_categories: data.food_categories,
       market_sales_data: data.market_sales_data ?? null,
-      bipoc_owned: data.bipoc_owned,
-      gap_certified: data.gap_certified,
-      food_safety_plan: data.food_safety_plan,
-      agritourism: data.agritourism,
-      sells_at_markets: data.sells_at_markets,
-      csa_boxes: data.csa_boxes,
-      online_sales: data.online_sales,
-      delivery: data.delivery,
-      f2s_experience: data.f2s_experience,
-      interested_in_f2s: data.interested_in_f2s,
+      growing_practices: data.growing_practices,
+      food_safety_certifications: data.food_safety_certifications,
+      farm_experiences: data.farm_experiences,
+      farm_characteristics: data.farm_characteristics,
+      farm_to_school_sales: data.farm_to_school_sales,
+      f2s_experience: data.f2s_experience ?? null,
+      minimum_order: data.minimum_order ?? null,
+      delivery_details: data.delivery_details ?? null,
+      cover_photo: data.cover_photo ?? null,
+      carousel_photos: data.carousel_photos,
       status: data.status,
       createdAt:
         data.createdAt instanceof Date

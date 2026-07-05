@@ -2,6 +2,14 @@ import { BelongsTo, Column, DataType, ForeignKey, Model, Table } from 'sequelize
 
 import User from './user.model';
 import { FarmStatus } from '@/types';
+import type {
+  GrowingPractice,
+  ProductCategory,
+  FoodSafetyCertification,
+  FarmExperience,
+  FarmCharacteristic,
+  FarmToSchoolSale,
+} from '@/constants/farmOptions';
 
 @Table({ tableName: 'farms', timestamps: true, underscored: true })
 export default class Farm extends Model {
@@ -15,14 +23,14 @@ export default class Farm extends Model {
   @BelongsTo(() => User)
   owner!: User;
 
-  @Column({ type: DataType.INTEGER, allowNull: false, unique: true })
-  usda_farm_id!: number;
+  @Column({ type: DataType.STRING, allowNull: false, unique: true })
+  usda_farm_id!: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
   farm_name!: string;
 
   @Column({ type: DataType.TEXT, allowNull: false })
-  description!: string;
+  specific_products!: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
   primary_phone!: string;
@@ -42,47 +50,47 @@ export default class Farm extends Model {
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
   counties_served!: string[];
 
-  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: true, defaultValue: [] })
   cities_served!: string[];
 
   @Column({ type: DataType.GEOMETRY('POINT', 4326), allowNull: false })
   location!: { type: string; coordinates: [number, number] };
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
-  food_categories!: string[];
+  food_categories!: ProductCategory[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  growing_practices!: GrowingPractice[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  food_safety_certifications!: FoodSafetyCertification[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  farm_experiences!: FarmExperience[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  farm_characteristics!: FarmCharacteristic[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  farm_to_school_sales!: FarmToSchoolSale[];
 
   @Column({ type: DataType.JSON, allowNull: true })
   market_sales_data!: { market: string; times: string }[] | null;
 
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  bipoc_owned!: boolean;
+  @Column({ type: DataType.TEXT, allowNull: true })
+  f2s_experience!: string | null;
 
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  gap_certified!: boolean;
+  @Column({ type: DataType.STRING, allowNull: true })
+  minimum_order!: string | null;
 
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  food_safety_plan!: boolean;
+  @Column({ type: DataType.TEXT, allowNull: true })
+  delivery_details!: string | null;
 
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  agritourism!: boolean;
+  @Column({ type: DataType.STRING, allowNull: true })
+  cover_photo!: string | null;
 
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  sells_at_markets!: boolean;
-
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  csa_boxes!: boolean;
-
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  online_sales!: boolean;
-
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  delivery!: boolean;
-
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  f2s_experience!: boolean;
-
-  @Column({ type: DataType.BOOLEAN, defaultValue: false })
-  interested_in_f2s!: boolean;
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  carousel_photos!: string[];
 
   @Column({
     type: DataType.ENUM('PENDING_APPROVAL', 'APPROVED', 'REJECTED'),
