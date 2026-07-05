@@ -12,6 +12,7 @@ const authType = gql`
     refresh(refreshToken: String!): String!
     logout(userId: ID!): Boolean!
     resetPassword(email: String!): Boolean!
+    sendEmailVerificationLink(email: String!): Boolean!
   }
 
   type AuthDTO {
