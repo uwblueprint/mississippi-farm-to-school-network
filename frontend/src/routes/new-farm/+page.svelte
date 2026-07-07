@@ -341,12 +341,12 @@
 			f2s_experience: f2sSelected ? f2sExperience.trim() || null : null,
 			minimum_order: f2sSelected && minimumOrder.trim() !== '' ? Number(minimumOrder) : null,
 			delivery_details: deliverySelected ? deliveryDetails.trim() || null : null,
-			cover_photo: coverPhoto[0]?.name ?? null,
-			carousel_photos: carouselPhotos.map((file) => file.name)
+			cover_photo: null,
+			carousel_photos: []
 		};
 	}
 
-	function handleSubmit() {
+	async function handleSubmit() {
 		for (const key of Object.keys(errors)) {
 			touched[key] = true;
 		}
@@ -354,6 +354,22 @@
 
 		const payload = buildFarmPayload();
 		console.log('createFarm payload', payload);
+		console.log('pending photos (upload not wired yet)', {
+			cover: coverPhoto[0]?.name ?? null,
+			carousel: carouselPhotos.map((file) => file.name)
+		});
+
+		try {
+			const res = await fetch('/api/create-farm', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(payload)
+			});
+			const result = await res.json();
+			console.log('createFarm response', result);
+		} catch (error) {
+			console.error('createFarm request failed', error);
+		}
 	}
 
 	function formatSize(bytes: number) {
