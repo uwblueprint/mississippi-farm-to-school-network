@@ -21,7 +21,7 @@
 	}: Props = $props();
 
 	const navItems = [
-		{ label: 'Farms', href: '/farmer' },
+		{ label: 'Farms', href: '/farmer/farms' },
 		{ label: 'Map', href: '/map' },
 		{ label: 'Contact MSFN', href: '/contact' }
 	];
