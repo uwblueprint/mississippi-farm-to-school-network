@@ -41,11 +41,21 @@ const farmResolvers = {
       _parent: undefined,
       {
         filter,
-        pageNumber = 1,
-        pageSize = 50,
-      }: { filter?: FarmFilter; pageNumber?: number; pageSize?: number },
+        pageNumber: rawPageNumber,
+        pageSize: rawPageSize,
+      }: { filter?: FarmFilter; pageNumber?: number | null; pageSize?: number | null },
       context: AuthContext
     ) => {
+      const pageNumber = rawPageNumber ?? 1;
+      const pageSize = rawPageSize ?? 50;
+
+      if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+        throw new Error('pageNumber must be an integer >= 1');
+      }
+      if (!Number.isInteger(pageSize) || pageSize < 1) {
+        throw new Error('pageSize must be an integer >= 1');
+      }
+
       const isAdmin = await authHelper
         .requireRole(context, [Role.ADMIN])
         .then(() => true)
