@@ -164,7 +164,14 @@ class FarmService implements IFarmService {
 
       const options: Record<string, unknown> = { where, order: FARM_LIST_ORDER };
 
-      if (pageNumber !== undefined && pageSize !== undefined) {
+      if (pageNumber != null && pageSize != null) {
+        if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+          throw new Error('pageNumber must be an integer >= 1');
+        }
+        if (!Number.isInteger(pageSize) || pageSize < 1) {
+          throw new Error('pageSize must be an integer >= 1');
+        }
+
         options.limit = pageSize;
         options.offset = (pageNumber - 1) * pageSize;
       }
