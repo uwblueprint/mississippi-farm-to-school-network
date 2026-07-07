@@ -40,6 +40,7 @@
 	},
 	"dependencies": {
 		"@fontsource-variable/dm-sans": "^5.2.8",
-		"@fontsource-variable/figtree": "^5.2.10"
+		"@fontsource-variable/figtree": "^5.2.10",
+		"@fontsource-variable/nunito": "^5.2.7"
 	}
 }
