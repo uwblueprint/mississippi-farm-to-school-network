@@ -66,8 +66,8 @@ const convertFromPostGISPoint = (location: {
 
 class FarmService implements IFarmService {
   private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
-    if (input.food_categories !== undefined) {
-      assertAllowedValues(input.food_categories, PRODUCT_CATEGORIES, 'food_categories');
+    if (input.product_categories !== undefined) {
+      assertAllowedValues(input.product_categories, PRODUCT_CATEGORIES, 'product_categories');
     }
     if (input.growing_practices !== undefined) {
       assertAllowedValues(input.growing_practices, GROWING_PRACTICES, 'growing_practices');
@@ -143,16 +143,16 @@ class FarmService implements IFarmService {
         where.status = filter.approved ? FarmStatus.APPROVED : { [Op.ne]: FarmStatus.APPROVED };
       }
 
-      if (filter?.counties_served?.length) {
-        where.counties_served = { [Op.overlap]: filter.counties_served };
+      if (filter?.counties?.length) {
+        where.county = { [Op.in]: filter.counties };
       }
 
       if (filter?.cities_served?.length) {
         where.cities_served = { [Op.overlap]: filter.cities_served };
       }
 
-      if (filter?.food_categories?.length) {
-        where.food_categories = { [Op.overlap]: filter.food_categories };
+      if (filter?.product_categories?.length) {
+        where.product_categories = { [Op.overlap]: filter.product_categories };
       }
 
       const farms = await Farm.findAll({ where });
@@ -334,13 +334,13 @@ class FarmService implements IFarmService {
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
-      counties_served: data.counties_served,
+      county: data.county,
       cities_served: data.cities_served ?? [],
       location: {
         type: 'Point',
         coordinates: data.location.coordinates,
       },
-      food_categories: data.food_categories,
+      product_categories: data.product_categories,
       market_sales_data: data.market_sales_data ?? null,
       growing_practices: data.growing_practices,
       food_safety_certifications: data.food_safety_certifications,
@@ -420,10 +420,10 @@ class FarmService implements IFarmService {
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
-      counties_served: data.counties_served,
+      county: data.county,
       cities_served: data.cities_served ?? [],
       location: convertFromPostGISPoint(data.location),
-      food_categories: data.food_categories,
+      product_categories: data.product_categories,
       market_sales_data: data.market_sales_data ?? null,
       growing_practices: data.growing_practices,
       food_safety_certifications: data.food_safety_certifications,

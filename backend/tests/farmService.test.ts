@@ -25,10 +25,10 @@ const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   website: null,
   social_media: null,
   farm_address: '123 Farm Rd',
-  counties_served: ['Hinds', 'Madison'],
+  county: 'Hinds',
   cities_served: ['Jackson', 'Ridgeland'],
   location: { type: 'Point', coordinates: [-90.18, 32.3] },
-  food_categories: ['Vegetables', 'Fruits'],
+  product_categories: ['Vegetables', 'Fruits'],
   market_sales_data: null,
   growing_practices: [],
   food_safety_certifications: [],
@@ -142,13 +142,13 @@ describe('FarmService.getFarms', () => {
 
   // ── array filters ─────────────────────────────────────────────────────────
 
-  test('filter by counties_served: uses Op.overlap', async () => {
+  test('filter by counties: uses Op.in', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties_served: ['Hinds'] });
+    await service.getFarms({ counties: ['Hinds'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { counties_served: { [Op.overlap]: ['Hinds'] } },
+      where: { county: { [Op.in]: ['Hinds'] } },
     });
   });
 
@@ -162,20 +162,20 @@ describe('FarmService.getFarms', () => {
     });
   });
 
-  test('filter by food_categories: uses Op.overlap', async () => {
+  test('filter by product_categories: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ food_categories: ['Vegetables'] });
+    await service.getFarms({ product_categories: ['Vegetables'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { food_categories: { [Op.overlap]: ['Vegetables'] } },
+      where: { product_categories: { [Op.overlap]: ['Vegetables'] } },
     });
   });
 
   test('empty array filter: ignores empty array, returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties_served: [], food_categories: [] });
+    await service.getFarms({ counties: [], product_categories: [] });
 
     // Empty arrays should not add where conditions
     expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
@@ -183,20 +183,20 @@ describe('FarmService.getFarms', () => {
 
   // ── combined filters ──────────────────────────────────────────────────────
 
-  test('combining status + counties_served + food_categories', async () => {
+  test('combining status + counties + product_categories', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
     await service.getFarms({
       status: FarmStatus.APPROVED,
-      counties_served: ['Hinds'],
-      food_categories: ['Vegetables'],
+      counties: ['Hinds'],
+      product_categories: ['Vegetables'],
     });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: {
         status: FarmStatus.APPROVED,
-        counties_served: { [Op.overlap]: ['Hinds'] },
-        food_categories: { [Op.overlap]: ['Vegetables'] },
+        county: { [Op.in]: ['Hinds'] },
+        product_categories: { [Op.overlap]: ['Vegetables'] },
       },
     });
   });
@@ -207,7 +207,7 @@ describe('FarmService.getFarms', () => {
     MockFarm.findAll.mockResolvedValue([]);
 
     const result = await service.getFarms({
-      counties_served: ['NonExistentCounty'],
+      counties: ['NonExistentCounty'],
     });
 
     expect(result).toEqual([]);
@@ -226,8 +226,8 @@ describe('FarmService.getFarms', () => {
       owner_user_id: 'owner-1',
       usda_farm_id: '1001',
       farm_name: 'Test Farm',
-      counties_served: ['Hinds', 'Madison'],
-      food_categories: ['Vegetables', 'Fruits'],
+      county: 'Hinds',
+      product_categories: ['Vegetables', 'Fruits'],
       status: FarmStatus.APPROVED,
     });
     expect(dto.createdAt).toBe(new Date('2025-01-01').toISOString());
@@ -261,10 +261,10 @@ describe('FarmService.updateFarm', () => {
       website: null,
       social_media: null,
       farm_address: '123 Farm Rd',
-      counties_served: ['Hinds'],
+      county: 'Hinds',
       cities_served: ['Jackson'],
       location: { type: 'Point', coordinates: [-90.18, 32.3] },
-      food_categories: ['Vegetables'],
+      product_categories: ['Vegetables'],
       market_sales_data: null,
       growing_practices: [],
       food_safety_certifications: [],

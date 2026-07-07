@@ -30,10 +30,10 @@ const farmType = gql`
     website: String
     social_media: JSON
     farm_address: String!
-    counties_served: [String!]!
+    county: String!
     cities_served: [String!]
     location: Location!
-    food_categories: [String!]!
+    product_categories: [String!]!
     growing_practices: [String!]!
     food_safety_certifications: [String!]!
     farm_experiences: [String!]!
@@ -59,10 +59,10 @@ const farmType = gql`
     website: String
     social_media: JSON
     farm_address: String!
-    counties_served: [String!]!
+    county: String!
     cities_served: [String!]
     location: LocationInput!
-    food_categories: [String!]!
+    product_categories: [String!]!
     growing_practices: [String!]!
     food_safety_certifications: [String!]!
     farm_experiences: [String!]
@@ -70,7 +70,7 @@ const farmType = gql`
     farm_to_school_sales: [String!]
     market_sales_data: [MarketSalesDataInput!]
     f2s_experience: String
-    minimum_order: String
+    minimum_order: Int
     delivery_details: String
     cover_photo: String
     carousel_photos: [String!]
@@ -88,9 +88,9 @@ const farmType = gql`
 
   input FarmFilter {
     status: FarmStatus
-    counties_served: [String!]
+    counties: [String!]
     cities_served: [String!]
-    food_categories: [String!]
+    product_categories: [String!]
     approved: Boolean
   }
 
@@ -103,10 +103,10 @@ const farmType = gql`
     website: String
     social_media: JSON
     farm_address: String
-    counties_served: [String!]
+    county: String
     cities_served: [String!]
     location: LocationInput
-    food_categories: [String!]
+    product_categories: [String!]
     growing_practices: [String!]
     food_safety_certifications: [String!]
     farm_experiences: [String!]
@@ -114,7 +114,7 @@ const farmType = gql`
     farm_to_school_sales: [String!]
     market_sales_data: [MarketSalesDataInput!]
     f2s_experience: String
-    minimum_order: String
+    minimum_order: Int
     delivery_details: String
     cover_photo: String
     carousel_photos: [String!]

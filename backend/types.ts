@@ -96,10 +96,10 @@ export type FarmDTO = {
   website: string | null;
   social_media: Record<string, unknown> | null;
   farm_address: string;
-  counties_served: string[];
+  county: string;
   cities_served: string[];
   location: LocationDTO;
-  food_categories: ProductCategory[];
+  product_categories: ProductCategory[];
   growing_practices: GrowingPractice[];
   food_safety_certifications: FoodSafetyCertification[];
   farm_experiences: FarmExperience[];
@@ -107,7 +107,7 @@ export type FarmDTO = {
   farm_to_school_sales: FarmToSchoolSale[];
   market_sales_data: { market: string; times: string }[] | null;
   f2s_experience: string | null;
-  minimum_order: string | null;
+  minimum_order: number | null;
   delivery_details: string | null;
   cover_photo: string | null;
   carousel_photos: string[];
@@ -147,10 +147,10 @@ export type CreateFarmInput = {
   social_media?: Record<string, unknown>;
   farm_address: string;
   usda_farm_id: string;
-  counties_served: string[];
+  county: string;
   cities_served?: string[];
   location: LocationDTO;
-  food_categories: ProductCategory[];
+  product_categories: ProductCategory[];
   growing_practices: GrowingPractice[];
   food_safety_certifications: FoodSafetyCertification[];
   farm_experiences?: FarmExperience[];
@@ -158,7 +158,7 @@ export type CreateFarmInput = {
   farm_to_school_sales?: FarmToSchoolSale[];
   market_sales_data?: { market: string; times: string }[];
   f2s_experience?: string;
-  minimum_order?: string;
+  minimum_order?: number;
   delivery_details?: string;
   cover_photo?: string;
   carousel_photos?: string[];
@@ -180,10 +180,10 @@ export type UpdateFarmInput = {
   website?: string;
   social_media?: Record<string, unknown>;
   farm_address?: string;
-  counties_served?: string[];
+  county?: string;
   cities_served?: string[];
   location?: LocationDTO;
-  food_categories?: ProductCategory[];
+  product_categories?: ProductCategory[];
   growing_practices?: GrowingPractice[];
   food_safety_certifications?: FoodSafetyCertification[];
   farm_experiences?: FarmExperience[];
@@ -191,7 +191,7 @@ export type UpdateFarmInput = {
   farm_to_school_sales?: FarmToSchoolSale[];
   market_sales_data?: { market: string; times: string }[];
   f2s_experience?: string;
-  minimum_order?: string;
+  minimum_order?: number;
   delivery_details?: string;
   cover_photo?: string;
   carousel_photos?: string[];
@@ -199,9 +199,9 @@ export type UpdateFarmInput = {
 
 export interface FarmFilter {
   status?: FarmStatus;
-  counties_served?: string[];
+  counties?: string[];
   cities_served?: string[];
-  food_categories?: string[];
+  product_categories?: string[];
   approved?: boolean;
 }
 

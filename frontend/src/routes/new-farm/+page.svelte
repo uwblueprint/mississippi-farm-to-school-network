@@ -230,6 +230,13 @@
 		input.value = cleaned;
 	}
 
+	function handleMinimumOrderInput(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const cleaned = digitsOnly(input.value);
+		minimumOrder = cleaned;
+		input.value = cleaned;
+	}
+
 	function toggleInGroup(current: string[], option: string, checked: boolean, hasNone: boolean) {
 		if (hasNone && option === NONE) {
 			return checked ? [NONE] : [];
@@ -318,16 +325,16 @@
 			website: website.trim() || null,
 			social_media: Object.keys(socialMedia).length > 0 ? socialMedia : null,
 			farm_address: farmAddress.trim(),
-			counties_served: county.trim() ? [county.trim()] : [],
+			county: county.trim(),
 			location: { lat: addressLat, lng: addressLng },
-			food_categories: productCategories,
+			product_categories: productCategories,
 			growing_practices: growingPractices,
 			food_safety_certifications: foodSafetyCertifications,
 			farm_experiences: farmExperiences,
 			farm_characteristics: farmCharacteristics,
 			farm_to_school_sales: farmToSchoolSales,
 			f2s_experience: f2sSelected ? f2sExperience.trim() || null : null,
-			minimum_order: f2sSelected ? minimumOrder.trim() || null : null,
+			minimum_order: f2sSelected && minimumOrder.trim() !== '' ? Number(minimumOrder) : null,
 			delivery_details: deliverySelected ? deliveryDetails.trim() || null : null,
 			cover_photo: coverPhoto[0]?.name ?? null,
 			carousel_photos: carouselPhotos.map((file) => file.name)
@@ -779,8 +786,10 @@
 				id="minimum-order"
 				class="field"
 				class:input-error={touched.minimumOrder && errors.minimumOrder}
-				placeholder="$30"
-				bind:value={minimumOrder}
+				inputmode="numeric"
+				placeholder="30"
+				value={minimumOrder}
+				oninput={handleMinimumOrderInput}
 				onblur={() => (touched.minimumOrder = true)}
 			/>
 			{#if touched.minimumOrder && errors.minimumOrder}

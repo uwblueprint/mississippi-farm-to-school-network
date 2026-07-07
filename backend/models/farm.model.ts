@@ -47,8 +47,8 @@ export default class Farm extends Model {
   @Column({ type: DataType.STRING, allowNull: false })
   farm_address!: string;
 
-  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
-  counties_served!: string[];
+  @Column({ type: DataType.STRING, allowNull: false })
+  county!: string;
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: true, defaultValue: [] })
   cities_served!: string[];
@@ -57,7 +57,7 @@ export default class Farm extends Model {
   location!: { type: string; coordinates: [number, number] };
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
-  food_categories!: ProductCategory[];
+  product_categories!: ProductCategory[];
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
   growing_practices!: GrowingPractice[];
@@ -80,8 +80,8 @@ export default class Farm extends Model {
   @Column({ type: DataType.TEXT, allowNull: true })
   f2s_experience!: string | null;
 
-  @Column({ type: DataType.STRING, allowNull: true })
-  minimum_order!: string | null;
+  @Column({ type: DataType.INTEGER, allowNull: true })
+  minimum_order!: number | null;
 
   @Column({ type: DataType.TEXT, allowNull: true })
   delivery_details!: string | null;
