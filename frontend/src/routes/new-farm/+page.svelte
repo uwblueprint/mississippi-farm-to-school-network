@@ -190,7 +190,12 @@
 	const errors = $derived({
 		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm ID is required.' : '',
 		farmName: farmName.trim() === '' ? 'Farm name is required.' : '',
-		farmAddress: farmAddress.trim() === '' ? 'Farm address is required.' : '',
+		farmAddress:
+			farmAddress.trim() === ''
+				? 'Farm address is required.'
+				: addressLat === null || addressLng === null
+					? 'Select an address from the suggestions.'
+					: '',
 		county: county.trim() === '' ? 'County is required.' : '',
 		phone:
 			phone === ''
