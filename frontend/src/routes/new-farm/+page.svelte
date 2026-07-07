@@ -303,11 +303,45 @@
 		carouselPhotos = details.acceptedFiles;
 	}
 
+	function buildFarmPayload() {
+		const socialMedia: Record<string, string> = {};
+		if (instagram.trim()) socialMedia.instagram = instagram.trim();
+		if (facebook.trim()) socialMedia.facebook = facebook.trim();
+		if (otherSocial.trim()) socialMedia.other = otherSocial.trim();
+
+		return {
+			usda_farm_id: usdaFarmId.trim(),
+			farm_name: farmName.trim(),
+			specific_products: specificProducts.trim(),
+			primary_phone: phone,
+			primary_email: email.trim(),
+			website: website.trim() || null,
+			social_media: Object.keys(socialMedia).length > 0 ? socialMedia : null,
+			farm_address: farmAddress.trim(),
+			counties_served: county.trim() ? [county.trim()] : [],
+			location: { lat: addressLat, lng: addressLng },
+			food_categories: productCategories,
+			growing_practices: growingPractices,
+			food_safety_certifications: foodSafetyCertifications,
+			farm_experiences: farmExperiences,
+			farm_characteristics: farmCharacteristics,
+			farm_to_school_sales: farmToSchoolSales,
+			f2s_experience: f2sSelected ? f2sExperience.trim() || null : null,
+			minimum_order: f2sSelected ? minimumOrder.trim() || null : null,
+			delivery_details: deliverySelected ? deliveryDetails.trim() || null : null,
+			cover_photo: coverPhoto[0]?.name ?? null,
+			carousel_photos: carouselPhotos.map((file) => file.name)
+		};
+	}
+
 	function handleSubmit() {
 		for (const key of Object.keys(errors)) {
 			touched[key] = true;
 		}
 		if (!isValid) return;
+
+		const payload = buildFarmPayload();
+		console.log('createFarm payload', payload);
 	}
 
 	function formatSize(bytes: number) {
