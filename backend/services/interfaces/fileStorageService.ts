@@ -22,6 +22,15 @@ export interface IFileStorageService {
   createFile(fileName: string, filePath: string, contentType?: string | null): Promise<void>;
 
   /**
+   * Uploads raw file bytes to storage (browser-friendly; no server-local file needed)
+   * @param fileName name of file in storage (storage key)
+   * @param buffer file contents to upload
+   * @param contentType MIME type of file (optional)
+   * @throws Error if file name already exists or upload fails
+   */
+  uploadBytes(fileName: string, buffer: Buffer, contentType?: string | null): Promise<void>;
+
+  /**
    * Updates an existing file in storage
    * @param fileName name of file in storage
    * @param filePath local path to file

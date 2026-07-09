@@ -1,30 +1,27 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { enhance, deserialize } from '$app/forms';
+	import { invalidateAll } from '$app/navigation';
+	import type { ActionResult } from '@sveltejs/kit';
+	import type { PageData } from './$types';
 	import ActionButton from '$lib/components/ActionButton.svelte';
+	import TextField from '$lib/components/TextField.svelte';
+	import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
+	import UploadZone from '$lib/components/UploadZone.svelte';
+	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
+
+	let { data }: { data: PageData } = $props();
 
 	// The [id] segment is the farm's UUID — the same id used by the backend
 	// farmById(id) query and the updateFarm(id, input) / resubmitFarm(id, input) mutations.
 	const farmId = $derived($page.params.id);
 
 	// --- Form state ---------------------------------------------------------
-	// Seeded with sample values for now; a +page.server.ts loader will hydrate
-	// these from the farm record once an owner-scoped query exists on the backend.
-	const farm = $state({
-		readableId: '32486126374',
-		name: 'Two Brooks Farm',
-		address: '235 North State St Clarksdale, MS 38614',
-		counties: 'Coahoma County',
-		phone: '647-234-5678',
-		email: '',
-		instagram: '',
-		facebook: '',
-		website: '',
-		other: '',
-		seasonal: '',
-		dashboardImageName: 'farmphoto.png'
-	});
+	// Clean, backend-mapped fields, seeded from the server loader (farmToFormModel).
+	// Same FarmFormModel shape the ?/save action reads back out of the form fields.
+	const farm = $state({ ...data.form });
 
-	// Multi-select checkbox groups. Keyed so the same markup snippet drives each.
+	// Options shared by every multi-select checkbox group.
 	const CHOICE_OPTIONS = [
 		'Organic Practices',
 		'Conventional',
@@ -35,6 +32,9 @@
 		'None of the above'
 	];
 
+	// TODO(backend-mapping): the checkbox groups, BIPOC radios and "seasonal"
+	// field below have no clean backend mapping yet — they are local, unpersisted
+	// UI state and are intentionally NOT sent by the ?/save action.
 	const choiceGroups = $state<Record<string, string[]>>({
 		growingPractices: [],
 		foodSafety: [],
@@ -43,28 +43,69 @@
 		schoolSales: []
 	});
 
-	function toggleChoice(group: string, option: string) {
-		const current = choiceGroups[group];
-		choiceGroups[group] = current.includes(option)
-			? current.filter((o) => o !== option)
-			: [...current, option];
-	}
-
-	// Yes/No radio groups.
-	const radioGroups = $state<Record<string, 'yes' | 'no' | ''>>({
+	// Yes/No radio groups. TODO(backend-mapping): unpersisted.
+	const radioGroups = $state<Record<string, string>>({
 		bipoc1: '',
 		bipoc2: '',
 		bipoc3: '',
 		bipoc4: ''
 	});
 
-	// --- Actions (placeholders until mutations are wired) -------------------
-	function save() {
-		// maps to updateFarm(id, input) — REJECTED farms would route to resubmitFarm.
-		console.log('save farm', farmId, $state.snapshot(farm), $state.snapshot(choiceGroups));
+	// Public gallery photos come from the file service (filesByFarm via the loader).
+	const galleryPhotos = $derived(data.images.map((img) => ({ id: img.fileId, url: img.url })));
+
+	const rejectedDate = $derived(
+		data.rejection ? new Date(data.rejection.createdAt).toLocaleDateString() : ''
+	);
+
+	let saving = $state(false);
+	let uploading = $state(false);
+	let actionError = $state('');
+	let galleryInput = $state<HTMLInputElement | null>(null);
+
+	// Manually POST to a named form action (image ops live outside the save form,
+	// so they can't be plain nested <form>s). Mirrors use:enhance's request shape.
+	async function postAction(action: string, body: FormData): Promise<ActionResult> {
+		const res = await fetch(action, {
+			method: 'POST',
+			headers: { 'x-sveltekit-action': 'true' },
+			body
+		});
+		return deserialize(await res.text());
+	}
+
+	async function uploadFiles(files: FileList | null) {
+		if (!files || files.length === 0) return;
+		uploading = true;
+		actionError = '';
+		try {
+			for (const file of Array.from(files)) {
+				const fd = new FormData();
+				fd.append('file', file);
+				const result = await postAction('?/uploadImage', fd);
+				if (result.type === 'failure') {
+					actionError = String(result.data?.message ?? 'Upload failed.');
+				}
+			}
+			await invalidateAll();
+		} finally {
+			uploading = false;
+		}
+	}
+
+	async function removePhoto(fileId: string) {
+		actionError = '';
+		const fd = new FormData();
+		fd.append('fileId', fileId);
+		const result = await postAction('?/removeImage', fd);
+		if (result.type === 'failure') {
+			actionError = String(result.data?.message ?? 'Remove failed.');
+		}
+		await invalidateAll();
 	}
 
 	function deleteFarm() {
+		// TODO(backend): delete deferred out of scope — stub kept as-is.
 		console.log('delete farm', farmId);
 	}
 </script>
@@ -73,218 +114,179 @@
 	<title>Edit farm</title>
 </svelte:head>
 
-<!-- ===================== reusable field snippets ===================== -->
-
-{#snippet textField(label: string, key: keyof typeof farm, placeholder = '', optional = false)}
-	<label class="field">
-		<span class="field__label" class:field__label--optional={optional}>{label}</span>
-		<input class="field__input" {placeholder} bind:value={farm[key]} />
-	</label>
-{/snippet}
-
-{#snippet checkboxGroup(label: string, group: string, options: string[])}
-	<fieldset class="choice-group">
-		<legend class="choice-group__label">{label}</legend>
-		{#each options as option (option)}
-			<label class="choice">
-				<input
-					type="checkbox"
-					checked={choiceGroups[group].includes(option)}
-					onchange={() => toggleChoice(group, option)}
-				/>
-				<span>{option}</span>
-			</label>
-		{/each}
-	</fieldset>
-{/snippet}
-
-{#snippet yesNo(label: string, group: string)}
-	<fieldset class="choice-group">
-		<legend class="choice-group__label">{label}</legend>
-		<label class="choice">
-			<input type="radio" name={group} value="yes" bind:group={radioGroups[group]} />
-			<span>Yes</span>
-		</label>
-		<label class="choice">
-			<input type="radio" name={group} value="no" bind:group={radioGroups[group]} />
-			<span>No</span>
-		</label>
-	</fieldset>
-{/snippet}
-
-{#snippet uploadZone(title: string, hint: string)}
-	<div class="upload-zone">
-		<span class="upload-zone__icon">
-			<svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 35 35" fill="none" aria-hidden="true">
-				<path d="M30.625 21.875V23.625C30.625 26.0752 30.625 27.3003 30.1482 28.2362C29.7287 29.0594 29.0594 29.7287 28.2362 30.1482C27.3003 30.625 26.0752 30.625 23.625 30.625H11.375C8.92477 30.625 7.69966 30.625 6.76379 30.1482C5.94058 29.7287 5.27129 29.0594 4.85185 28.2362C4.375 27.3003 4.375 26.0752 4.375 23.625V21.875M10.2083 11.6667L17.5 4.375L24.7917 11.6667M17.5 4.375V21.875" stroke="black" stroke-width="2.91667" stroke-linecap="round" stroke-linejoin="round" />
-			</svg>
-		</span>
-		<span class="upload-zone__title">{title}</span>
-		<span class="upload-zone__hint">{hint}</span>
-	</div>
-{/snippet}
-
-<!-- ===================== page ===================== -->
-
-<form
-	class="edit-page"
-	onsubmit={(e) => {
-		e.preventDefault();
-		save();
-	}}
->
-	<!-- top action bar -->
+{#snippet actionBar()}
 	<div class="action-bar">
 		<ActionButton variant="outline" href="/farmer/farms">
 			{#snippet iconLeft()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="aspect-ratio: 1 / 1;">
+				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<path d="M19 12H5M12 5L5 12L12 19" stroke="#696C78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 				</svg>
 			{/snippet}
 			Back
 		</ActionButton>
 
-		<ActionButton variant="primary" type="submit">
-			Save
+		<ActionButton variant="primary" type="submit" disabled={saving}>
+			{saving ? 'Saving…' : 'Save'}
 			{#snippet iconRight()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="aspect-ratio: 1 / 1;">
+				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 				</svg>
 			{/snippet}
 		</ActionButton>
 	</div>
+{/snippet}
+
+<!-- Hidden picker used by the public PhotoGallery "Add Photos" tile. -->
+<input
+	bind:this={galleryInput}
+	class="visually-hidden-file"
+	type="file"
+	accept="image/png,image/jpeg"
+	multiple
+	onchange={(e) => uploadFiles((e.currentTarget as HTMLInputElement).files)}
+/>
+
+<form
+	class="edit-page"
+	method="POST"
+	action="?/save"
+	use:enhance={() => {
+		saving = true;
+		actionError = '';
+		return async ({ result, update }) => {
+			saving = false;
+			if (result.type === 'failure') {
+				actionError = String(result.data?.message ?? 'Save failed.');
+			}
+			// keep the user's edits in the fields; loader re-runs for status/rejection
+			await update({ reset: false });
+		};
+	}}
+>
+	<!-- Clean, backend-mapped FarmFormModel fields carried to the ?/save action.
+	     TextField has no name attribute, so the hidden inputs mirror farm state. -->
+	<input type="hidden" name="readableId" value={farm.readableId} />
+	<input type="hidden" name="name" value={farm.name} />
+	<input type="hidden" name="address" value={farm.address} />
+	<input type="hidden" name="counties" value={farm.counties} />
+	<input type="hidden" name="phone" value={farm.phone} />
+	<input type="hidden" name="email" value={farm.email} />
+	<input type="hidden" name="instagram" value={farm.instagram} />
+	<input type="hidden" name="facebook" value={farm.facebook} />
+	<input type="hidden" name="website" value={farm.website} />
+	<input type="hidden" name="other" value={farm.other} />
+	<input type="hidden" name="seasonal" value={farm.seasonal} />
+	<input type="hidden" name="dashboardImageName" value={farm.dashboardImageName} />
+	<!-- Routes the save action to resubmitFarm when REJECTED, else updateFarm. -->
+	<input type="hidden" name="status" value={data.status} />
+
+	{@render actionBar()}
 
 	<h1 class="edit-title">Edit {farm.name}</h1>
 
-	<!-- ---------- Dashboard image ---------- -->
+	{#if data.rejection}
+		<div class="rejection-banner" role="alert">
+			<span class="rejection-banner__title">This farm was rejected{rejectedDate ? ` on ${rejectedDate}` : ''}.</span>
+			<span class="rejection-banner__reason">{data.rejection.reason}</span>
+			<span class="rejection-banner__hint">Update the details below and save to resubmit for review.</span>
+		</div>
+	{/if}
+
+	{#if actionError}
+		<p class="form-error" role="alert">{actionError}</p>
+	{/if}
+
 	<section class="section">
-		<span class="field__label">Dashboard Image</span>
-		{@render uploadZone('Upload new farm photo', 'JPG or PNG, up to 10 pics')}
-		<a class="file-link" href="#dashboard-photo">{farm.dashboardImageName}</a>
+		<span class="section__subtitle">Dashboard Image</span>
+		<UploadZone
+			title="Upload new farm photo"
+			hint="JPG or PNG, up to 10 pics"
+			onFiles={uploadFiles}
+			disabled={uploading}
+		/>
+		{#if farm.dashboardImageName}
+			<a class="file-link" href="#dashboard-photo">{farm.dashboardImageName}</a>
+		{/if}
 	</section>
 
-	<!-- ---------- Photo gallery (educator) ---------- -->
+	<!-- Photo gallery (educator) -->
 	<section class="section">
-		<span class="field__label">Photo Gallery</span>
+		<span class="section__subtitle">Photo Gallery</span>
 		<p class="section__hint">
 			*Optional: Upload photos of your farm, operations, and/or products here for educator view.
 		</p>
-		{@render uploadZone('Upload farm photos', 'JPG or PNG, up to 10 pics')}
+		<UploadZone
+			title="Upload farm photos"
+			hint="JPG or PNG, up to 10 pics"
+			onFiles={uploadFiles}
+			disabled={uploading}
+		/>
 	</section>
 
-	<!-- ---------- Photo gallery (public) ---------- -->
+	<!-- Photo gallery (public) -->
 	<section class="section">
-		<span class="field__label">Photo Gallery</span>
+		<span class="section__subtitle">Photo Gallery</span>
 		<p class="section__hint">
 			*Optional: Upload photos of your farm, operations, and/or products here for people to see when
 			they look at your farm!
 		</p>
-		<div class="gallery-grid">
-			{#each Array(9) as _, i (i)}
-				<div class="gallery-item">
-					<div class="gallery-item__media">
-						<!-- real image goes here: <img src=… /> or a background-image on this element -->
-					</div>
-					<button type="button" class="gallery-item__remove" aria-label="Remove photo">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-							<rect x="0.5" y="0.5" width="23" height="23" rx="11.5" fill="white" />
-							<rect x="0.5" y="0.5" width="23" height="23" rx="11.5" stroke="#D6D6D6" />
-							<path d="M17 7L7 17M7 7L17 17" stroke="#131927" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-						</svg>
-					</button>
-				</div>
-			{/each}
-			<button type="button" class="gallery-add">
-				<span class="gallery-add__plus">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-						<path d="M12 5V19M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-					</svg>
-				</span>
-				<span class="gallery-add__label">Add Photos</span>
-			</button>
-		</div>
+		<PhotoGallery
+			photos={galleryPhotos}
+			onAdd={() => galleryInput?.click()}
+			onRemove={removePhoto}
+		/>
 	</section>
 
-	<!-- ---------- Farm basics ---------- -->
 	<section class="section">
 		<h2 class="section__heading">Farm Basics</h2>
 
-		<div class="field">
-			<span class="field__label field__label--strong">Farm ID#</span>
-			<span class="field__readonly">{farm.readableId}</span>
-		</div>
+		<TextField label="Farm ID#" value={farm.readableId} readonly />
 
-		{@render textField('Farm Name', 'name')}
-		{@render textField('Farm address', 'address')}
-		{@render textField('Counties and/or Cities Served', 'counties')}
+		<TextField label="Farm Name" bind:value={farm.name} />
+		<TextField label="Farm address" bind:value={farm.address} />
+		<TextField label="Counties and/or Cities Served" bind:value={farm.counties} />
 	</section>
 
-	<!-- ---------- Primary contact ---------- -->
 	<section class="section">
 		<h2 class="section__heading">Primary Contact Information</h2>
 
 		<div class="field-grid">
-			{@render textField('Phone Number', 'phone')}
-			{@render textField('Email Address', 'email')}
-			{@render textField('*Optional: Instagram', 'instagram', '', true)}
-			{@render textField('*Optional: Facebook', 'facebook', '', true)}
-			{@render textField('*Optional: Website', 'website', '', true)}
-			{@render textField('*Optional: Other (social media + username)', 'other', '', true)}
+			<TextField label="Phone Number" bind:value={farm.phone} />
+			<TextField label="Email Address" bind:value={farm.email} />
+			<TextField label="*Optional: Instagram" bind:value={farm.instagram} optional />
+			<TextField label="*Optional: Facebook" bind:value={farm.facebook} optional />
+			<TextField label="*Optional: Website" bind:value={farm.website} optional />
+			<TextField label="*Optional: Other (social media + username)" bind:value={farm.other} optional />
 		</div>
 	</section>
 
-	<!-- ---------- Farm profile ---------- -->
 	<section class="section">
 		<h2 class="section__heading">Farm Profile</h2>
 
-		{@render checkboxGroup('Growing Practices', 'growingPractices', CHOICE_OPTIONS)}
+		<ChoiceGroup label="Growing Practices" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.growingPractices} />
 
-		<label class="field">
-			<span class="field__label">Seasonal product and products offered</span>
-			<textarea class="field__input field__textarea" rows="4" bind:value={farm.seasonal}></textarea>
-		</label>
+		<TextField label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
 
-		{@render checkboxGroup('Food Safety & Certifications', 'foodSafety', CHOICE_OPTIONS)}
-		{@render checkboxGroup('Farm Experiences & Services', 'experiences', CHOICE_OPTIONS)}
-		{@render checkboxGroup('Farm Characteristics', 'characteristics', CHOICE_OPTIONS)}
-		{@render checkboxGroup('Farm to School Sales', 'schoolSales', CHOICE_OPTIONS)}
+		<ChoiceGroup label="Food Safety & Certifications" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.foodSafety} />
+		<ChoiceGroup label="Farm Experiences & Services" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.experiences} />
+		<ChoiceGroup label="Farm Characteristics" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.characteristics} />
+		<ChoiceGroup label="Farm to School Sales" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.schoolSales} />
 
-		{@render yesNo('Does your farm identify as BIPOC-owned?', 'bipoc1')}
-		{@render yesNo('Does your farm identify as BIPOC-owned?', 'bipoc2')}
-		{@render yesNo('Does your farm identify as BIPOC-owned?', 'bipoc3')}
-		{@render yesNo('Does your farm identify as BIPOC-owned?', 'bipoc4')}
+		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc1" bind:value={radioGroups.bipoc1} />
+		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc2" bind:value={radioGroups.bipoc2} />
+		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc3" bind:value={radioGroups.bipoc3} />
+		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc4" bind:value={radioGroups.bipoc4} />
 	</section>
 
-	<!-- ---------- Footer actions ---------- -->
 	<div class="footer-actions">
-		<ActionButton variant="primary" type="submit" block>Save</ActionButton>
+		<ActionButton variant="primary" type="submit" block disabled={saving}>{saving ? 'Saving…' : 'Save'}</ActionButton>
 		<ActionButton variant="danger" onclick={deleteFarm}>Delete Farm</ActionButton>
 	</div>
 
-	<div class="action-bar">
-		<ActionButton variant="outline" href="/farmer/farms">
-			{#snippet iconLeft()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="aspect-ratio: 1 / 1;">
-					<path d="M19 12H5M12 5L5 12L12 19" stroke="#696C78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			{/snippet}
-			Back
-		</ActionButton>
-
-		<ActionButton variant="primary" type="submit">
-			Save
-			{#snippet iconRight()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true" style="aspect-ratio: 1 / 1;">
-					<path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-				</svg>
-			{/snippet}
-		</ActionButton>
-	</div>
+	{@render actionBar()}
 </form>
 
 <style>
-	/* Placeholder structural styling — class hooks are stable so Figma CSS drops
-	   straight onto each piece later. */
 	.edit-page {
 		padding: 72px clamp(32px, 8cqi, 110px);
 		display: flex;
@@ -322,10 +324,48 @@
 		color: #000;
 	}
 
+	/* Hidden file input driving the public gallery "Add Photos" tile. */
+	.visually-hidden-file {
+		display: none;
+	}
+
+	.rejection-banner {
+		display: flex;
+		flex-direction: column;
+		gap: 6px;
+		padding: 18px 22px;
+		border: 1px solid #f2c4bf;
+		border-left: 6px solid #d9544c;
+		border-radius: 10px;
+		background: #fce4e1;
+		color: #7a2318;
+	}
+
+	.rejection-banner__title {
+		font-size: 19px;
+		font-weight: 600;
+	}
+
+	.rejection-banner__reason {
+		font-size: 17px;
+		font-weight: 400;
+	}
+
+	.rejection-banner__hint {
+		font-size: 15px;
+		font-weight: 300;
+	}
+
+	.form-error {
+		margin: 0;
+		color: #c4341f;
+		font-size: 17px;
+		font-weight: 400;
+	}
+
 	.section {
 		display: flex;
 		flex-direction: column;
-		/* vertical gap between questions */
 		gap: 38px;
 	}
 
@@ -344,190 +384,18 @@
 		margin: 0;
 	}
 
-	/* ----- fields ----- */
-	.field {
-		display: flex;
-		flex-direction: column;
-		/* label ↔ input */
-		gap: 14px;
-	}
-
-	.field__label {
-		font-size: 21px;
-		font-weight: 300;
-		color: #131927;
-	}
-
-	/* Optional field labels */
-	.field__label--optional {
-		color: #000;
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 21px;
-		font-weight: 300;
-		line-height: normal;
-	}
-
-	/* Farm ID# — heavier than the light field labels */
-	.field__label--strong {
-		font-weight: 400;
-	}
-
 	/* Section subtitle (e.g. "Photo Gallery", "Dashboard Image") — H2 headline */
-	.section > .field__label {
+	.section__subtitle {
 		color: #000;
 		font-size: 24px;
 		font-weight: 400;
 		line-height: 34px;
 	}
 
-	.field__input {
-		padding: 16.8px 22.4px;
-		border-radius: 11.2px;
-		border: 1.82px solid #d3d5de; /* --Neutral-300 */
-		background: #fff; /* --Neutral-0 */
-		font-size: 17.343px;
-		font-family: 'Nunito Variable', 'Nunito', 'DM Sans Variable', sans-serif;
-		font-weight: 400;
-		line-height: normal;
-		color: #383b4a; /* --Neutral-600 */
-		box-sizing: border-box;
-	}
-
-	.field__textarea {
-		resize: vertical;
-	}
-
-	.field__readonly {
-		color: #383b4a; /* --Neutral-600 */
-		font-family: 'Nunito Variable', 'Nunito', sans-serif;
-		font-size: 17.343px;
-		font-weight: 400;
-		line-height: normal;
-	}
-
 	.field-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		/* vertical + horizontal gap between questions */
 		gap: 38px;
-	}
-
-	/* ----- choice (checkbox / radio) groups ----- */
-	.choice-group {
-		border: none;
-		margin: 0;
-		padding: 0;
-		display: flex;
-		flex-direction: column;
-		/* label-to-label gap */
-		gap: 12px;
-	}
-
-	.choice-group__label {
-		font-size: 21px;
-		padding: 0;
-		/* title ↔ labels: 2px more than the 12px label-to-label gap */
-		margin-bottom: 14px;
-	}
-
-	.choice {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		font-size: 21px;
-		width: fit-content;
-	}
-
-	.choice span {
-		color: #000;
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 21px;
-		font-style: normal;
-		font-weight: 300;
-		line-height: normal;
-	}
-
-	.choice input {
-		width: 24px;
-		height: 24px;
-		margin: 0;
-		padding: 0;
-		box-sizing: border-box;
-		flex-shrink: 0;
-		appearance: none;
-		-webkit-appearance: none;
-		border: none;
-		background-color: transparent;
-		background-repeat: no-repeat;
-		background-position: center;
-		background-size: 24px 24px;
-		cursor: pointer;
-	}
-
-	.choice input[type='checkbox'] {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Crect x='0.75' y='0.75' width='22.5' height='22.5' rx='1.25' stroke='%239EA0AD' stroke-width='1.5'/%3E%3C/svg%3E");
-	}
-
-	.choice input[type='checkbox']:checked {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Crect x='0.75' y='0.75' width='22.5' height='22.5' rx='1.25' fill='%23131927' stroke='%23131927' stroke-width='1.5'/%3E%3Cpath d='M6.5 12.5L10.5 16.5L17.5 8.5' stroke='white' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-	}
-
-	.choice input[type='radio'] {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='11.25' stroke='%239EA0AD' stroke-width='1.5'/%3E%3C/svg%3E");
-	}
-
-	.choice input[type='radio']:checked {
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='11.25' stroke='%23131927' stroke-width='1.5'/%3E%3Ccircle cx='12' cy='12' r='6' fill='%23131927'/%3E%3C/svg%3E");
-	}
-
-	/* ----- uploads ----- */
-	.upload-zone {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 10px;
-		padding: 49px 24px 29px;
-		border: 1px dashed #c5c8d8;
-		border-radius: 12px;
-		text-align: center;
-	}
-
-	.upload-zone__icon {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 65px;
-		height: 65px;
-		flex-shrink: 0;
-		border-radius: 32.5px;
-		border: 1px solid #d6d6d6;
-		background: #fff;
-	}
-
-	.upload-zone__icon svg {
-		width: 35px;
-		height: 35px;
-		flex-shrink: 0;
-		aspect-ratio: 1 / 1;
-	}
-
-	.upload-zone__title {
-		color: #000;
-		text-align: center;
-		font-family: 'Figtree Variable', 'Figtree', sans-serif;
-		font-size: 22.711px;
-		font-weight: 500;
-		line-height: 38.933px;
-	}
-
-	.upload-zone__hint {
-		color: #000;
-		text-align: center;
-		font-size: 14px;
-		font-weight: 400;
-		line-height: 16px;
-		align-self: stretch;
 	}
 
 	.file-link {
@@ -543,106 +411,10 @@
 		width: fit-content;
 	}
 
-	/* ----- gallery ----- */
-	.gallery-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
-		gap: 12px;
-	}
-
-	.gallery-item {
-		/* positioning context for the corner button — must NOT clip */
-		position: relative;
-		aspect-ratio: 1 / 1;
-	}
-
-	/* holds/clips the photo to rounded corners; the remove button lives outside this */
-	.gallery-item__media {
-		width: 100%;
-		height: 100%;
-		border-radius: 12px;
-		overflow: hidden;
-		background: #d9d9d9;
-	}
-
-	.gallery-item__media img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	.gallery-item__remove {
-		position: absolute;
-		/* centered on the image's top-right corner */
-		top: -12px;
-		right: -12px;
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		width: 24px;
-		height: 24px;
-		padding: 0;
-		border: none;
-		background: transparent;
-		cursor: pointer;
-		/* revealed on hover */
-		opacity: 0;
-		transition: opacity 0.15s ease;
-	}
-
-	.gallery-item__remove svg {
-		width: 24px;
-		height: 24px;
-		flex-shrink: 0;
-		aspect-ratio: 1 / 1;
-	}
-
-	.gallery-item:hover .gallery-item__remove,
-	.gallery-item__remove:focus-visible {
-		opacity: 1;
-	}
-
-	.gallery-add {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		gap: 24px;
-		aspect-ratio: 1 / 1;
-		border: 2px dashed #d9d9d9;
-		border-radius: 12px;
-		background: #fff;
-		cursor: pointer;
-	}
-
-	.gallery-add__plus {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.gallery-add__plus svg {
-		width: 24px;
-		height: 24px;
-		flex-shrink: 0;
-	}
-
-	.gallery-add__label {
-		color: #000;
-		text-align: center;
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 14px;
-		font-weight: 400;
-		line-height: 16px;
-	}
-
-	/* ----- footer ----- */
 	.footer-actions {
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		/* Save ↔ Delete spacing */
 		gap: 48px;
 		/* end of questions ↔ Save: 48px total (28px flex gap + 20px) */
 		margin-top: 20px;

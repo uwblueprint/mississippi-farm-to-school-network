@@ -58,7 +58,13 @@ const farmResolvers = {
       { id }: { id: string },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      await authHelper.requireRole(context, [Role.ADMIN]);
+      const farm = await Farm.findByPk(id);
+      if (!farm) {
+        throw new Error(`Farm with id ${id} not found.`);
+      }
+      // Owner may read their own farm (any status) to populate the edit form;
+      // admins may read any farm. Mirrors latestActiveFarmRejection's auth.
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
       return farmService.getFarmById(id);
     },
     farmsByStatus: async (
