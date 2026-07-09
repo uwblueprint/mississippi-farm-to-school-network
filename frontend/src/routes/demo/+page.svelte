@@ -48,6 +48,15 @@
 					<p class="text-sm text-surface-600-400">Expanded (static)</p>
 					<PromoBanner {announcements} expanded={true} />
 				</div>
+				<div class="space-y-2">
+					<p class="text-sm text-surface-600-400">Dismissable (persists per session)</p>
+					<PromoBanner
+						{announcements}
+						expanded={true}
+						dismissable
+						storageKey="demo-promo-dismiss"
+					/>
+				</div>
 			</div>
 		{/snippet}
 		{@render section('Promo Banner', promoBody)}

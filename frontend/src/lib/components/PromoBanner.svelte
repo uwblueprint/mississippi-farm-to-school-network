@@ -1,5 +1,6 @@
 <script lang="ts">
 	interface Announcement {
+		id?: string;
 		title: string;
 		date: string;
 	}
@@ -7,13 +8,28 @@
 	interface Props {
 		announcements: Announcement[];
 		expanded?: boolean;
+		dismissable?: boolean;
+		storageKey?: string;
 	}
 
-	let { announcements, expanded = false }: Props = $props();
+	let {
+		announcements,
+		expanded = false,
+		dismissable = false,
+		storageKey = 'promo-banner-dismissed'
+	}: Props = $props();
+
+	const keyOf = (a: Announcement) => a.id ?? `${a.title}|${a.date}`;
 
 	let index = $state(0);
-	const current = $derived(announcements[index]);
-	const count = $derived(announcements.length);
+	let dismissed = $state<Set<string>>(new Set());
+
+	const visible = $derived(
+		dismissable ? announcements.filter((a) => !dismissed.has(keyOf(a))) : announcements
+	);
+	const count = $derived(visible.length);
+	const shown = $derived(count > 0 ? Math.min(index, count - 1) : 0);
+	const current = $derived(visible[shown]);
 
 	let maxH = $state(0);
 	let active = $state(false);
@@ -21,6 +37,24 @@
 	let frameEl: HTMLDivElement | undefined = $state();
 
 	const open = $derived(expanded || active);
+
+	$effect(() => {
+		if (!dismissable) return;
+		const valid = new Set(announcements.map(keyOf));
+		let stored: string[] = [];
+		try {
+			stored = JSON.parse(sessionStorage.getItem(storageKey) ?? '[]');
+		} catch {
+			stored = [];
+		}
+		const pruned = stored.filter((key) => valid.has(key));
+		dismissed = new Set(pruned);
+		try {
+			sessionStorage.setItem(storageKey, JSON.stringify(pruned));
+		} catch {
+			// storage unavailable — dismissals just won't persist
+		}
+	});
 
 	$effect(() => {
 		const mq = window.matchMedia('(hover: hover)');
@@ -42,11 +76,23 @@
 	});
 
 	function prev() {
-		index = (index - 1 + count) % count;
+		index = (shown - 1 + count) % count;
 	}
 
 	function next() {
-		index = (index + 1) % count;
+		index = (shown + 1) % count;
+	}
+
+	function dismiss() {
+		if (!current) return;
+		const next = new Set(dismissed);
+		next.add(keyOf(current));
+		dismissed = next;
+		try {
+			sessionStorage.setItem(storageKey, JSON.stringify([...next]));
+		} catch {
+			// storage unavailable — dismissals just won't persist
+		}
 	}
 
 	function onPointerUp(event: PointerEvent) {
@@ -86,71 +132,114 @@
 	</svg>
 {/snippet}
 
-<div class="promo-root" style="--max-h:{maxH}px;">
-	<div
-		class="promo-frame"
-		class:open
-		bind:this={frameEl}
-		role="group"
-		onmouseenter={() => canHover && (active = true)}
-		onmouseleave={() => canHover && (active = false)}
-		onpointerup={onPointerUp}
-		onfocusin={() => (active = true)}
-		onfocusout={onFocusOut}
-	>
-		<div class="promo-layout">
-			<span class="promo-icon">{@render alertIcon()}</span>
+{#snippet closeIcon()}
+	<svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+		<path
+			d="M21.25 8.75L8.75 21.25M8.75 8.75L21.25 21.25"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+		/>
+	</svg>
+{/snippet}
 
-			<div class="promo-content">
-				<p class="promo-title">{current.title}</p>
-				<p class="promo-caption">{current.date}</p>
-			</div>
-
-			{#if count > 1}
-				<div class="promo-pager">
-					<button
-						class="promo-chevron"
-						type="button"
-						aria-label="Previous announcement"
-						onclick={prev}
-					>
-						{@render chevron()}
-					</button>
-					<span class="promo-count">{index + 1}/{count}</span>
-					<button
-						class="promo-chevron promo-chevron-right"
-						type="button"
-						aria-label="Next announcement"
-						onclick={next}
-					>
-						{@render chevron()}
-					</button>
-				</div>
-			{/if}
-		</div>
-	</div>
-
-	<div class="promo-measure" aria-hidden="true" bind:clientHeight={maxH}>
-		{#each announcements as a (a.title)}
+{#if count > 0}
+	<div class="promo-root" style="--max-h:{maxH}px;">
+		<div
+			class="promo-frame"
+			class:open
+			bind:this={frameEl}
+			role="group"
+			onmouseenter={() => canHover && (active = true)}
+			onmouseleave={() => canHover && (active = false)}
+			onpointerup={onPointerUp}
+			onfocusin={() => (active = true)}
+			onfocusout={onFocusOut}
+		>
 			<div class="promo-layout">
 				<span class="promo-icon">{@render alertIcon()}</span>
 
 				<div class="promo-content">
-					<p class="promo-title">{a.title}</p>
-					<p class="promo-caption">{a.date}</p>
+					<p class="promo-title">{current.title}</p>
+					<p class="promo-caption">{current.date}</p>
 				</div>
 
-				{#if count > 1}
-					<div class="promo-pager">
-						<span class="promo-chevron">{@render chevron()}</span>
-						<span class="promo-count">{index + 1}/{count}</span>
-						<span class="promo-chevron promo-chevron-right">{@render chevron()}</span>
+				{#if count > 1 || dismissable}
+					<div class="promo-controls">
+						{#if count > 1}
+							<div class="promo-pager">
+								<button
+									class="promo-chevron"
+									type="button"
+									aria-label="Previous announcement"
+									onclick={prev}
+								>
+									{@render chevron()}
+								</button>
+								<span class="promo-count">{shown + 1}/{count}</span>
+								<button
+									class="promo-chevron promo-chevron-right"
+									type="button"
+									aria-label="Next announcement"
+									onclick={next}
+								>
+									{@render chevron()}
+								</button>
+							</div>
+						{/if}
+
+						{#if dismissable}
+							{#if count > 1}
+								<span class="promo-divider" aria-hidden="true"></span>
+							{/if}
+							<button
+								class="promo-close"
+								type="button"
+								aria-label="Dismiss announcement"
+								onclick={dismiss}
+							>
+								{@render closeIcon()}
+							</button>
+						{/if}
 					</div>
 				{/if}
 			</div>
-		{/each}
+		</div>
+
+		<div class="promo-measure" aria-hidden="true" bind:clientHeight={maxH}>
+			{#each visible as a (keyOf(a))}
+				<div class="promo-layout">
+					<span class="promo-icon">{@render alertIcon()}</span>
+
+					<div class="promo-content">
+						<p class="promo-title">{a.title}</p>
+						<p class="promo-caption">{a.date}</p>
+					</div>
+
+					{#if count > 1 || dismissable}
+						<div class="promo-controls">
+							{#if count > 1}
+								<div class="promo-pager">
+									<span class="promo-chevron">{@render chevron()}</span>
+									<span class="promo-count">{shown + 1}/{count}</span>
+									<span class="promo-chevron promo-chevron-right">{@render chevron()}</span>
+								</div>
+							{/if}
+
+							{#if dismissable}
+								{#if count > 1}
+									<span class="promo-divider" aria-hidden="true"></span>
+								{/if}
+								<span class="promo-close">{@render closeIcon()}</span>
+							{/if}
+						</div>
+					{/if}
+				</div>
+			{/each}
+		</div>
 	</div>
-</div>
+{/if}
 
 <style>
 	.promo-root {
@@ -225,7 +314,7 @@
 
 	.promo-title,
 	.promo-caption,
-	.promo-pager {
+	.promo-controls {
 		opacity: 0;
 		transform: translateY(0.375rem);
 		transition:
@@ -249,7 +338,7 @@
 			transform 250ms ease 330ms;
 	}
 
-	.promo-frame.open .promo-pager {
+	.promo-frame.open .promo-controls {
 		opacity: 1;
 		transform: translateY(0);
 		transition:
@@ -275,12 +364,18 @@
 		color: var(--color-neutral-500);
 	}
 
-	.promo-pager {
+	.promo-controls {
 		flex-shrink: 0;
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
+		gap: 0.75rem;
 		align-self: flex-end;
+	}
+
+	.promo-pager {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
 	}
 
 	.promo-chevron {
@@ -313,13 +408,37 @@
 		color: var(--color-neutral-500);
 	}
 
+	.promo-divider {
+		width: 1.5px;
+		height: 1.75rem;
+		border-radius: 1px;
+		background: var(--color-neutral-300);
+	}
+
+	.promo-close {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		padding: 0;
+		background: none;
+		border: none;
+		cursor: pointer;
+		color: #000000;
+	}
+
+	.promo-close :global(svg) {
+		display: block;
+		width: 1.875rem;
+		height: 1.875rem;
+	}
+
 	@media (max-width: 640px) {
 		.promo-layout {
 			flex-wrap: wrap;
 			align-content: space-between;
 		}
 
-		.promo-pager {
+		.promo-controls {
 			flex-basis: 100%;
 			justify-content: flex-end;
 			align-self: auto;
@@ -331,10 +450,10 @@
 		.promo-frame.open,
 		.promo-title,
 		.promo-caption,
-		.promo-pager,
+		.promo-controls,
 		.promo-frame.open .promo-title,
 		.promo-frame.open .promo-caption,
-		.promo-frame.open .promo-pager {
+		.promo-frame.open .promo-controls {
 			transition: none;
 		}
 	}
