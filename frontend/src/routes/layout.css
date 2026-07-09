@@ -1,9 +1,39 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/forms';
 
+@theme {
+	--color-primary-button: #587244;
+	--color-link: #455d32;
+	--color-text-muted: #666666;
+	--color-error: #dc2626;
+	--color-success: #16a34a;
+	--color-input-border: #d1d5db;
+	--font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
+
+@font-face {
+	font-family: 'DM Sans';
+	src: url('/fonts/DMSans-Variable.ttf') format('truetype');
+	font-weight: 100 1000;
+	font-style: normal;
+	font-display: swap;
+}
+
+@font-face {
+	font-family: 'Figtree';
+	src: url('/fonts/Figtree-Variable.ttf') format('truetype');
+	font-weight: 100 1000;
+	font-style: normal;
+	font-display: swap;
+}
+
+body {
+	font-family: var(--font-sans);
+}
 
 /* Windows form styling fix (see Skeleton docs) */
 .select,
