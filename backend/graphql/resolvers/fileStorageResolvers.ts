@@ -13,6 +13,13 @@ import { FarmStatus } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import { getErrorMessage } from '@/utilities/errorUtils';
 
+type FarmImageDTO = {
+  fileId: string;
+  originalFileName: string;
+  contentType: string | null;
+  url: string;
+};
+
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || '';
 const fileStorageService: IFileStorageService = new FileStorageService(defaultBucket);
 const storedFileService: IStoredFileService = new StoredFileService();
@@ -40,8 +47,70 @@ const fileStorageResolvers = {
 
       return fileStorageService.getFile(record.storage_key);
     },
+    filesByFarm: async (
+      _parent: undefined,
+      { farmId }: { farmId: string },
+      context: AuthContext
+    ): Promise<FarmImageDTO[]> => {
+      const farm = await farmService.getFarmById(farmId);
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+
+      const records = await storedFileService.getRecordsByFarm(farmId);
+
+      return Promise.all(
+        records.map(async (record) => ({
+          fileId: record.id,
+          originalFileName: record.original_file_name,
+          contentType: record.content_type,
+          url: await fileStorageService.getFile(record.storage_key),
+        }))
+      );
+    },
   },
   Mutation: {
+    uploadFarmImage: async (
+      _parent: undefined,
+      {
+        farmId,
+        originalFileName,
+        contentType,
+        dataBase64,
+      }: {
+        farmId: string;
+        originalFileName: string;
+        contentType: string;
+        dataBase64: string;
+      },
+      context: AuthContext
+    ): Promise<FarmImageDTO> => {
+      const user = await authHelper.requireAuth(context);
+      const farm = await farmService.getFarmById(farmId);
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+
+      const buffer = Buffer.from(dataBase64, 'base64');
+      if (buffer.length === 0) {
+        throw new UserInputError('dataBase64 did not decode to any file bytes.');
+      }
+
+      const fileId = randomUUID();
+      const storageKey = `farms/${farmId}/${fileId}`;
+
+      await fileStorageService.uploadBytes(storageKey, buffer, contentType);
+      const record = await storedFileService.createFileRecord(
+        storageKey,
+        originalFileName,
+        user.id,
+        farmId,
+        contentType
+      );
+
+      return {
+        fileId: record.id,
+        originalFileName: record.original_file_name,
+        contentType: record.content_type,
+        url: await fileStorageService.getFile(storageKey),
+      };
+    },
     createFile: async (
       _parent: undefined,
       {

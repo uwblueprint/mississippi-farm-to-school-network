@@ -106,9 +106,6 @@
 	}
 
 	.farms-title {
-		flex-shrink: 0;
-		width: 100px;
-		height: 34px;
 		color: #000;
 		font-family: 'Figtree Variable', 'Figtree', sans-serif;
 		font-size: 32px;

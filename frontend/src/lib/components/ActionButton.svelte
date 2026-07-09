@@ -7,9 +7,6 @@
 	 * Extracted from the bespoke "Add farm" button so the same language is reused
 	 * for Back / Save / Delete on the edit form. Renders as an <a> when `href` is
 	 * provided, otherwise a <button> — mirroring the action() pattern in FarmCard.
-	 *
-	 * Variants are intentionally thin class hooks (.action-btn--outline, etc.) so
-	 * real Figma CSS can be dropped onto each one later without touching markup.
 	 */
 	type Variant = 'outline' | 'primary' | 'danger';
 
@@ -124,17 +121,17 @@
 
 	/* --- Outline (Add farm, Back) --- */
 	.action-btn--outline {
-		border-color: #696c78; /* --Neutral-500 */
-		background: #ffffff; /* --Neutral-0 */
+		border-color: #696c78;
+		background: #ffffff;
 		color: #696c78;
 	}
 
 	/* --- Primary (Save) --- */
 	.action-btn--primary {
 		height: 50px;
-		border-color: #587244; /* --Primary-400 */
+		border-color: #587244;
 		background: #587244;
-		color: #ffffff; /* --Neutral-0 */
+		color: #ffffff;
 	}
 
 	/* --- Danger (Delete Farm) --- */
@@ -142,7 +139,7 @@
 		width: 100%;
 		border: none;
 		background: transparent;
-		color: #c4341f; /* --Secondary-600 */
+		color: #c4341f;
 		height: auto;
 		padding: 0;
 		text-align: center;

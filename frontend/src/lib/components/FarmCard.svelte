@@ -142,7 +142,7 @@
 		align-items: center;
 		justify-content: center;
 		padding: 8px 16px;
-		border-radius: 999px; /* pill */
+		border-radius: 999px;
 		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
 		font-size: 16px;
 		font-weight: 500;
@@ -185,7 +185,7 @@
 		font-size: 23.069px;
 		font-style: normal;
 		font-weight: 400;
-		line-height: 32.681px; /* 141.667% */
+		line-height: 32.681px;
 		/* keep titles to one line so cards in a row stay the same height */
 		white-space: nowrap;
 		overflow: hidden;
@@ -199,7 +199,7 @@
 		font-size: 14px;
 		font-style: normal;
 		font-weight: 500;
-		line-height: 16px; /* 114.286% */
+		line-height: 16px;
 		/* one line + ellipsis so every card in a row is the same height */
 		white-space: nowrap;
 		overflow: hidden;
@@ -232,7 +232,7 @@
 		align-items: center;
 		gap: 2.815px;
 		border-radius: 5.63px;
-		background: #587244; /* --Primary-400 */
+		background: #587244;
 		border: none;
 		box-sizing: border-box;
 		color: #ffffff;

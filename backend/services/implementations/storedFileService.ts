@@ -66,6 +66,19 @@ class StoredFileService implements IStoredFileService {
     }
   }
 
+  async getRecordsByFarm(farmId: string): Promise<StoredFileDTO[]> {
+    try {
+      const rows = await StoredFile.findAll({
+        where: { farm_id: farmId },
+        order: [['createdAt', 'ASC']],
+      });
+      return rows.map(toDTO);
+    } catch (error: unknown) {
+      Logger.error(`Failed to list stored file records. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   async updateFileRecordById(fileId: string, contentType?: string | null): Promise<StoredFileDTO> {
     try {
       const row = await StoredFile.findByPk(fileId);

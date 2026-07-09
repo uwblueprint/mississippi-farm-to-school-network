@@ -12,6 +12,7 @@ import {
   UpdateFarmInput,
   Role,
   FarmRejectionDTO,
+  ActiveFarmRejectionDTO,
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
@@ -58,7 +59,13 @@ const farmResolvers = {
       { id }: { id: string },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      await authHelper.requireRole(context, [Role.ADMIN]);
+      const farm = await Farm.findByPk(id);
+      if (!farm) {
+        throw new Error(`Farm with id ${id} not found.`);
+      }
+      // Owner may read their own farm (any status) to populate the edit form;
+      // admins may read any farm. Mirrors latestActiveFarmRejection's auth.
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
       return farmService.getFarmById(id);
     },
     farmsByStatus: async (
@@ -73,7 +80,7 @@ const farmResolvers = {
       _parent: undefined,
       { farmId }: { farmId: string },
       context: AuthContext
-    ): Promise<FarmRejectionDTO | null> => {
+    ): Promise<ActiveFarmRejectionDTO | null> => {
       await authHelper.requireEmailVerified(context);
       const farm = await Farm.findByPk(farmId);
       if (!farm) {

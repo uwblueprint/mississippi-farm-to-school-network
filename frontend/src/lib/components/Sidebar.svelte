@@ -42,7 +42,7 @@
 			{#each navItems as item (item.href)}
 				<a
 					href={item.href}
-					class="sidebar__link {isActive(item.href) ? 'sidebar__link--active' : ''}"
+					class="sidebar__link" class:sidebar__link--active={isActive(item.href)}
 				>
 					{item.label}
 				</a>
