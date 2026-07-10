@@ -130,7 +130,7 @@ const farmType = gql`
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
-    latestActiveFarmRejection(farmId: ID!): FarmRejectionDTO
+    latestActiveFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
   }
 
   type Mutation {
@@ -140,7 +140,7 @@ const farmType = gql`
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
   }
 
-  type FarmRejectionDTO {
+  type ActiveFarmRejectionDTO {
     id: ID!
     farm_id: ID!
     rejection_reason: String!

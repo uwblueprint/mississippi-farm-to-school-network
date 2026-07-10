@@ -8,6 +8,11 @@ jest.mock('@/services/implementations/userService', () => ({
   })),
 }));
 
+jest.mock('@/services/implementations/emailService', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({})),
+}));
+
 jest.mock('@/services/implementations/authService', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
@@ -17,35 +22,37 @@ jest.mock('@/services/implementations/authService', () => ({
 
 import authResolvers from '@/graphql/resolvers/authResolvers';
 
-const sendEmailVerificationLink = (email: string) =>
-  authResolvers.Mutation.sendEmailVerificationLink(undefined, { email });
+const EXISTING_EMAIL = 'user@example.com';
+const MISSING_EMAIL = 'missing@example.com';
+const USER_NOT_FOUND_ERROR = `User with email ${MISSING_EMAIL} not found.`;
 
-describe('Mutation.sendEmailVerificationLink', () => {
+const sendEmailVerificationLink = authResolvers.Mutation.sendEmailVerificationLink;
+const callResolver = (email: string) => sendEmailVerificationLink(undefined, { email });
+
+describe('authResolvers.sendEmailVerificationLink', () => {
   beforeEach(() => {
     mockGetUserByEmail.mockReset();
     mockSendEmailVerificationLink.mockReset();
   });
 
-  test('sends the verification email and returns true for an existing user', async () => {
-    mockGetUserByEmail.mockResolvedValue({ email: 'user@example.com' });
+  test('returns true and sends email for initial and resend requests', async () => {
+    mockGetUserByEmail.mockResolvedValue({ email: EXISTING_EMAIL, is_verified: false });
 
-    await expect(sendEmailVerificationLink('user@example.com')).resolves.toBe(true);
-    expect(mockSendEmailVerificationLink).toHaveBeenCalledWith('user@example.com');
-  });
+    await expect(callResolver(EXISTING_EMAIL)).resolves.toBe(true);
+    await expect(callResolver(EXISTING_EMAIL)).resolves.toBe(true);
 
-  test('resends the verification email on subsequent calls', async () => {
-    mockGetUserByEmail.mockResolvedValue({ email: 'user@example.com' });
-
-    await sendEmailVerificationLink('user@example.com');
-    await sendEmailVerificationLink('user@example.com');
-
+    expect(mockGetUserByEmail).toHaveBeenCalledTimes(2);
+    expect(mockGetUserByEmail).toHaveBeenCalledWith(EXISTING_EMAIL);
     expect(mockSendEmailVerificationLink).toHaveBeenCalledTimes(2);
+    expect(mockSendEmailVerificationLink).toHaveBeenCalledWith(EXISTING_EMAIL);
   });
 
-  test('throws and does not send when the user does not exist', async () => {
-    mockGetUserByEmail.mockRejectedValue(new Error('User with email user@example.com not found.'));
+  test('returns an error when the email does not exist', async () => {
+    mockGetUserByEmail.mockRejectedValue(new Error(USER_NOT_FOUND_ERROR));
 
-    await expect(sendEmailVerificationLink('user@example.com')).rejects.toThrow('not found');
+    await expect(callResolver(MISSING_EMAIL)).rejects.toThrow(USER_NOT_FOUND_ERROR);
+
+    expect(mockGetUserByEmail).toHaveBeenCalledWith(MISSING_EMAIL);
     expect(mockSendEmailVerificationLink).not.toHaveBeenCalled();
   });
 });

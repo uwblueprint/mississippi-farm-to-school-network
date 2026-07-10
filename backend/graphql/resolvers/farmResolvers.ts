@@ -11,7 +11,6 @@ import {
   FarmStatus,
   UpdateFarmInput,
   Role,
-  FarmRejectionDTO,
   ActiveFarmRejectionDTO,
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';

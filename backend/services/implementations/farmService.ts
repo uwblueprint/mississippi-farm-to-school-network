@@ -236,14 +236,16 @@ class FarmService implements IFarmService {
     }
 
     const subject = 'Your Farm Has Been Approved!';
-    const emailBody = `<h2>Your Farm Has Been Approved!</h2>
-                      <p>Congratulations! Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
-                      <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
 
-    let ownerEmail: string;
     try {
-      ownerEmail = (await userService.getUserById(updatedFarm.owner_user_id)).email;
-      await emailService.sendEmail(ownerEmail, subject, emailBody);
+      const owner = await userService.getUserById(updatedFarm.owner_user_id);
+      const greeting = owner.firstName
+        ? `Congratulations, ${owner.firstName}!`
+        : 'Congratulations!';
+      const emailBody = `<h2>Your Farm Has Been Approved!</h2>
+                      <p>${greeting} Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
+                      <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
+      await emailService.sendEmail(owner.email, subject, emailBody);
     } catch (error: unknown) {
       Logger.warn(
         `Farm approved but failed to send approval email. Reason = ${getErrorMessage(error)}`

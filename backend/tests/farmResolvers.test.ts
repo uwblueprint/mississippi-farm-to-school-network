@@ -1,30 +1,20 @@
 import { FarmStatus } from '@/types';
+import type { AuthContext } from '@/middlewares/auth';
 
 const mockGetFarmsByProximity = jest.fn();
+const mockGetLatestActiveRejection = jest.fn();
 const mockGetFarmById = jest.fn();
-const mockFarmFindByPk = jest.fn();
+const mockRequireEmailVerified = jest.fn();
 const mockRequireOwnerOrAdmin = jest.fn();
+const mockFindByPk = jest.fn();
 
 jest.mock('@/services/implementations/farmService', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     getFarmsByProximity: mockGetFarmsByProximity,
+    getLatestActiveRejection: mockGetLatestActiveRejection,
     getFarmById: mockGetFarmById,
   })),
-}));
-
-jest.mock('@/models/farm.model', () => ({
-  __esModule: true,
-  default: {
-    findByPk: (...args: unknown[]) => mockFarmFindByPk(...args),
-  },
-}));
-
-jest.mock('@/utilities/authHelpers', () => ({
-  __esModule: true,
-  default: {
-    requireOwnerOrAdmin: (...args: unknown[]) => mockRequireOwnerOrAdmin(...args),
-  },
 }));
 
 jest.mock('@/services/implementations/userService', () => ({
@@ -39,6 +29,21 @@ jest.mock('@/services/implementations/emailService', () => ({
   })),
 }));
 
+jest.mock('@/utilities/authHelpers', () => ({
+  __esModule: true,
+  default: {
+    requireEmailVerified: mockRequireEmailVerified,
+    requireOwnerOrAdmin: mockRequireOwnerOrAdmin,
+  },
+}));
+
+jest.mock('@/models/farm.model', () => ({
+  __esModule: true,
+  default: {
+    findByPk: mockFindByPk,
+  },
+}));
+
 import farmResolvers from '@/graphql/resolvers/farmResolvers';
 
 const farmsByProximity = farmResolvers.Query.farmsByProximity as (
@@ -46,11 +51,19 @@ const farmsByProximity = farmResolvers.Query.farmsByProximity as (
   args: { lat: number; lng: number; radiusKm: number }
 ) => Promise<unknown>;
 
+const latestActiveFarmRejection = farmResolvers.Query.latestActiveFarmRejection as (
+  parent: unknown,
+  args: { farmId: string },
+  context: AuthContext
+) => Promise<unknown>;
+
 const farmById = farmResolvers.Query.farmById as (
   parent: unknown,
   args: { id: string },
   context: unknown
 ) => Promise<unknown>;
+
+const authContext = {} as AuthContext;
 
 describe('farmResolvers.Query.farmsByProximity', () => {
   beforeEach(() => {
@@ -121,15 +134,86 @@ describe('farmResolvers.Query.farmsByProximity', () => {
   });
 });
 
+describe('farmResolvers.Query.latestActiveFarmRejection', () => {
+  const farmId = 'farm-uuid-1';
+  const ownerUserId = 'owner-uuid-1';
+
+  beforeEach(() => {
+    mockGetLatestActiveRejection.mockReset();
+    mockRequireEmailVerified.mockReset();
+    mockRequireOwnerOrAdmin.mockReset();
+    mockFindByPk.mockReset();
+
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId });
+    mockGetLatestActiveRejection.mockResolvedValue(null);
+  });
+
+  test('throws when the farm does not exist', async () => {
+    mockFindByPk.mockResolvedValue(null);
+
+    await expect(latestActiveFarmRejection(null, { farmId }, authContext)).rejects.toThrow(
+      `Farm with id ${farmId} not found.`
+    );
+    expect(mockRequireOwnerOrAdmin).not.toHaveBeenCalled();
+    expect(mockGetLatestActiveRejection).not.toHaveBeenCalled();
+  });
+
+  test('propagates auth error and does not look up the farm', async () => {
+    mockRequireEmailVerified.mockRejectedValue(new Error('You must verify your email'));
+
+    await expect(latestActiveFarmRejection(null, { farmId }, authContext)).rejects.toThrow(
+      'You must verify your email'
+    );
+    expect(mockFindByPk).not.toHaveBeenCalled();
+    expect(mockGetLatestActiveRejection).not.toHaveBeenCalled();
+  });
+
+  test('enforces owner-or-admin access against the farm owner', async () => {
+    mockRequireOwnerOrAdmin.mockRejectedValue(new Error('You do not have permission'));
+
+    await expect(latestActiveFarmRejection(null, { farmId }, authContext)).rejects.toThrow(
+      'You do not have permission'
+    );
+    expect(mockRequireOwnerOrAdmin).toHaveBeenCalledWith(authContext, ownerUserId);
+    expect(mockGetLatestActiveRejection).not.toHaveBeenCalled();
+  });
+
+  test('returns null when the farm has no active rejection', async () => {
+    mockGetLatestActiveRejection.mockResolvedValue(null);
+
+    const result = await latestActiveFarmRejection(null, { farmId }, authContext);
+
+    expect(result).toBeNull();
+    expect(mockGetLatestActiveRejection).toHaveBeenCalledWith(farmId);
+  });
+
+  test('returns the latest active rejection when one exists', async () => {
+    const rejection = {
+      id: 'rejection-uuid-1',
+      farm_id: farmId,
+      rejection_reason: 'Missing food safety plan',
+      created_at: '2026-06-01T00:00:00.000Z',
+    };
+    mockGetLatestActiveRejection.mockResolvedValue(rejection);
+
+    const result = await latestActiveFarmRejection(null, { farmId }, authContext);
+
+    expect(result).toEqual(rejection);
+    expect(mockGetLatestActiveRejection).toHaveBeenCalledWith(farmId);
+  });
+});
+
 describe('farmResolvers.Query.farmById', () => {
   beforeEach(() => {
     mockGetFarmById.mockReset();
-    mockFarmFindByPk.mockReset();
+    mockFindByPk.mockReset();
     mockRequireOwnerOrAdmin.mockReset();
   });
 
   test('throws when the farm does not exist and never checks authorization', async () => {
-    mockFarmFindByPk.mockResolvedValue(null);
+    mockFindByPk.mockResolvedValue(null);
 
     await expect(farmById(undefined, { id: 'missing' }, { firebaseUid: 'uid-1' })).rejects.toThrow(
       'Farm with id missing not found.'
@@ -141,7 +225,7 @@ describe('farmResolvers.Query.farmById', () => {
   test('authorizes against the farm owner and returns the farm', async () => {
     const context = { firebaseUid: 'uid-1' };
     const farm = { id: 'farm-1', owner_user_id: 'owner-1', status: FarmStatus.REJECTED };
-    mockFarmFindByPk.mockResolvedValue({ owner_user_id: 'owner-1' });
+    mockFindByPk.mockResolvedValue({ owner_user_id: 'owner-1' });
     mockRequireOwnerOrAdmin.mockResolvedValue({ id: 'owner-1' });
     mockGetFarmById.mockResolvedValue(farm);
 
@@ -153,7 +237,7 @@ describe('farmResolvers.Query.farmById', () => {
   });
 
   test('propagates authorization errors and does not read the farm', async () => {
-    mockFarmFindByPk.mockResolvedValue({ owner_user_id: 'owner-1' });
+    mockFindByPk.mockResolvedValue({ owner_user_id: 'owner-1' });
     mockRequireOwnerOrAdmin.mockRejectedValue(new Error('forbidden'));
 
     await expect(

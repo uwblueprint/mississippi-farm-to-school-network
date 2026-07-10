@@ -41,6 +41,7 @@
 	"dependencies": {
 		"@fontsource-variable/dm-sans": "^5.2.8",
 		"@fontsource-variable/figtree": "^5.2.10",
-		"@fontsource-variable/nunito": "^5.2.7"
+		"@fontsource-variable/nunito": "^5.2.7",
+		"firebase": "^12.14.0"
 	}
 }
