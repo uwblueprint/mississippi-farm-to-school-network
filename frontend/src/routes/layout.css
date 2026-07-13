@@ -11,6 +11,7 @@
 	--mfsn-primary-hover: #688750; /* a touch lighter than primary, for hover */
 	--mfsn-primary-tint: rgba(88, 114, 68, 0.08); /* faint primary wash for outlined hover */
 	--mfsn-text-primary: #131927; /* primary text + icons */
+	--mfsn-text-muted: #8a8f87; /* muted labels, e.g. onboarding step counter */
 	--mfsn-icon-close: #414141;
 	--mfsn-surface: #ffffff;
 }

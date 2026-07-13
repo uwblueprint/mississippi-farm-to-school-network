@@ -2,26 +2,41 @@
 	interface Props {
 		title: string;
 		body: string;
-		primaryLabel: string;
-		onPrimary: () => void;
+		stepLabel: string;
+		primaryLabel?: string;
+		onPrimary?: () => void;
 		secondaryLabel?: string;
 		onSecondary?: () => void;
 	}
 
-	let { title, body, primaryLabel, onPrimary, secondaryLabel, onSecondary }: Props = $props();
+	let { title, body, stepLabel, primaryLabel, onPrimary, secondaryLabel, onSecondary }: Props =
+		$props();
+
+	const hasPrimary = $derived(Boolean(primaryLabel));
+	const hasSecondary = $derived(Boolean(secondaryLabel));
 </script>
 
 <div class="card" role="dialog" aria-modal="true" aria-labelledby="onboarding-title">
+	<p class="step-counter">{stepLabel}</p>
 	<h2 id="onboarding-title" class="title">{title}</h2>
 	<p class="body">{body}</p>
 
-	<div class="actions">
-		{#if secondaryLabel}
-			<button class="btn-secondary btn" type="button" onclick={onSecondary}>{secondaryLabel}</button
-			>
-		{/if}
-		<button class="btn-primary btn" type="button" onclick={onPrimary}>{primaryLabel}</button>
-	</div>
+	{#if hasPrimary || hasSecondary}
+		<div
+			class="actions"
+			class:only-primary={hasPrimary && !hasSecondary}
+			class:only-secondary={hasSecondary && !hasPrimary}
+		>
+			{#if hasSecondary}
+				<button class="btn-secondary btn" type="button" onclick={onSecondary}
+					>{secondaryLabel}</button
+				>
+			{/if}
+			{#if hasPrimary}
+				<button class="btn-primary btn" type="button" onclick={onPrimary}>{primaryLabel}</button>
+			{/if}
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -38,6 +53,15 @@
 		border-radius: 1em;
 		box-shadow: 0 1.5em 4.375em rgba(20, 28, 16, 0.28);
 		font-family: 'DM Sans', sans-serif;
+	}
+
+	.step-counter {
+		margin: 0 0 0.625em;
+		font-size: 1em;
+		font-weight: 500;
+		line-height: 1.2;
+		letter-spacing: -0.01em;
+		color: var(--mfsn-text-muted);
 	}
 
 	.title {
@@ -61,9 +85,18 @@
 
 	.actions {
 		display: flex;
-		justify-content: flex-end;
+		justify-content: space-between;
+		align-items: center;
 		gap: 0.875em;
 		margin-top: 1.5em;
+	}
+
+	.actions.only-primary {
+		justify-content: flex-end;
+	}
+
+	.actions.only-secondary {
+		justify-content: flex-start;
 	}
 
 	.btn {

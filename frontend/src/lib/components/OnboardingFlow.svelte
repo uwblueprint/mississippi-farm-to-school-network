@@ -1,35 +1,56 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { cubicOut } from 'svelte/easing';
 	import OnboardingModal from './OnboardingModal.svelte';
 
 	const FARM_CREATION_ROUTE = '/new-farm';
+
+	interface ModalPosition {
+		top?: string;
+		right?: string;
+		bottom?: string;
+		left?: string;
+		transform?: string;
+	}
 
 	interface Step {
 		title: string;
 		body: string;
 		secondaryLabel?: string;
-		primaryLabel: string;
+		primaryLabel?: string;
+		position?: ModalPosition;
 	}
+
+	const ADD_FARM_STEP = 1;
 
 	const steps: Step[] = [
 		{
-			title: 'Welcome!',
-			body: 'This is your hub for managing your farm profile on the Mississippi Farm to School Network. Schools and partners discover farms like yours here.',
+			title: 'Manage your profile',
+			body: 'Access your settings to manage your account details.',
 			primaryLabel: 'Continue'
 		},
 		{
-			title: 'Update your Profile',
-			body: 'Your profile section at the bottom left shows your name and role. Keep your contact details up to date so MFSN and schools can reach you easily.',
+			title: 'Add a Farm',
+			body: 'Let’s get your farm on the map. Click “Add Farm” to register your first farm. You will need to submit a farm to continue.',
+			position: { top: '5.5rem', right: '1.5rem' }
+		},
+		{
+			title: 'Farm Cards',
+			body: 'Your farm appears on the dashboard once submitted. You can see its name, location, and current status.',
 			secondaryLabel: 'Back',
 			primaryLabel: 'Continue'
 		},
 		{
-			title: 'Create a Farm',
-			body: 'Let’s get your farm on the map. Click “Create a Farm” to register your first farm. You will need to submit a farm to continue.',
+			title: 'Status Badge',
+			body: 'Your farm is currently under review. Once MFSN approves it, the badge will update and the farm becomes visible to schools across Mississippi.',
 			secondaryLabel: 'Back',
-			primaryLabel: 'Create a Farm'
+			primaryLabel: 'Continue'
+		},
+		{
+			title: 'You’re all set!',
+			body: 'Your farm profile is submitted and in the process of being reviewed. Once approved, you will receive an email notifying the status update.',
+			secondaryLabel: 'Back',
+			primaryLabel: 'Done'
 		}
 	];
 
@@ -38,17 +59,24 @@
 	let visible = $state(false);
 
 	const current = $derived(steps[step]);
+	const stepLabel = $derived(`Step ${step + 1} of ${steps.length}`);
 
 	onMount(() => {
 		visible = true;
 	});
 
-	function handlePrimary() {
+	export function advance() {
 		if (step === steps.length - 1) {
 			goto(FARM_CREATION_ROUTE);
 			return;
 		}
 		step += 1;
+	}
+
+	export function completeAddFarm() {
+		if (step === ADD_FARM_STEP) {
+			advance();
+		}
 	}
 
 	function handleSecondary() {
@@ -65,16 +93,17 @@
 		}
 	}
 
-	function popIn(_node: Element, { duration = 200 } = {}) {
-		return {
-			duration,
-			css: (t: number) => {
-				const grow = cubicOut(t);
-				const scale = 0.9 + 0.1 * grow;
-				const opacity = Math.min(1, t * 1.8);
-				return `opacity: ${opacity}; transform: scale(${scale});`;
-			}
-		};
+	function positionStyle(position?: ModalPosition): string {
+		if (!position) {
+			return '';
+		}
+		const parts: string[] = [];
+		if (position.top !== undefined) parts.push(`top: ${position.top}`);
+		if (position.right !== undefined) parts.push(`right: ${position.right}`);
+		if (position.bottom !== undefined) parts.push(`bottom: ${position.bottom}`);
+		if (position.left !== undefined) parts.push(`left: ${position.left}`);
+		parts.push(`transform: ${position.transform ?? 'none'}`);
+		return parts.join('; ') + ';';
 	}
 </script>
 
@@ -85,18 +114,21 @@
 		<button class="backdrop" type="button" aria-label="Close onboarding" onclick={handleClose}
 		></button>
 
-		{#key step}
-			<div class="stage" in:popIn>
-				<OnboardingModal
-					title={current.title}
-					body={current.body}
-					primaryLabel={current.primaryLabel}
-					secondaryLabel={current.secondaryLabel}
-					onPrimary={handlePrimary}
-					onSecondary={handleSecondary}
-				/>
-			</div>
-		{/key}
+		<div
+			class="modal-anchor"
+			class:positioned={!!current.position}
+			style={positionStyle(current.position)}
+		>
+			<OnboardingModal
+				{stepLabel}
+				title={current.title}
+				body={current.body}
+				primaryLabel={current.primaryLabel}
+				secondaryLabel={current.secondaryLabel}
+				onPrimary={advance}
+				onSecondary={handleSecondary}
+			/>
+		</div>
 	</div>
 {/if}
 
@@ -122,7 +154,7 @@
 		backdrop-filter: blur(3px);
 	}
 
-	.stage {
+	.modal-anchor {
 		grid-area: 1 / 1;
 		position: relative;
 		z-index: 1;
@@ -130,7 +162,12 @@
 		justify-content: center;
 		width: 100%;
 		max-width: 40em;
-		transform-origin: center;
-		will-change: transform, opacity;
+	}
+
+	.modal-anchor.positioned {
+		grid-area: auto;
+		position: absolute;
+		width: auto;
+		max-width: calc(100vw - 3em);
 	}
 </style>
