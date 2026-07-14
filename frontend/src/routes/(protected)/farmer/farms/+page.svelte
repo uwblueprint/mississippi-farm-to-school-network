@@ -1,51 +1,49 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import FarmCard from '$lib/components/FarmCard.svelte';
 	import ActionButton from '$lib/components/ActionButton.svelte';
+	import { gqlClient } from '$lib/graphqlClient';
 	import type { FarmStatus } from '$lib/farmStatus';
 
-	// Sample farms (varied name/address lengths + images) for testing responsive behavior.
-	// Shape mirrors a backend FarmDTO mapped to display fields.
-	const farms: {
+	// The signed-in farmer's own farms, across all statuses (backend myFarms query).
+	interface FarmListItem {
 		id: string;
-		title: string;
-		address: string;
-		owner: string;
+		farm_name: string;
+		farm_address: string;
+		home_county: string;
 		status: FarmStatus;
-		image: string;
-	}[] = [
-		{
-			id: 'two-brooks',
-			title: 'Two Brooks Farm',
-			address: '309 W Lampton St, Mound Bayou, MS 38762',
-			owner: 'Antionette Turner',
-			status: 'APPROVED',
-			image: 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900'
-		},
-		{
-			id: 'whispering-pines',
-			title: 'Whispering Pines Organic Family Farm & Orchard',
-			address: '12450 County Road 47 North, Hattiesburg, MS 39402',
-			owner: 'Reginald Booker',
-			status: 'PENDING_APPROVAL',
-			image: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=900'
-		},
-		{
-			id: 'lilas-greens',
-			title: 'Lila’s Greens',
-			address: '5 Oak Ave, Tupelo, MS',
-			owner: 'Lila Okafor',
-			status: 'APPROVED',
-			image: 'https://images.unsplash.com/photo-1464226184884-fa280b87c399?w=900'
-		},
-		{
-			id: 'delta-roots',
-			title: 'Delta Roots Co-op',
-			address: '88 Levee Rd, Greenville, MS 38701',
-			owner: 'Marcus & Dawn Pleasant',
-			status: 'REJECTED',
-			image: 'https://images.unsplash.com/photo-1592982537447-7440770cbfc9?w=900'
+	}
+
+	const MY_FARMS = `
+		query MyFarms {
+			myFarms {
+				id
+				farm_name
+				farm_address
+				home_county
+				status
+			}
 		}
-	];
+	`;
+
+	// Card image placeholder until per-farm gallery images are wired (farm images
+	// come from the file service via filesByFarm, not from the FarmDTO).
+	const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900';
+
+	let farms = $state<FarmListItem[]>([]);
+	let loading = $state(true);
+	let errorMessage = $state('');
+
+	onMount(async () => {
+		try {
+			const data = await gqlClient<{ myFarms: FarmListItem[] }>(MY_FARMS);
+			farms = data.myFarms;
+		} catch (err) {
+			errorMessage = err instanceof Error ? err.message : 'Failed to load your farms.';
+		} finally {
+			loading = false;
+		}
+	});
 
 	// Placeholder until a backend archive mutation exists.
 	function archive(id: string) {
@@ -70,22 +68,30 @@
 		</ActionButton>
 	</header>
 
-	<div class="farm-grid">
-		{#each farms as farm (farm.id)}
-			<FarmCard
-				id={farm.id}
-				imageUrl={farm.image}
-				imageAlt={farm.title}
-				title={farm.title}
-				subtitle={farm.address}
-				subtitle2={farm.owner}
-				status={farm.status}
-				viewHref={`/farmer/farms/${farm.id}`}
-				editHref={`/farmer/farms/${farm.id}/edit`}
-				onArchive={() => archive(farm.id)}
-			/>
-		{/each}
-	</div>
+	{#if loading}
+		<p class="farms-message">Loading your farms…</p>
+	{:else if errorMessage}
+		<p class="farms-message farms-message--error" role="alert">{errorMessage}</p>
+	{:else if farms.length === 0}
+		<p class="farms-message">You don't have any farms yet.</p>
+	{:else}
+		<div class="farm-grid">
+			{#each farms as farm (farm.id)}
+				<FarmCard
+					id={farm.id}
+					imageUrl={PLACEHOLDER_IMAGE}
+					imageAlt={farm.farm_name}
+					title={farm.farm_name}
+					subtitle={farm.farm_address}
+					subtitle2={farm.home_county}
+					status={farm.status}
+					viewHref={`/farmer/farms/${farm.id}`}
+					editHref={`/farmer/farms/${farm.id}/edit`}
+					onArchive={() => archive(farm.id)}
+				/>
+			{/each}
+		</div>
+	{/if}
 </section>
 
 <style>
@@ -112,6 +118,17 @@
 		font-style: normal;
 		font-weight: 500;
 		line-height: normal;
+	}
+
+	.farms-message {
+		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+		font-size: 18px;
+		color: #696c78;
+		margin: 0;
+	}
+
+	.farms-message--error {
+		color: #c4341f;
 	}
 
 	.farm-grid {

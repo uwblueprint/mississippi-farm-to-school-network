@@ -1,20 +1,56 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { enhance, deserialize } from '$app/forms';
 	import { invalidateAll } from '$app/navigation';
-	import type { ActionResult } from '@sveltejs/kit';
 	import type { PageData } from './$types';
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import TextField from '$lib/components/TextField.svelte';
 	import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
+	import { gqlClient } from '$lib/graphqlClient';
+	import { formModelToUpdateInput } from '$lib/farmMapping';
 
 	let { data }: { data: PageData } = $props();
 
 	// The [id] segment is the farm's UUID — the same id used by the backend
 	// farmById(id) query and the updateFarm(id, input) / resubmitFarm(id, input) mutations.
 	const farmId = $derived($page.params.id);
+
+	// --- GraphQL mutations (client-side; auth via Firebase ID token) ---------
+	const UPDATE_FARM = `
+		mutation UpdateFarm($id: ID!, $input: UpdateFarmInput!) {
+			updateFarm(id: $id, input: $input) { id status }
+		}
+	`;
+	const RESUBMIT_FARM = `
+		mutation ResubmitFarm($id: ID!, $input: UpdateFarmInput!) {
+			resubmitFarm(id: $id, input: $input) { id status }
+		}
+	`;
+	const UPLOAD_FARM_IMAGE = `
+		mutation UploadFarmImage($farmId: String!, $originalFileName: String!, $contentType: String!, $dataBase64: String!) {
+			uploadFarmImage(farmId: $farmId, originalFileName: $originalFileName, contentType: $contentType, dataBase64: $dataBase64) {
+				fileId
+				url
+				originalFileName
+			}
+		}
+	`;
+	const DELETE_FILE = `
+		mutation DeleteFile($fileId: String!) {
+			deleteFile(fileId: $fileId)
+		}
+	`;
+
+	// Encode file bytes as raw base64 (no data: prefix) for uploadFarmImage.
+	function toBase64(bytes: Uint8Array): string {
+		let binary = '';
+		const chunk = 0x8000;
+		for (let i = 0; i < bytes.length; i += chunk) {
+			binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+		}
+		return btoa(binary);
+	}
 
 	// --- Form state ---------------------------------------------------------
 	// Clean, backend-mapped fields, seeded from the server loader (farmToFormModel).
@@ -63,15 +99,23 @@
 	let actionError = $state('');
 	let galleryInput = $state<HTMLInputElement | null>(null);
 
-	// Manually POST to a named form action (image ops live outside the save form,
-	// so they can't be plain nested <form>s). Mirrors use:enhance's request shape.
-	async function postAction(action: string, body: FormData): Promise<ActionResult> {
-		const res = await fetch(action, {
-			method: 'POST',
-			headers: { 'x-sveltekit-action': 'true' },
-			body
-		});
-		return deserialize(await res.text());
+	// Persist the clean editable fields. REJECTED farms resubmit (re-enters the
+	// approval queue); all others use updateFarm.
+	async function handleSave(event: SubmitEvent) {
+		event.preventDefault();
+		saving = true;
+		actionError = '';
+		try {
+			const input = formModelToUpdateInput(farm);
+			const mutation = data.status === 'REJECTED' ? RESUBMIT_FARM : UPDATE_FARM;
+			await gqlClient(mutation, { id: farmId, input });
+			// Refresh status/rejection; the loader re-runs but the user's edits stay.
+			await invalidateAll();
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Save failed.';
+		} finally {
+			saving = false;
+		}
 	}
 
 	async function uploadFiles(files: FileList | null) {
@@ -80,14 +124,17 @@
 		actionError = '';
 		try {
 			for (const file of Array.from(files)) {
-				const fd = new FormData();
-				fd.append('file', file);
-				const result = await postAction('?/uploadImage', fd);
-				if (result.type === 'failure') {
-					actionError = String(result.data?.message ?? 'Upload failed.');
-				}
+				const dataBase64 = toBase64(new Uint8Array(await file.arrayBuffer()));
+				await gqlClient(UPLOAD_FARM_IMAGE, {
+					farmId,
+					originalFileName: file.name,
+					contentType: file.type || 'application/octet-stream',
+					dataBase64
+				});
 			}
 			await invalidateAll();
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Upload failed.';
 		} finally {
 			uploading = false;
 		}
@@ -95,13 +142,12 @@
 
 	async function removePhoto(fileId: string) {
 		actionError = '';
-		const fd = new FormData();
-		fd.append('fileId', fileId);
-		const result = await postAction('?/removeImage', fd);
-		if (result.type === 'failure') {
-			actionError = String(result.data?.message ?? 'Remove failed.');
+		try {
+			await gqlClient(DELETE_FILE, { fileId });
+			await invalidateAll();
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Remove failed.';
 		}
-		await invalidateAll();
 	}
 
 	function deleteFarm() {
@@ -146,40 +192,10 @@
 	onchange={(e) => uploadFiles((e.currentTarget as HTMLInputElement).files)}
 />
 
-<form
-	class="edit-page"
-	method="POST"
-	action="?/save"
-	use:enhance={() => {
-		saving = true;
-		actionError = '';
-		return async ({ result, update }) => {
-			saving = false;
-			if (result.type === 'failure') {
-				actionError = String(result.data?.message ?? 'Save failed.');
-			}
-			// keep the user's edits in the fields; loader re-runs for status/rejection
-			await update({ reset: false });
-		};
-	}}
->
-	<!-- Clean, backend-mapped FarmFormModel fields carried to the ?/save action.
-	     TextField has no name attribute, so the hidden inputs mirror farm state. -->
-	<input type="hidden" name="readableId" value={farm.readableId} />
-	<input type="hidden" name="name" value={farm.name} />
-	<input type="hidden" name="address" value={farm.address} />
-	<input type="hidden" name="counties" value={farm.counties} />
-	<input type="hidden" name="phone" value={farm.phone} />
-	<input type="hidden" name="email" value={farm.email} />
-	<input type="hidden" name="instagram" value={farm.instagram} />
-	<input type="hidden" name="facebook" value={farm.facebook} />
-	<input type="hidden" name="website" value={farm.website} />
-	<input type="hidden" name="other" value={farm.other} />
-	<input type="hidden" name="seasonal" value={farm.seasonal} />
-	<input type="hidden" name="dashboardImageName" value={farm.dashboardImageName} />
-	<!-- Routes the save action to resubmitFarm when REJECTED, else updateFarm. -->
-	<input type="hidden" name="status" value={data.status} />
-
+<!-- Client-side save (auth via Firebase ID token in gqlClient). Fields bind to
+     `farm` state directly, so no hidden mirror inputs are needed. The save action
+     routes to resubmitFarm when REJECTED, else updateFarm (see handleSave). -->
+<form class="edit-page" onsubmit={handleSave}>
 	{@render actionBar()}
 
 	<h1 class="edit-title">Edit {farm.name}</h1>

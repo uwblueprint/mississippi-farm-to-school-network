@@ -53,6 +53,16 @@ const farmResolvers = {
 
       return farmService.getFarms(filter);
     },
+    // The authenticated user's own farms across ALL statuses (the public `farms`
+    // query clamps non-admins to APPROVED, so it can't back a farmer dashboard).
+    myFarms: async (
+      _parent: undefined,
+      _args: undefined,
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      const user = await authHelper.requireAuth(context);
+      return farmService.getFarmsByOwner(user.id);
+    },
     farmById: async (
       _parent: undefined,
       { id }: { id: string },

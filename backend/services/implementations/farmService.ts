@@ -457,6 +457,16 @@ class FarmService implements IFarmService {
     }
   }
 
+  async getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]> {
+    try {
+      const farms = await Farm.findAll({ where: { owner_user_id: ownerUserId } });
+      return this.convertToFarmDTOs(farms);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farms by owner. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   async getFarmById(farmId: string): Promise<FarmDTO> {
     try {
       const farm = await Farm.findByPk(farmId);

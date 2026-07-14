@@ -55,6 +55,14 @@ interface IFarmService {
   getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]>;
 
   /**
+   * Get all farms owned by a user, across every status
+   * @param ownerUserId the owner's user id
+   * @returns array of FarmDTOs
+   * @throws Error if farm retrieval fails
+   */
+  getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]>;
+
+  /**
    * Update a farm's status to APPROVED & attempt to email farm owner
    * @param id farm's id
    * @returns a FarmDTO with the updated farm's information
