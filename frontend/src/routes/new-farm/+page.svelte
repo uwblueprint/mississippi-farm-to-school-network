@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
+	import { beforeNavigate, goto } from '$app/navigation';
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
 
@@ -7,6 +8,8 @@
 
 	interface AddressSuggestion {
 		formatted: string;
+		primary: string;
+		secondary: string;
 		lat: number | null;
 		lon: number | null;
 		placeId: string;
@@ -48,6 +51,11 @@
 
 	let coverPhoto = $state<File[]>([]);
 	let carouselPhotos = $state<File[]>([]);
+
+	let submitted = $state(false);
+	let showLeaveModal = $state(false);
+	let allowLeave = $state(false);
+	let pendingUrl = $state<URL | null>(null);
 
 	const NONE = 'None of the above';
 	const DELIVERY_AVAILABLE = 'Delivery Available';
@@ -233,6 +241,35 @@
 
 	const isValid = $derived(Object.values(errors).every((message) => message === ''));
 
+	const isDirty = $derived(
+		usdaFarmId !== '' ||
+			farmName !== '' ||
+			farmAddress !== '' ||
+			county !== '' ||
+			phone !== (data.user?.phone ?? '') ||
+			email !== (data.user?.email ?? '') ||
+			instagram !== '' ||
+			facebook !== '' ||
+			website !== '' ||
+			otherSocial !== '' ||
+			growingPractices.length > 0 ||
+			seasonalProducts.length > 0 ||
+			meatProducts.length > 0 ||
+			otherProducts.length > 0 ||
+			specificProducts !== '' ||
+			meatDetail !== '' ||
+			otherDetail !== '' ||
+			foodSafetyCertifications.length > 0 ||
+			farmExperiences.length > 0 ||
+			farmCharacteristics.length > 0 ||
+			farmToSchoolSales.length > 0 ||
+			f2sExperience !== '' ||
+			minimumOrder !== '' ||
+			deliveryDetails !== '' ||
+			coverPhoto.length > 0 ||
+			carouselPhotos.length > 0
+	);
+
 	function digitsOnly(value: string) {
 		return value.replace(/\D/g, '');
 	}
@@ -365,6 +402,9 @@
 		}
 		if (!isValid) return;
 
+		submitted = true;
+		alert('Successfully submitted!');
+
 		const payload = buildFarmPayload();
 		console.log('createFarm payload', payload);
 		console.log('pending photos (upload not wired yet)', {
@@ -382,6 +422,24 @@
 			console.log('createFarm response', result);
 		} catch (error) {
 			console.error('createFarm request failed', error);
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (allowLeave || submitted || !isDirty) return;
+		navigation.cancel();
+		if (navigation.willUnload) return;
+		pendingUrl = navigation.to?.url ?? null;
+		showLeaveModal = true;
+	});
+
+	async function confirmLeave() {
+		allowLeave = true;
+		showLeaveModal = false;
+		if (pendingUrl) {
+			await goto(pendingUrl);
+		} else {
+			history.back();
 		}
 	}
 
@@ -450,7 +508,7 @@
 
 <div class="container">
 	<div class="topbar">
-		<button class="back-btn" type="button">
+		<button class="back-btn" type="button" onclick={() => history.back()}>
 			<img class="back-icon" src={leftArrow} alt="" />
 			Back
 		</button>
@@ -538,7 +596,10 @@
 									selectAddress(suggestion);
 								}}
 							>
-								{suggestion.formatted}
+								<span class="addr-primary">{suggestion.primary}</span>
+								{#if suggestion.secondary}
+									<span class="addr-secondary">{suggestion.secondary}</span>
+								{/if}
 							</button>
 						</li>
 					{/each}
@@ -976,6 +1037,64 @@
 	</div>
 </div>
 
+{#if showLeaveModal}
+	<div class="leave-overlay">
+		<button
+			class="leave-backdrop"
+			type="button"
+			aria-label="Keep editing"
+			onclick={() => (showLeaveModal = false)}
+		></button>
+		<div class="leave-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title">
+			<button
+				class="leave-close"
+				type="button"
+				aria-label="Close"
+				onclick={() => (showLeaveModal = false)}
+			>
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M18 6 6 18M6 6l12 12" />
+				</svg>
+			</button>
+
+			<span class="leave-icon" aria-hidden="true">!</span>
+			<h2 id="leave-title" class="leave-title">You have unsaved changes.</h2>
+			<p class="leave-body">
+				You haven’t saved your changes yet. If you leave now, your changes will be lost.
+			</p>
+
+			<div class="leave-actions">
+				<button class="leave-btn leave-discard" type="button" onclick={confirmLeave}>
+					Discard Changes
+				</button>
+				<button
+					class="leave-btn leave-outline"
+					type="button"
+					onclick={() => (showLeaveModal = false)}
+				>
+					Save Draft
+				</button>
+				<button
+					class="leave-btn leave-outline"
+					type="button"
+					onclick={() => (showLeaveModal = false)}
+				>
+					Keep Editing
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
 <style>
 	.container {
 		font-family: 'DM Sans', sans-serif;
@@ -1151,6 +1270,15 @@
 		cursor: pointer;
 	}
 
+	.addr-primary {
+		color: #131927;
+	}
+
+	.addr-secondary {
+		margin-left: 6px;
+		color: #9aa0a6;
+	}
+
 	.combobox-option:hover {
 		background: var(--mfsn-primary-tint, #f0f5ec);
 	}
@@ -1281,5 +1409,115 @@
 
 	.submit:hover {
 		background: var(--mfsn-primary-hover);
+	}
+
+	.leave-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: grid;
+		place-items: center;
+		box-sizing: border-box;
+		padding: 1.5rem;
+	}
+
+	.leave-backdrop {
+		position: fixed;
+		inset: 0;
+		padding: 0;
+		border: none;
+		cursor: default;
+		background: rgba(18, 24, 14, 0.45);
+	}
+
+	.leave-modal {
+		position: relative;
+		z-index: 1;
+		box-sizing: border-box;
+		width: 520px;
+		max-width: 100%;
+		padding: 28px;
+		background: #fff;
+		border-radius: 16px;
+		box-shadow: 0 24px 70px rgba(20, 28, 16, 0.28);
+		font-family: 'DM Sans', sans-serif;
+	}
+
+	.leave-close {
+		position: absolute;
+		top: 20px;
+		right: 20px;
+		display: inline-flex;
+		padding: 0;
+		border: none;
+		background: none;
+		color: #414141;
+		cursor: pointer;
+	}
+
+	.leave-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: #fdece9;
+		color: #c0341c;
+		font-size: 22px;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.leave-title {
+		margin: 16px 0 8px;
+		font-size: 26px;
+		font-weight: 500;
+		color: #131927;
+	}
+
+	.leave-body {
+		margin: 0 0 22px;
+		font-size: 15px;
+		line-height: 1.5;
+		color: #131927;
+	}
+
+	.leave-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.leave-btn {
+		width: 100%;
+		padding: 9px 16px;
+		border: 1.5px solid transparent;
+		border-radius: 10px;
+		font-family: inherit;
+		font-size: 15px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.leave-discard {
+		background: #c0341c;
+		color: #fff;
+		border-color: #c0341c;
+	}
+
+	.leave-discard:hover {
+		background: #a82c17;
+		border-color: #a82c17;
+	}
+
+	.leave-outline {
+		background: #fff;
+		color: var(--mfsn-primary);
+		border-color: var(--mfsn-primary);
+	}
+
+	.leave-outline:hover {
+		background: var(--mfsn-primary-tint, #f0f5ec);
 	}
 </style>

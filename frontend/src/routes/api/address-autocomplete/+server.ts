@@ -11,6 +11,7 @@ interface MapboxFeature {
 		mapbox_id?: string;
 		coordinates?: { longitude?: number; latitude?: number };
 		context?: {
+			place?: { name?: string };
 			region?: { region_code?: string; name?: string };
 		};
 	};
@@ -52,12 +53,22 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 			const region = feature.properties?.context?.region;
 			return region?.region_code === 'MS' || region?.name === 'Mississippi';
 		})
-		.map((feature) => ({
-			formatted: feature.properties?.full_address ?? feature.properties?.name ?? '',
-			lat: feature.properties?.coordinates?.latitude ?? null,
-			lon: feature.properties?.coordinates?.longitude ?? null,
-			placeId: feature.properties?.mapbox_id ?? ''
-		}));
+		.map((feature) => {
+			const props = feature.properties;
+			const primary = props?.name ?? props?.full_address ?? '';
+			const place = props?.context?.place?.name ?? '';
+			const regionCode = props?.context?.region?.region_code ?? '';
+			const secondary = [place, regionCode].filter(Boolean).join(', ');
+
+			return {
+				formatted: props?.full_address ?? props?.name ?? '',
+				primary,
+				secondary,
+				lat: props?.coordinates?.latitude ?? null,
+				lon: props?.coordinates?.longitude ?? null,
+				placeId: props?.mapbox_id ?? ''
+			};
+		});
 
 	return json({ results });
 };
