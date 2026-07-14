@@ -38,7 +38,7 @@
 	let seasonalProducts = $state<string[]>([]);
 	let meatProducts = $state<string[]>([]);
 	let otherProducts = $state<string[]>([]);
-	let specificProducts = $state('');
+	let seasonalDetail = $state('');
 	let meatDetail = $state('');
 	let otherDetail = $state('');
 	let foodSafetyCertifications = $state<string[]>([]);
@@ -256,7 +256,7 @@
 			seasonalProducts.length > 0 ||
 			meatProducts.length > 0 ||
 			otherProducts.length > 0 ||
-			specificProducts !== '' ||
+			seasonalDetail !== '' ||
 			meatDetail !== '' ||
 			otherDetail !== '' ||
 			foodSafetyCertifications.length > 0 ||
@@ -370,7 +370,7 @@
 		return {
 			usda_farm_id: usdaFarmId.trim(),
 			farm_name: farmName.trim(),
-			specific_products: specificProducts.trim(),
+			seasonal_products_detail: seasonalDetail.trim(),
 			meat_products_detail: meatDetail.trim(),
 			other_products_detail: otherDetail.trim(),
 			primary_phone: phone,
@@ -783,15 +783,15 @@
 
 	{#if seasonalSelected}
 		<div class="form-group">
-			<label class="field-label" for="specific-products"
+			<label class="field-label" for="seasonal-detail"
 				>List each fruit, vegetable, herb, or dairy product offered</label
 			>
 			<textarea
-				id="specific-products"
+				id="seasonal-detail"
 				class="field"
 				rows="3"
 				placeholder="Example: tomatoes, zucchini, basil, kale, strawberries, eggs"
-				bind:value={specificProducts}
+				bind:value={seasonalDetail}
 			></textarea>
 		</div>
 	{/if}

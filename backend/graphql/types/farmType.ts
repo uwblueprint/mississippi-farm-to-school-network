@@ -24,7 +24,6 @@ const farmType = gql`
     owner: UserDTO
     usda_farm_id: String
     farm_name: String!
-    specific_products: String!
     primary_phone: String!
     primary_email: String!
     website: String
@@ -33,7 +32,12 @@ const farmType = gql`
     county: String!
     cities_served: [String!]
     location: Location!
-    product_categories: [String!]!
+    seasonal_products: [String!]!
+    meat_products: [String!]!
+    other_products: [String!]!
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
     growing_practices: [String!]!
     food_safety_certifications: [String!]!
     farm_experiences: [String!]!
@@ -53,7 +57,6 @@ const farmType = gql`
   input CreateFarmInput {
     usda_farm_id: String!
     farm_name: String!
-    specific_products: String!
     primary_phone: String!
     primary_email: String!
     website: String
@@ -62,7 +65,12 @@ const farmType = gql`
     county: String!
     cities_served: [String!]
     location: LocationInput!
-    product_categories: [String!]!
+    seasonal_products: [String!]!
+    meat_products: [String!]!
+    other_products: [String!]!
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
     growing_practices: [String!]!
     food_safety_certifications: [String!]!
     farm_experiences: [String!]
@@ -90,14 +98,15 @@ const farmType = gql`
     status: FarmStatus
     counties: [String!]
     cities_served: [String!]
-    product_categories: [String!]
+    seasonal_products: [String!]
+    meat_products: [String!]
+    other_products: [String!]
     approved: Boolean
   }
 
   input UpdateFarmInput {
     usda_farm_id: String
     farm_name: String
-    specific_products: String
     primary_phone: String
     primary_email: String
     website: String
@@ -106,7 +115,12 @@ const farmType = gql`
     county: String
     cities_served: [String!]
     location: LocationInput
-    product_categories: [String!]
+    seasonal_products: [String!]
+    meat_products: [String!]
+    other_products: [String!]
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
     growing_practices: [String!]
     food_safety_certifications: [String!]
     farm_experiences: [String!]

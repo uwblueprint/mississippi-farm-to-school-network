@@ -4,7 +4,9 @@ import User from './user.model';
 import { FarmStatus } from '@/types';
 import type {
   GrowingPractice,
-  ProductCategory,
+  SeasonalProduct,
+  MeatProduct,
+  OtherProduct,
   FoodSafetyCertification,
   FarmExperience,
   FarmCharacteristic,
@@ -28,9 +30,6 @@ export default class Farm extends Model {
 
   @Column({ type: DataType.STRING, allowNull: false })
   farm_name!: string;
-
-  @Column({ type: DataType.TEXT, allowNull: false })
-  specific_products!: string;
 
   @Column({ type: DataType.STRING, allowNull: false })
   primary_phone!: string;
@@ -56,8 +55,23 @@ export default class Farm extends Model {
   @Column({ type: DataType.GEOMETRY('POINT', 4326), allowNull: false })
   location!: { type: string; coordinates: [number, number] };
 
-  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false })
-  product_categories!: ProductCategory[];
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  seasonal_products!: SeasonalProduct[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  meat_products!: MeatProduct[];
+
+  @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
+  other_products!: OtherProduct[];
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  seasonal_products_detail!: string | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  meat_products_detail!: string | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  other_products_detail!: string | null;
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
   growing_practices!: GrowingPractice[];

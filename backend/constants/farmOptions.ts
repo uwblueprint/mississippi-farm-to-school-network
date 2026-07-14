@@ -11,14 +11,22 @@ export const GROWING_PRACTICES = [
 ] as const;
 export type GrowingPractice = (typeof GROWING_PRACTICES)[number];
 
-export const PRODUCT_CATEGORIES = [
-  'Dairy and Eggs',
-  'Fruits and Vegetables',
-  'Herbs',
-  'Meat (Beef, Poultry, Fish)',
-  'Other (Honey, Mushrooms, Flowers, Seedlings & Plants, Grains, Value-Added Products)',
+export const SEASONAL_PRODUCTS = ['Fruits and Vegetables', 'Dairy and Eggs', 'Herbs'] as const;
+export type SeasonalProduct = (typeof SEASONAL_PRODUCTS)[number];
+
+export const MEAT_PRODUCTS = ['Beef', 'Poultry', 'Fish', 'Other'] as const;
+export type MeatProduct = (typeof MEAT_PRODUCTS)[number];
+
+export const OTHER_PRODUCTS = [
+  'Honey',
+  'Mushrooms',
+  'Flowers',
+  'Seedlings & Plants',
+  'Grains',
+  'Value-Added Products',
+  'Other',
 ] as const;
-export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+export type OtherProduct = (typeof OTHER_PRODUCTS)[number];
 
 export const FOOD_SAFETY_CERTIFICATIONS = [
   'Food Safety Plan in Place',

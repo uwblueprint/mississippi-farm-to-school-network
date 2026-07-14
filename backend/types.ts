@@ -1,6 +1,8 @@
 import type {
   GrowingPractice,
-  ProductCategory,
+  SeasonalProduct,
+  MeatProduct,
+  OtherProduct,
   FoodSafetyCertification,
   FarmExperience,
   FarmCharacteristic,
@@ -90,7 +92,6 @@ export type FarmDTO = {
   owner_user_id: string;
   usda_farm_id: string | null;
   farm_name: string;
-  specific_products: string;
   primary_phone: string;
   primary_email: string;
   website: string | null;
@@ -99,7 +100,12 @@ export type FarmDTO = {
   county: string;
   cities_served: string[];
   location: LocationDTO;
-  product_categories: ProductCategory[];
+  seasonal_products: SeasonalProduct[];
+  meat_products: MeatProduct[];
+  other_products: OtherProduct[];
+  seasonal_products_detail: string | null;
+  meat_products_detail: string | null;
+  other_products_detail: string | null;
   growing_practices: GrowingPractice[];
   food_safety_certifications: FoodSafetyCertification[];
   farm_experiences: FarmExperience[];
@@ -140,7 +146,6 @@ export type FarmRejectionDTO = {
 
 export type CreateFarmInput = {
   farm_name: string;
-  specific_products: string;
   primary_phone: string;
   primary_email: string;
   website?: string;
@@ -150,7 +155,12 @@ export type CreateFarmInput = {
   county: string;
   cities_served?: string[];
   location: LocationDTO;
-  product_categories: ProductCategory[];
+  seasonal_products: SeasonalProduct[];
+  meat_products: MeatProduct[];
+  other_products: OtherProduct[];
+  seasonal_products_detail?: string;
+  meat_products_detail?: string;
+  other_products_detail?: string;
   growing_practices: GrowingPractice[];
   food_safety_certifications: FoodSafetyCertification[];
   farm_experiences?: FarmExperience[];
@@ -174,7 +184,6 @@ export enum SignUpMethod {
 export type UpdateFarmInput = {
   usda_farm_id?: string;
   farm_name?: string;
-  specific_products?: string;
   primary_phone?: string;
   primary_email?: string;
   website?: string;
@@ -183,7 +192,12 @@ export type UpdateFarmInput = {
   county?: string;
   cities_served?: string[];
   location?: LocationDTO;
-  product_categories?: ProductCategory[];
+  seasonal_products?: SeasonalProduct[];
+  meat_products?: MeatProduct[];
+  other_products?: OtherProduct[];
+  seasonal_products_detail?: string;
+  meat_products_detail?: string;
+  other_products_detail?: string;
   growing_practices?: GrowingPractice[];
   food_safety_certifications?: FoodSafetyCertification[];
   farm_experiences?: FarmExperience[];
@@ -201,7 +215,9 @@ export interface FarmFilter {
   status?: FarmStatus;
   counties?: string[];
   cities_served?: string[];
-  product_categories?: string[];
+  seasonal_products?: string[];
+  meat_products?: string[];
+  other_products?: string[];
   approved?: boolean;
 }
 
