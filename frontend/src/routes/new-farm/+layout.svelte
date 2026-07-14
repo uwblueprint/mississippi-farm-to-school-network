@@ -4,4 +4,13 @@
 
 {#if data.user}{/if}
 
-<slot />
+<div class="new-farm-page">
+	<slot />
+</div>
+
+<style>
+	.new-farm-page {
+		min-height: 100vh;
+		background: #fff;
+	}
+</style>

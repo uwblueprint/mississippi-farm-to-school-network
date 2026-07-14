@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
+	import leftArrow from '$lib/assets/left-arrow.svg';
 
 	let { data } = $props();
 
@@ -31,8 +32,12 @@
 	let otherSocial = $state('');
 
 	let growingPractices = $state<string[]>([]);
-	let productCategories = $state<string[]>([]);
+	let seasonalProducts = $state<string[]>([]);
+	let meatProducts = $state<string[]>([]);
+	let otherProducts = $state<string[]>([]);
 	let specificProducts = $state('');
+	let meatDetail = $state('');
+	let otherDetail = $state('');
 	let foodSafetyCertifications = $state<string[]>([]);
 	let farmExperiences = $state<string[]>([]);
 	let farmCharacteristics = $state<string[]>([]);
@@ -55,12 +60,16 @@
 		'Aquaponic',
 		'Biodynamic'
 	];
-	const PRODUCT_CATEGORIES = [
-		'Dairy and Eggs',
-		'Fruits and Vegetables',
-		'Herbs',
-		'Meat (Beef, Poultry, Fish)',
-		'Other (Honey, Mushrooms, Flowers, Seedlings & Plants, Grains, Value-Added Products)'
+	const SEASONAL_PRODUCTS = ['Fruits and Vegetables', 'Dairy and Eggs', 'Herbs'];
+	const MEAT_PRODUCTS = ['Beef', 'Poultry', 'Fish', 'Other'];
+	const OTHER_PRODUCTS = [
+		'Honey',
+		'Mushrooms',
+		'Flowers',
+		'Seedlings & Plants',
+		'Grains',
+		'Value-Added Products',
+		'Other'
 	];
 	const FOOD_SAFETY_CERTIFICATIONS = [
 		'Food Safety Plan in Place',
@@ -186,6 +195,9 @@
 
 	const f2sSelected = $derived(farmToSchoolSales.length > 0);
 	const deliverySelected = $derived(farmToSchoolSales.includes(DELIVERY_AVAILABLE));
+	const seasonalSelected = $derived(seasonalProducts.length > 0);
+	const meatSelected = $derived(meatProducts.length > 0);
+	const otherSelected = $derived(otherProducts.length > 0);
 
 	const errors = $derived({
 		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm ID is required.' : '',
@@ -211,9 +223,6 @@
 					: '',
 		website: website.trim() !== '' && !urlPattern.test(website.trim()) ? 'Enter a valid URL.' : '',
 		growingPractices: growingPractices.length === 0 ? 'Select at least one growing practice.' : '',
-		productCategories:
-			productCategories.length === 0 ? 'Select at least one product category.' : '',
-		specificProducts: specificProducts.trim() === '' ? 'This field is required.' : '',
 		foodSafetyCertifications:
 			foodSafetyCertifications.length === 0 ? 'Select at least one option.' : '',
 		f2sExperience: f2sSelected && f2sExperience.trim() === '' ? 'This field is required.' : '',
@@ -325,6 +334,8 @@
 			usda_farm_id: usdaFarmId.trim(),
 			farm_name: farmName.trim(),
 			specific_products: specificProducts.trim(),
+			meat_products_detail: meatDetail.trim(),
+			other_products_detail: otherDetail.trim(),
 			primary_phone: phone,
 			primary_email: email.trim(),
 			website: website.trim() || null,
@@ -332,7 +343,9 @@
 			farm_address: farmAddress.trim(),
 			county: county.trim(),
 			location: { lat: addressLat, lng: addressLng },
-			product_categories: productCategories,
+			seasonal_products: seasonalProducts,
+			meat_products: meatProducts,
+			other_products: otherProducts,
 			growing_practices: growingPractices,
 			food_safety_certifications: foodSafetyCertifications,
 			farm_experiences: farmExperiences,
@@ -436,29 +449,20 @@
 {/snippet}
 
 <div class="container">
-	<div class="header">
-		<h1>Create a Farm</h1>
+	<div class="topbar">
 		<button class="back-btn" type="button">
-			<svg
-				width="16"
-				height="16"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M15 18l-6-6 6-6" />
-			</svg>
+			<img class="back-icon" src={leftArrow} alt="" />
 			Back
 		</button>
+		<button class="save-btn" type="button">Save Changes</button>
 	</div>
+
+	<h1 class="page-title">Create a Farm</h1>
 
 	<h2 class="section-title">Farm Basics</h2>
 
 	<div class="form-group">
-		<label class="field-label" for="usda-farm-id">Government Issued Farm ID</label>
+		<label class="field-label" for="usda-farm-id">Farm ID #</label>
 		<input
 			id="usda-farm-id"
 			class="field"
@@ -488,7 +492,7 @@
 	</div>
 
 	<div class="form-group">
-		<label class="field-label" for="farm-address">Farm Address</label>
+		<label class="field-label" for="farm-address">Farm address</label>
 		<div class="combobox">
 			<div class="search-field">
 				<svg
@@ -547,7 +551,7 @@
 	</div>
 
 	<div class="form-group">
-		<label class="field-label" for="county">County it is located in</label>
+		<label class="field-label" for="county">County</label>
 		<div class="combobox">
 			<div class="search-field">
 				<svg
@@ -641,9 +645,7 @@
 
 	<div class="row">
 		<div class="form-group">
-			<label class="field-label" for="instagram"
-				>Instagram <span class="optional">(Optional)</span></label
-			>
+			<label class="field-label" for="instagram">Optional: Instagram</label>
 			<input
 				id="instagram"
 				class="field"
@@ -653,9 +655,7 @@
 		</div>
 
 		<div class="form-group">
-			<label class="field-label" for="facebook"
-				>Facebook <span class="optional">(Optional)</span></label
-			>
+			<label class="field-label" for="facebook">Optional: Facebook</label>
 			<input
 				id="facebook"
 				class="field"
@@ -667,9 +667,7 @@
 
 	<div class="row">
 		<div class="form-group">
-			<label class="field-label" for="website"
-				>Website URL <span class="optional">(Optional)</span></label
-			>
+			<label class="field-label" for="website">Optional: Website</label>
 			<input
 				id="website"
 				class="field"
@@ -685,7 +683,7 @@
 
 		<div class="form-group">
 			<label class="field-label" for="other-social">
-				Other Social Media <span class="optional">(Optional)</span>
+				Optional: Other (social media + username)
 			</label>
 			<input
 				id="other-social"
@@ -709,35 +707,86 @@
 		)}
 	</div>
 
+	<h2 class="section-title">Products offered</h2>
+
 	<div class="form-group">
-		<span class="field-label">Product Categories Offered</span>
+		<span class="field-label">Seasonal product and products offered</span>
 		{@render checkboxGroup(
-			'productCategories',
-			PRODUCT_CATEGORIES,
-			productCategories,
-			(next) => (productCategories = next),
+			'seasonalProducts',
+			SEASONAL_PRODUCTS,
+			seasonalProducts,
+			(next) => (seasonalProducts = next),
 			false
 		)}
 	</div>
 
-	<div class="form-group">
-		<label class="field-label" for="specific-products">Specific Products</label>
-		<textarea
-			id="specific-products"
-			class="field"
-			class:input-error={touched.specificProducts && errors.specificProducts}
-			rows="3"
-			placeholder="Enter the specific product items you offer on your farm"
-			bind:value={specificProducts}
-			onblur={() => (touched.specificProducts = true)}
-		></textarea>
-		{#if touched.specificProducts && errors.specificProducts}
-			<span class="error-text">{errors.specificProducts}</span>
-		{/if}
-	</div>
+	{#if seasonalSelected}
+		<div class="form-group">
+			<label class="field-label" for="specific-products"
+				>List each fruit, vegetable, herb, or dairy product offered</label
+			>
+			<textarea
+				id="specific-products"
+				class="field"
+				rows="3"
+				placeholder="Example: tomatoes, zucchini, basil, kale, strawberries, eggs"
+				bind:value={specificProducts}
+			></textarea>
+		</div>
+	{/if}
 
 	<div class="form-group">
-		<span class="field-label">Food Safety + Certifications</span>
+		<span class="field-label">Meat</span>
+		{@render checkboxGroup(
+			'meatProducts',
+			MEAT_PRODUCTS,
+			meatProducts,
+			(next) => (meatProducts = next),
+			false
+		)}
+	</div>
+
+	{#if meatSelected}
+		<div class="form-group">
+			<label class="field-label" for="meat-detail">List each meat product offered</label>
+			<textarea
+				id="meat-detail"
+				class="field"
+				rows="3"
+				placeholder="Example: ground beef, whole chicken, pork chops, catfish"
+				bind:value={meatDetail}
+			></textarea>
+		</div>
+	{/if}
+
+	<div class="form-group">
+		<span class="field-label">Other</span>
+		{@render checkboxGroup(
+			'otherProducts',
+			OTHER_PRODUCTS,
+			otherProducts,
+			(next) => (otherProducts = next),
+			false
+		)}
+	</div>
+
+	{#if otherSelected}
+		<div class="form-group">
+			<label class="field-label" for="other-detail">List each other product offered</label>
+			<textarea
+				id="other-detail"
+				class="field"
+				rows="3"
+				placeholder="Example: honey, shiitake mushrooms, sunflowers, seedlings"
+				bind:value={otherDetail}
+			></textarea>
+		</div>
+	{/if}
+
+	<h2 class="section-title">Other Details</h2>
+
+	<div class="form-group">
+		<span class="field-label">Food Safety &amp; Certifications</span>
 		{@render checkboxGroup(
 			'foodSafetyCertifications',
 			FOOD_SAFETY_CERTIFICATIONS,
@@ -748,9 +797,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label"
-			>Farm Experiences + Services <span class="optional">(Optional)</span></span
-		>
+		<span class="field-label">Farm Experiences &amp; Services</span>
 		{@render checkboxGroup(
 			'farmExperiences',
 			FARM_EXPERIENCES,
@@ -761,7 +808,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Farm Characteristics <span class="optional">(Optional)</span></span>
+		<span class="field-label">Farm Characteristics</span>
 		{@render checkboxGroup(
 			'farmCharacteristics',
 			FARM_CHARACTERISTICS,
@@ -772,7 +819,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Farm to School Sales <span class="optional">(Optional)</span></span>
+		<span class="field-label">Farm to School Sales</span>
 		{@render checkboxGroup(
 			'farmToSchoolSales',
 			FARM_TO_SCHOOL_SALES,
@@ -839,12 +886,10 @@
 		</div>
 	{/if}
 
+	<h2 class="section-title">Optional: Photos</h2>
+
 	<div class="form-group">
-		<span class="field-label">Display Photo <span class="optional">(Optional)</span></span>
-		<p class="field-help">
-			The image you upload here will be the cover image child nutrition directors, community
-			members, and educators will see when browsing farms on the Mississippi Farm Fresh Map.
-		</p>
+		<p class="field-help">Upload cover photo of your farm on dashboard view.</p>
 
 		<FileUpload
 			accept="image/*"
@@ -873,9 +918,9 @@
 				<FileUpload.Trigger
 					class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
 				>
-					Upload cover photo
+					Upload farm photo
 				</FileUpload.Trigger>
-				<span class="text-xs text-[#9aa0a6]">JPG or PNG, up to 10 MB</span>
+				<span class="text-xs text-[#9aa0a6]">JPG or PNG</span>
 				<FileUpload.HiddenInput />
 			</FileUpload.Dropzone>
 		</FileUpload>
@@ -884,9 +929,9 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Photo Carousel <span class="optional">(Optional)</span></span>
 		<p class="field-help">
-			Add up to 10 photos of your farm, operations, and products for educators to browse.
+			Optional: Upload photos of your farm, operations, and/or products here for people to see when
+			they look at your farm up to 10 pics!
 		</p>
 
 		<FileUpload
@@ -918,7 +963,7 @@
 				>
 					Upload farm photos
 				</FileUpload.Trigger>
-				<span class="text-xs text-[#9aa0a6]">JPG or PNG, up to 10 MB each</span>
+				<span class="text-xs text-[#9aa0a6]">JPG or PNG up to 10 pics</span>
 				<FileUpload.HiddenInput />
 			</FileUpload.Dropzone>
 		</FileUpload>
@@ -928,62 +973,70 @@
 
 	<div class="submit-section">
 		<button class="submit" type="button" onclick={handleSubmit}>Submit Farm Information</button>
-		<button class="back-link" type="button">
-			<svg
-				width="14"
-				height="14"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-			>
-				<path d="M15 18l-6-6 6-6" />
-			</svg>
-			Back to Onboarding
-		</button>
 	</div>
 </div>
 
 <style>
 	.container {
 		font-family: 'DM Sans', sans-serif;
-		max-width: 680px;
+		max-width: 760px;
 		margin: 0 auto;
 		padding: 40px 24px 64px;
 		color: #131927;
 	}
 
-	.header {
+	.topbar {
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		margin-bottom: 28px;
+		gap: 12px;
+		margin-bottom: 20px;
 	}
 
-	.header h1 {
+	.page-title {
 		font-size: 26px;
-		font-weight: 600;
-		margin: 0;
+		font-weight: 500;
+		margin: 0 0 8px;
 	}
 
 	.back-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 6px;
+		gap: 8px;
 		padding: 8px 16px;
 		border: 1px solid #d8d8d8;
 		border-radius: 8px;
 		background: #fff;
-		font-size: 14px;
+		font-size: 15px;
+		font-family: inherit;
 		color: #131927;
 		cursor: pointer;
 	}
 
+	.back-icon {
+		width: 14px;
+		height: 14px;
+	}
+
+	.save-btn {
+		padding: 8px 18px;
+		border: none;
+		border-radius: 8px;
+		background: var(--mfsn-primary);
+		color: #fff;
+		font-size: 15px;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+	}
+
+	.save-btn:hover {
+		background: var(--mfsn-primary-hover);
+	}
+
 	.section-title {
-		font-size: 18px;
-		font-weight: 600;
+		font-size: 20px;
+		font-weight: 500;
 		margin: 28px 0 16px;
 	}
 
@@ -994,20 +1047,15 @@
 	}
 
 	.field-label {
-		font-size: 14px;
+		font-size: 15px;
 		font-weight: 500;
 		margin-bottom: 6px;
 		color: #131927;
 	}
 
-	.optional {
-		color: #9aa0a6;
-		font-weight: 400;
-	}
-
 	.field-help {
 		margin: 0 0 8px;
-		font-size: 13px;
+		font-size: 14px;
 		color: #666;
 		line-height: 1.4;
 	}
@@ -1015,7 +1063,7 @@
 	.field {
 		width: 100%;
 		box-sizing: border-box;
-		padding: 12px 14px;
+		padding: 8px 16px;
 		border: 1px solid #d8d8d8;
 		border-radius: 8px;
 		background: #fff;
@@ -1134,7 +1182,7 @@
 		align-items: center;
 		gap: 10px;
 		width: fit-content;
-		font-size: 14px;
+		font-size: 15px;
 		cursor: pointer;
 	}
 
@@ -1219,8 +1267,7 @@
 	}
 
 	.submit {
-		width: 360px;
-		max-width: 100%;
+		width: 100%;
 		padding: 14px 24px;
 		border: none;
 		border-radius: 8px;
@@ -1234,17 +1281,5 @@
 
 	.submit:hover {
 		background: var(--mfsn-primary-hover);
-	}
-
-	.back-link {
-		display: inline-flex;
-		align-items: center;
-		gap: 6px;
-		border: none;
-		background: none;
-		font-family: inherit;
-		font-size: 14px;
-		color: #444;
-		cursor: pointer;
 	}
 </style>
