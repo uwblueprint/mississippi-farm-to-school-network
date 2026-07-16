@@ -8,7 +8,16 @@
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
-	import { formModelToUpdateInput } from '$lib/farmMapping';
+	import {
+		formModelToUpdateInput,
+		optionLabels,
+		FOOD_CATEGORY_OPTIONS,
+		GROWING_PRACTICE_OPTIONS,
+		FOOD_SAFETY_OPTIONS,
+		EXPERIENCE_OPTIONS,
+		CHARACTERISTIC_OPTIONS,
+		SCHOOL_SALES_OPTIONS
+	} from '$lib/farmMapping';
 
 	let { data }: { data: PageData } = $props();
 
@@ -53,39 +62,18 @@
 	}
 
 	// --- Form state ---------------------------------------------------------
-	// Clean, backend-mapped fields, seeded from the server loader (farmToFormModel).
-	// Same FarmFormModel shape the ?/save action reads back out of the form fields.
+	// Backend-mapped fields, seeded from the loader (farmToFormModel). The
+	// checkbox groups live in here too (not separate local state) so that
+	// formModelToUpdateInput actually sends them on save.
 	const farm = $state({ ...data.form });
 
-	// Options shared by every multi-select checkbox group.
-	const CHOICE_OPTIONS = [
-		'Organic Practices',
-		'Conventional',
-		'Regenerative',
-		'Hydroponic',
-		'Aquaponic',
-		'Biodynamic',
-		'None of the above'
-	];
-
-	// TODO(backend-mapping): the checkbox groups, BIPOC radios and "seasonal"
-	// field below have no clean backend mapping yet — they are local, unpersisted
-	// UI state and are intentionally NOT sent by the ?/save action.
-	const choiceGroups = $state<Record<string, string[]>>({
-		growingPractices: [],
-		foodSafety: [],
-		experiences: [],
-		characteristics: [],
-		schoolSales: []
-	});
-
-	// Yes/No radio groups. TODO(backend-mapping): unpersisted.
-	const radioGroups = $state<Record<string, string>>({
-		bipoc1: '',
-		bipoc2: '',
-		bipoc3: '',
-		bipoc4: ''
-	});
+	// Checkbox option labels. The boolean groups come from farmMapping, which owns
+	// the label -> backend column mapping (single source of truth for both the UI
+	// and the read/write mapping).
+	const FOOD_SAFETY_LABELS = optionLabels(FOOD_SAFETY_OPTIONS);
+	const EXPERIENCE_LABELS = optionLabels(EXPERIENCE_OPTIONS);
+	const CHARACTERISTIC_LABELS = optionLabels(CHARACTERISTIC_OPTIONS);
+	const SCHOOL_SALES_LABELS = optionLabels(SCHOOL_SALES_OPTIONS);
 
 	// Public gallery photos come from the file service (filesByFarm via the loader).
 	const galleryPhotos = $derived(data.images.map((img) => ({ id: img.fileId, url: img.url })));
@@ -249,6 +237,7 @@
 		<PhotoGallery
 			photos={galleryPhotos}
 			onAdd={() => galleryInput?.click()}
+			onFiles={uploadFiles}
 			onRemove={removePhoto}
 		/>
 	</section>
@@ -260,6 +249,7 @@
 
 		<TextField label="Farm Name" bind:value={farm.name} />
 		<TextField label="Farm address" bind:value={farm.address} />
+		<TextField label="Home County" bind:value={farm.homeCounty} />
 		<!-- Kept as two fields: they map 1:1 onto the backend's counties_served[]
 		     and cities_served[], which are filtered on independently. -->
 		<TextField label="Counties Served" bind:value={farm.counties} />
@@ -284,22 +274,25 @@
 	<section class="section">
 		<h2 class="section__heading">Farm Profile</h2>
 
-		<ChoiceGroup label="Growing Practices" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.growingPractices} />
+		<TextField label="Farm Description" bind:value={farm.description} multiline />
 
-		<!-- TODO(backend-mapping): no backend column for this yet, so it is not
-		     persisted. Flagged in the UI so a blank-on-reload isn't read as a bug. -->
+		<!-- TODO(backend-mapping): no `growing_practices` column exists, so this
+		     group is local-only and will come back blank on reload. -->
+		<ChoiceGroup label="Growing Practices" options={GROWING_PRACTICE_OPTIONS} type="checkbox" bind:value={farm.growingPractices} />
+
+		<!-- food_categories[] — stores the selected labels verbatim. -->
+		<ChoiceGroup label="Food Categories" options={FOOD_CATEGORY_OPTIONS} type="checkbox" bind:value={farm.foodCategories} />
+
+		<!-- TODO(backend-mapping): no `seasonal_products` column exists, so this is
+		     NOT persisted — it will come back blank on reload. -->
 		<TextField label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
-		<p class="field-note field-note--warn">Not saved yet — this field has no backend field, so it won't persist.</p>
 
-		<ChoiceGroup label="Food Safety & Certifications" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.foodSafety} />
-		<ChoiceGroup label="Farm Experiences & Services" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.experiences} />
-		<ChoiceGroup label="Farm Characteristics" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.characteristics} />
-		<ChoiceGroup label="Farm to School Sales" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.schoolSales} />
-
-		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc1" bind:value={radioGroups.bipoc1} />
-		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc2" bind:value={radioGroups.bipoc2} />
-		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc3" bind:value={radioGroups.bipoc3} />
-		<ChoiceGroup label="Does your farm identify as BIPOC-owned?" options={['Yes', 'No']} type="radio" name="bipoc4" bind:value={radioGroups.bipoc4} />
+		<!-- Each checkbox below maps to exactly one backend boolean column; the
+		     label -> column mapping lives in farmMapping's *_OPTIONS tables. -->
+		<ChoiceGroup label="Food Safety & Certifications" options={FOOD_SAFETY_LABELS} type="checkbox" bind:value={farm.foodSafety} />
+		<ChoiceGroup label="Farm Experiences & Services" options={EXPERIENCE_LABELS} type="checkbox" bind:value={farm.experiences} />
+		<ChoiceGroup label="Farm Characteristics" options={CHARACTERISTIC_LABELS} type="checkbox" bind:value={farm.characteristics} />
+		<ChoiceGroup label="Farm to School Sales" options={SCHOOL_SALES_LABELS} type="checkbox" bind:value={farm.schoolSales} />
 	</section>
 
 	<div class="footer-actions">
@@ -359,7 +352,6 @@
 		gap: 6px;
 		padding: 18px 22px;
 		border: 1px solid #f2c4bf;
-		border-left: 6px solid #d9544c;
 		border-radius: 10px;
 		background: #fce4e1;
 		color: #7a2318;
@@ -394,10 +386,6 @@
 		color: #858790;
 		font-size: 14px;
 		font-weight: 400;
-	}
-
-	.field-note--warn {
-		color: #8a6d1f;
 	}
 
 	.section {
