@@ -13,22 +13,15 @@
 		title?: string;
 		/** Primary subtitle line (address). */
 		subtitle?: string;
-		/** Secondary subtitle line (owner). */
+		/** Secondary subtitle line (owner / county). */
 		subtitle2?: string;
 		/** Farm status; drives the badge label + colors. Badge hidden when omitted. */
 		status?: FarmStatus;
-		/** Edit button: provide an href to route, or onEdit to handle a click. */
-		editHref?: string;
-		onEdit?: () => void;
-		/** Archive button: href to route, or onArchive to trigger a mutation. */
-		archiveHref?: string;
-		onArchive?: () => void;
-		/** View button: href to route, or onView to handle a click. */
-		viewHref?: string;
-		onView?: () => void;
+		/** When set, the whole card becomes a link to this href (e.g. the edit page). */
+		href?: string;
 		/** Extra classes passed through to the card shell. */
 		class?: string;
-		/** Additional content rendered below the actions in the body. */
+		/** Additional content rendered in the body. */
 		children?: Snippet;
 		[key: string]: unknown;
 	}
@@ -41,12 +34,7 @@
 		subtitle = '',
 		subtitle2 = '',
 		status,
-		editHref,
-		onEdit,
-		archiveHref,
-		onArchive,
-		viewHref,
-		onView,
+		href,
 		class: className = '',
 		children,
 		...rest
@@ -55,39 +43,15 @@
 	const statusStyle = $derived(status ? FARM_STATUS_STYLES[status] : undefined);
 </script>
 
-<!-- Icons (Untitled UI: edit-05 / archive / eye) -->
-{#snippet editIcon()}
-	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-		<path d="M11 4H6.8c-1.68 0-2.52 0-3.16.33a3 3 0 0 0-1.31 1.3C2 6.29 2 7.13 2 8.8v8.4c0 1.68 0 2.52.33 3.16a3 3 0 0 0 1.31 1.31C4.28 22 5.12 22 6.8 22h8.4c1.68 0 2.52 0 3.16-.33a3 3 0 0 0 1.3-1.31c.34-.64.34-1.48.34-3.16V13" />
-		<path d="M16.04 3.02a2.08 2.08 0 1 1 2.94 2.94L12.16 12.8c-.4.4-.6.6-.83.74-.2.13-.42.23-.65.3-.25.08-.52.1-1.07.16l-2.2.24.24-2.2c.06-.55.08-.82.16-1.07.07-.23.17-.45.3-.65.14-.23.34-.43.74-.83l6.85-6.82Z" />
-	</svg>
-{/snippet}
-{#snippet archiveIcon()}
-	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-		<path d="M21 8v8.2c0 1.68 0 2.52-.33 3.16a3 3 0 0 1-1.31 1.31c-.64.33-1.48.33-3.16.33H7.8c-1.68 0-2.52 0-3.16-.33a3 3 0 0 1-1.31-1.31C3 18.72 3 17.88 3 16.2V8" />
-		<path d="M2 5.2c0-.84 0-1.26.16-1.58a1.5 1.5 0 0 1 .66-.66C3.14 2.8 3.56 2.8 4.4 2.8h15.2c.84 0 1.26 0 1.58.16a1.5 1.5 0 0 1 .66.66c.16.32.16.74.16 1.58s0 1.26-.16 1.58a1.5 1.5 0 0 1-.66.66C20.86 8 20.44 8 19.6 8H4.4c-.84 0-1.26 0-1.58-.16a1.5 1.5 0 0 1-.66-.66C2 6.86 2 6.44 2 5.6v-.4Z" />
-		<path d="M10 12h4" />
-	</svg>
-{/snippet}
-{#snippet viewIcon()}
-	<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-		<path d="M2.42 12.71c-.14-.22-.2-.33-.24-.5a1.2 1.2 0 0 1 0-.42c.04-.17.1-.28.24-.5C3.55 8.97 6.91 4.5 12 4.5s8.45 4.47 9.58 6.29c.14.22.2.33.24.5.03.13.03.29 0 .42-.04.17-.1.28-.24.5C20.45 15.03 17.09 19.5 12 19.5s-8.45-4.47-9.58-6.29Z" />
-		<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-	</svg>
-{/snippet}
-
-<!-- Renders an action as a link (href) or a button (onclick); disabled when neither is given -->
-{#snippet action(label: string, icon: Snippet, href?: string, onclick?: () => void)}
-	{#if href}
-		<a class="farm-card__btn" {href} aria-label={label}>{@render icon()}</a>
-	{:else}
-		<button class="farm-card__btn" type="button" aria-label={label} {onclick} disabled={!onclick}>
-			{@render icon()}
-		</button>
-	{/if}
-{/snippet}
-
-<div class="farm-card {className}" data-farm-id={id} {...rest}>
+<!-- The action buttons were removed from the design; when `href` is provided the
+     whole card is the click target (link), otherwise it renders as a plain div. -->
+<svelte:element
+	this={href ? 'a' : 'div'}
+	class="farm-card {className}"
+	data-farm-id={id}
+	href={href || undefined}
+	{...rest}
+>
 	{#if statusStyle}
 		<div
 			class="farm-card__status"
@@ -108,18 +72,9 @@
 			{#if subtitle}<span class="farm-card__subtitle">{subtitle}</span>{/if}
 			{#if subtitle2}<span class="farm-card__subtitle farm-card__subtitle--muted">{subtitle2}</span>{/if}
 		</div>
-		<div class="farm-card__actions">
-			<div class="farm-card__actions-group">
-				{@render action('Edit', editIcon, editHref, onEdit)}
-				{@render action('Archive', archiveIcon, archiveHref, onArchive)}
-			</div>
-			<div class="farm-card__actions-group">
-				{@render action('View', viewIcon, viewHref, onView)}
-			</div>
-		</div>
 		{@render children?.()}
 	</div>
-</div>
+</svelte:element>
 
 <style>
 	.farm-card {
@@ -132,6 +87,21 @@
 		display: flex;
 		flex-direction: column;
 		background: #fff;
+		/* link reset so the card's own text colors win when rendered as an <a> */
+		color: inherit;
+		text-decoration: none;
+	}
+
+	/* Hover affordance only when the card is an actual link. */
+	a.farm-card {
+		transition:
+			border-color 0.15s ease,
+			box-shadow 0.15s ease;
+	}
+
+	a.farm-card:hover {
+		border-color: #b9b9b9;
+		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
 	}
 
 	.farm-card__status {
@@ -165,7 +135,9 @@
 
 	.farm-card__body {
 		flex-shrink: 0; /* keep natural content height so paddings stay exact */
-		padding: 8px 16px 20px;
+		/* was 8px 16px 20px with an actions row below; without it, a touch more
+		   bottom padding balances the card so the text isn't crammed at the edge */
+		padding: 14px 16px 18px;
 		display: flex;
 		flex-direction: column;
 	}
@@ -208,46 +180,5 @@
 
 	.farm-card__subtitle--muted {
 		color: #858790;
-	}
-
-	.farm-card__actions {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		margin-top: 15px;
-	}
-
-	.farm-card__actions-group {
-		display: flex;
-		align-items: center;
-		gap: 17px;
-	}
-
-	.farm-card__btn {
-		display: flex;
-		width: 33px;
-		height: 33px;
-		padding: 8.444px 12.667px;
-		justify-content: center;
-		align-items: center;
-		gap: 2.815px;
-		border-radius: 5.63px;
-		background: #587244;
-		border: none;
-		box-sizing: border-box;
-		color: #ffffff;
-		text-decoration: none;
-		cursor: pointer;
-	}
-
-	.farm-card__btn:disabled {
-		opacity: 0.45;
-		cursor: default;
-	}
-
-	.farm-card__btn svg {
-		width: 18px;
-		height: 18px;
-		flex: none;
 	}
 </style>

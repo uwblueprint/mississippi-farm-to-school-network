@@ -4,9 +4,14 @@
 //
 // SCOPE: only the CLEAN, unambiguous fields are mapped here. Several controls on
 // the edit page (the 5 CHOICE_OPTIONS checkbox groups, the BIPOC radios, the
-// seasonal textarea, the combined "Counties and/or Cities Served" field,
-// home_county, location, description) have no confirmed backend mapping and are
-// intentionally left UNWIRED — see the TODO(backend-mapping) notes below.
+// seasonal textarea, home_county, location, description) have no confirmed
+// backend mapping and are intentionally left UNWIRED — see the
+// TODO(backend-mapping) notes below.
+//
+// Counties/Cities: the form now has two separate fields that map 1:1 onto the
+// backend's counties_served[] / cities_served[] arrays (comma-separated in the
+// UI, split/joined here). They are kept distinct because both arrays are used
+// for farm filtering (see farmService.getFarms).
 
 import type { FarmStatus } from './farmStatus';
 
@@ -26,6 +31,8 @@ export interface FarmDTO {
 	primary_email: string;
 	website: string | null;
 	social_media: SocialMedia | null;
+	counties_served: string[];
+	cities_served: string[];
 	status: FarmStatus;
 }
 
@@ -49,6 +56,8 @@ export interface UpdateFarmInput {
 	primary_email: string;
 	website: string;
 	social_media: SocialMedia;
+	counties_served: string[];
+	cities_served: string[];
 }
 
 /**
@@ -60,7 +69,10 @@ export interface FarmFormModel {
 	readableId: string;
 	name: string;
 	address: string;
+	/** Comma-separated; maps to counties_served[]. */
 	counties: string;
+	/** Comma-separated; maps to cities_served[]. */
+	cities: string;
 	phone: string;
 	email: string;
 	instagram: string;
@@ -69,6 +81,22 @@ export interface FarmFormModel {
 	other: string;
 	seasonal: string;
 	dashboardImageName: string;
+}
+
+/** backend string[] -> comma-separated form field. Pure. */
+function joinList(values: string[] | null | undefined): string {
+	return (values ?? []).join(', ');
+}
+
+/**
+ * Comma-separated form field -> backend string[]. Trims entries and drops empty
+ * ones, so "A, , B," yields ["A","B"] and "" yields []. Pure.
+ */
+function splitList(value: string): string[] {
+	return value
+		.split(',')
+		.map((entry) => entry.trim())
+		.filter((entry) => entry.length > 0);
 }
 
 /** Map a backend FarmDTO onto the edit page's form model. Pure. */
@@ -89,12 +117,14 @@ export function farmToFormModel(farm: FarmDTO): FarmFormModel {
 		// website has a dedicated clean field; fall back to the blob if present.
 		website: farm.website ?? social.website ?? '',
 
-		// TODO(backend-mapping): no confirmed clean source. The backend exposes
-		// counties_served / cities_served (arrays) separately, not a single
-		// combined string; leave blank until a split/join convention is agreed.
-		counties: '',
-		// TODO(backend-mapping): no confirmed clean source for the seasonal
-		// products free-text field; leave blank (not persisted).
+		// counties_served[] / cities_served[] -> comma-separated text fields.
+		counties: joinList(farm.counties_served),
+		cities: joinList(farm.cities_served),
+
+		// TODO(backend-mapping): the seasonal products free-text field has no
+		// backend column yet (`description` is a distinct, already-populated
+		// field, so it is NOT a valid home for this). Left blank / not persisted
+		// until a `seasonal_products` column exists.
 		seasonal: '',
 		// TODO(backend-mapping): dashboard image name comes from the file service
 		// (StoredFile.original_file_name), not from FarmDTO; wired separately.
@@ -105,12 +135,12 @@ export function farmToFormModel(farm: FarmDTO): FarmFormModel {
 /**
  * Build the CLEAN UpdateFarmInput from the form model. Pure.
  *
- * Only the six unambiguous fields are sent. The following are intentionally
- * NOT included and must be added later once a confirmed mapping exists:
+ * The following are intentionally NOT included and must be added later once a
+ * confirmed mapping exists:
  *
  * TODO(backend-mapping):
- *   - counties/cities: the combined `counties` string must be split into the
- *     backend's counties_served[] and cities_served[] arrays.
+ *   - seasonal: no backend column yet (see farmToFormModel note). The edit page
+ *     surfaces this to the user as "not saved yet".
  *   - home_county, location (lat/lng), description: no UI source here.
  *   - food_categories and the boolean/checkbox groups (growing practices, food
  *     safety, experiences, characteristics, school sales) and the BIPOC radios
@@ -133,6 +163,9 @@ export function formModelToUpdateInput(m: FarmFormModel): UpdateFarmInput {
 		primary_phone: m.phone,
 		primary_email: m.email,
 		website: m.website,
-		social_media
+		social_media,
+		// Kept as two distinct arrays — both are used for farm filtering.
+		counties_served: splitList(m.counties),
+		cities_served: splitList(m.cities)
 	};
 }
