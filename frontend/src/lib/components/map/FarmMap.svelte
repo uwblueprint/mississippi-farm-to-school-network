@@ -18,12 +18,7 @@
 		onMapReady?: (map: MapboxMap) => void;
 	}
 
-	let {
-		farms,
-		selectedFarmId = $bindable(null),
-		onSelectFarm,
-		onMapReady
-	}: Props = $props();
+	let { farms, selectedFarmId = $bindable(null), onSelectFarm, onMapReady }: Props = $props();
 
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map = $state<MapboxMap | null>(null);
@@ -247,9 +242,7 @@
 
 {#if missingToken}
 	<div class="farm-map-error">
-		<p>
-			Map unavailable.
-		</p>
+		<p>Map unavailable.</p>
 	</div>
 {:else}
 	<div class="farm-map-canvas" bind:this={mapContainer}></div>

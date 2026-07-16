@@ -18,7 +18,9 @@ function imagesForFarm(id: string): string[] {
 	return [primary, secondary, tertiary];
 }
 
-function markerTypeForFarm(farm: Pick<MapFarm, 'csa_boxes' | 'delivery' | 'sells_at_markets' | 'gap_certified'>): FarmMarkerType {
+function markerTypeForFarm(
+	farm: Pick<MapFarm, 'csa_boxes' | 'delivery' | 'sells_at_markets' | 'gap_certified'>
+): FarmMarkerType {
 	if (farm.csa_boxes) return 'csa';
 	if (farm.delivery) return 'pickup';
 	if (farm.sells_at_markets) return 'market';
@@ -27,7 +29,8 @@ function markerTypeForFarm(farm: Pick<MapFarm, 'csa_boxes' | 'delivery' | 'sells
 }
 
 function baseFarm(
-	overrides: Partial<MapFarm> & Pick<MapFarm, 'id' | 'farm_name' | 'farm_address' | 'home_county' | 'location' | 'description'>
+	overrides: Partial<MapFarm> &
+		Pick<MapFarm, 'id' | 'farm_name' | 'farm_address' | 'home_county' | 'location' | 'description'>
 ): MapFarm {
 	const imageUrls = overrides.imageUrls ?? imagesForFarm(overrides.id);
 	const foodCategoryItems: FarmFoodCategoryItems = overrides.food_category_items ?? {
@@ -90,7 +93,8 @@ export const MOCK_FARMS: MapFarm[] = [
 	baseFarm({
 		id: 'farm-002',
 		farm_name: 'Sunshine Farm',
-		description: 'Certified organic vegetables and cut flowers with weekly CSA boxes for families and schools.',
+		description:
+			'Certified organic vegetables and cut flowers with weekly CSA boxes for families and schools.',
 		farm_address: '88 Delta Rd, Greenwood, MS 38930',
 		home_county: 'Leflore County',
 		location: { lat: 33.5162, lng: -90.1795 },
@@ -131,7 +135,8 @@ export const MOCK_FARMS: MapFarm[] = [
 	baseFarm({
 		id: 'farm-005',
 		farm_name: 'Tupelo Berry Patch',
-		description: 'Blueberries, blackberries, and value-added jams sold at regional farmers markets.',
+		description:
+			'Blueberries, blackberries, and value-added jams sold at regional farmers markets.',
 		farm_address: '742 County Rd 101, Tupelo, MS 38801',
 		home_county: 'Lee County',
 		location: { lat: 34.2576, lng: -88.7034 },
@@ -158,7 +163,8 @@ export const MOCK_FARMS: MapFarm[] = [
 	baseFarm({
 		id: 'farm-007',
 		farm_name: 'Delta Harvest Co-op',
-		description: 'Cooperative of small growers offering washed and bagged greens for cafeteria programs.',
+		description:
+			'Cooperative of small growers offering washed and bagged greens for cafeteria programs.',
 		farm_address: '120 Main St, Greenville, MS 38701',
 		home_county: 'Washington County',
 		location: { lat: 33.4101, lng: -91.0617 },
@@ -185,7 +191,8 @@ export const MOCK_FARMS: MapFarm[] = [
 	baseFarm({
 		id: 'farm-009',
 		farm_name: 'Natchez Trace Farm',
-		description: 'Heirloom tomatoes, peppers, and eggs with Saturday market sales in downtown Natchez.',
+		description:
+			'Heirloom tomatoes, peppers, and eggs with Saturday market sales in downtown Natchez.',
 		farm_address: '17 Trace Pkwy, Natchez, MS 39120',
 		home_county: 'Adams County',
 		location: { lat: 31.5604, lng: -91.4032 },
@@ -199,7 +206,8 @@ export const MOCK_FARMS: MapFarm[] = [
 	baseFarm({
 		id: 'farm-010',
 		farm_name: 'Starkville Student Farm',
-		description: 'University-affiliated teaching farm providing salad greens and herbs to campus and nearby schools.',
+		description:
+			'University-affiliated teaching farm providing salad greens and herbs to campus and nearby schools.',
 		farm_address: '400 Blackjack Rd, Starkville, MS 39759',
 		home_county: 'Oktibbeha County',
 		location: { lat: 33.4504, lng: -88.8184 },

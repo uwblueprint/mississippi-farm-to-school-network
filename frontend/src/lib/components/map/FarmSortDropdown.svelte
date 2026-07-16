@@ -11,7 +11,9 @@
 	let root = $state<HTMLDivElement | null>(null);
 
 	const selectedLabel = $derived(
-		sortBy ? (SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort by') : 'Sort by'
+		sortBy
+			? (SORT_OPTIONS.find((option) => option.value === sortBy)?.label ?? 'Sort by')
+			: 'Sort by'
 	);
 
 	function toggle(event: MouseEvent) {

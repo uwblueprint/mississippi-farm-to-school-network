@@ -22,7 +22,10 @@
 	const hasNext = $derived(farmIndex < farmCount - 1);
 	const hasMultipleImages = $derived(farm.imageUrls.length > 1);
 	const websiteLabel = $derived(
-		farm.website?.replace(/^https?:\/\//, '').replace(/\/$/, '').split('/')[0] ?? null
+		farm.website
+			?.replace(/^https?:\/\//, '')
+			.replace(/\/$/, '')
+			.split('/')[0] ?? null
 	);
 
 	function showPreviousImage() {
@@ -36,7 +39,7 @@
 	}
 
 	$effect(() => {
-		farm.id;
+		const _trackedFarmId = farm.id;
 		activeImageIndex = 0;
 		contactOpen = false;
 	});
@@ -54,7 +57,7 @@
 				<img
 					class="farm-detail-panel__hero"
 					src={farm.imageUrls[activeImageIndex] ?? farm.thumbnailUrl}
-					alt="{farm.farm_name}"
+					alt={farm.farm_name}
 				/>
 				{#if hasMultipleImages}
 					<button
@@ -122,7 +125,14 @@
 		</div>
 
 		<div class="farm-detail-panel__address">
-			<img class="farm-detail-panel__pin" width="24" height="24" src="/images/map/socialIcons/pinIcon.svg" alt="" aria-hidden="true" />
+			<img
+				class="farm-detail-panel__pin"
+				width="24"
+				height="24"
+				src="/images/map/socialIcons/pinIcon.svg"
+				alt=""
+				aria-hidden="true"
+			/>
 			<span class="farm-detail-panel__street">{farm.farm_address}</span>
 			<span class="farm-detail-panel__county-sep" aria-hidden="true">•</span>
 			<span class="farm-detail-panel__county">{farm.home_county}</span>
@@ -149,16 +159,37 @@
 			{#if contactOpen}
 				<div class="farm-detail-panel__contact-body">
 					<div class="farm-detail-panel__contact-item">
-						<img class="farm-detail-panel__contact-icon" width="24" height="24" src="/images/map/socialIcons/emailIcon.svg" alt="" aria-hidden="true" />
+						<img
+							class="farm-detail-panel__contact-icon"
+							width="24"
+							height="24"
+							src="/images/map/socialIcons/emailIcon.svg"
+							alt=""
+							aria-hidden="true"
+						/>
 						<a href="mailto:{farm.primary_email}">{farm.primary_email}</a>
 					</div>
 					<div class="farm-detail-panel__contact-item">
-						<img class="farm-detail-panel__contact-icon" width="24" height="24" src="/images/map/socialIcons/phoneIcon.svg" alt="" aria-hidden="true" />
+						<img
+							class="farm-detail-panel__contact-icon"
+							width="24"
+							height="24"
+							src="/images/map/socialIcons/phoneIcon.svg"
+							alt=""
+							aria-hidden="true"
+						/>
 						<a href="tel:{farm.primary_phone}">{farm.primary_phone}</a>
 					</div>
 					{#if farm.website && websiteLabel}
 						<div class="farm-detail-panel__contact-item">
-							<img class="farm-detail-panel__contact-icon farm-detail-panel__contact-icon--website" width="28" height="28" src="/images/map/socialIcons/websiteIcon.svg" alt="" aria-hidden="true" />
+							<img
+								class="farm-detail-panel__contact-icon farm-detail-panel__contact-icon--website"
+								width="28"
+								height="28"
+								src="/images/map/socialIcons/websiteIcon.svg"
+								alt=""
+								aria-hidden="true"
+							/>
 							<a href={farm.website} target="_blank" rel="noopener noreferrer">{websiteLabel}</a>
 						</div>
 					{/if}
@@ -171,7 +202,12 @@
 			<ul class="farm-detail-panel__products-list">
 				{#each products as product (product.section)}
 					<li class="farm-detail-panel__product-row">
-						<img class="farm-detail-panel__product-icon" src={product.icon} alt="" aria-hidden="true" />
+						<img
+							class="farm-detail-panel__product-icon"
+							src={product.icon}
+							alt=""
+							aria-hidden="true"
+						/>
 						<span>{product.items.join(', ')}</span>
 					</li>
 				{/each}
@@ -180,12 +216,22 @@
 	</div>
 
 	<footer class="farm-detail-panel__footer">
-		<button type="button" class="farm-detail-panel__nav" disabled={!hasPrevious} onclick={() => onPrevious?.()}>
+		<button
+			type="button"
+			class="farm-detail-panel__nav"
+			disabled={!hasPrevious}
+			onclick={() => onPrevious?.()}
+		>
 			<span class="farm-detail-panel__chevron" aria-hidden="true">‹</span>
 			Previous
 		</button>
 		<span class="farm-detail-panel__position">{farmIndex + 1} of {farmCount}</span>
-		<button type="button" class="farm-detail-panel__nav" disabled={!hasNext} onclick={() => onNext?.()}>
+		<button
+			type="button"
+			class="farm-detail-panel__nav"
+			disabled={!hasNext}
+			onclick={() => onNext?.()}
+		>
 			Next
 			<span class="farm-detail-panel__chevron" aria-hidden="true">›</span>
 		</button>

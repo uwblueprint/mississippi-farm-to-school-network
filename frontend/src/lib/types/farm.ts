@@ -2,7 +2,8 @@ export type FarmStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 
 export type FarmMarkerType = 'farm' | 'market' | 'processing' | 'csa' | 'pickup';
 
-export type FoodCategorySection = 'Fruits and Vegetables' | 'Dairy and Eggs' | 'Herbs' | 'Meat' | 'Other';
+export type FoodCategorySection =
+	'Fruits and Vegetables' | 'Dairy and Eggs' | 'Herbs' | 'Meat' | 'Other';
 
 export type FarmFoodCategoryItems = Partial<Record<FoodCategorySection, string[]>>;
 

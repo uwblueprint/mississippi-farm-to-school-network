@@ -20,14 +20,26 @@ export default [
 			globals: {
 				...globals.browser,
 				File: 'readonly',
-				console: 'readonly'
+				console: 'readonly',
+				$state: 'readonly',
+				$derived: 'readonly',
+				$effect: 'readonly',
+				$props: 'readonly',
+				$bindable: 'readonly',
+				$inspect: 'readonly',
+				$host: 'readonly'
 			}
 		},
 		plugins: {
 			'@typescript-eslint': tseslint
 		},
 		rules: {
-			...tseslint.configs.recommended.rules
+			...tseslint.configs.recommended.rules,
+			'no-undef': 'off',
+			'@typescript-eslint/no-unused-vars': [
+				'error',
+				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' }
+			]
 		}
 	},
 	{
@@ -43,6 +55,12 @@ export default [
 		},
 		rules: {
 			...sveltePlugin.configs.recommended.rules
+		}
+	},
+	{
+		files: ['**/*.d.ts'],
+		rules: {
+			'@typescript-eslint/no-unused-vars': 'off'
 		}
 	},
 	prettier,

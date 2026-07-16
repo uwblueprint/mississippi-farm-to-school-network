@@ -34,4 +34,10 @@ export const MARKER_META: Record<FarmMarkerType, MarkerMeta> = {
 	}
 };
 
-export const MARKER_TYPE_ORDER: FarmMarkerType[] = ['farm', 'market', 'processing', 'csa', 'pickup'];
+export const MARKER_TYPE_ORDER: FarmMarkerType[] = [
+	'farm',
+	'market',
+	'processing',
+	'csa',
+	'pickup'
+];
