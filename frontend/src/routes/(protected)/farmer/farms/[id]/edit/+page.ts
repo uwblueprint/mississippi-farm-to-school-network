@@ -24,6 +24,8 @@ const FARM_BY_ID = `
 			primary_email
 			website
 			social_media
+			counties_served
+			cities_served
 			status
 		}
 	}

@@ -45,10 +45,6 @@
 		}
 	});
 
-	// Placeholder until a backend archive mutation exists.
-	function archive(id: string) {
-		console.log('archive farm', id);
-	}
 </script>
 
 <svelte:head>
@@ -85,9 +81,7 @@
 					subtitle={farm.farm_address}
 					subtitle2={farm.home_county}
 					status={farm.status}
-					viewHref={`/farmer/farms/${farm.id}`}
-					editHref={`/farmer/farms/${farm.id}/edit`}
-					onArchive={() => archive(farm.id)}
+					href={`/farmer/farms/${farm.id}/edit`}
 				/>
 			{/each}
 		</div>

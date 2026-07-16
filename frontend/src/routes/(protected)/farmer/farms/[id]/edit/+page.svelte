@@ -260,7 +260,12 @@
 
 		<TextField label="Farm Name" bind:value={farm.name} />
 		<TextField label="Farm address" bind:value={farm.address} />
-		<TextField label="Counties and/or Cities Served" bind:value={farm.counties} />
+		<!-- Kept as two fields: they map 1:1 onto the backend's counties_served[]
+		     and cities_served[], which are filtered on independently. -->
+		<TextField label="Counties Served" bind:value={farm.counties} />
+		<p class="field-note">Separate multiple counties with commas.</p>
+		<TextField label="Cities Served" bind:value={farm.cities} />
+		<p class="field-note">Separate multiple cities with commas.</p>
 	</section>
 
 	<section class="section">
@@ -281,7 +286,10 @@
 
 		<ChoiceGroup label="Growing Practices" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.growingPractices} />
 
+		<!-- TODO(backend-mapping): no backend column for this yet, so it is not
+		     persisted. Flagged in the UI so a blank-on-reload isn't read as a bug. -->
 		<TextField label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
+		<p class="field-note field-note--warn">Not saved yet — this field has no backend field, so it won't persist.</p>
 
 		<ChoiceGroup label="Food Safety & Certifications" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.foodSafety} />
 		<ChoiceGroup label="Farm Experiences & Services" options={CHOICE_OPTIONS} type="checkbox" bind:value={choiceGroups.experiences} />
@@ -377,6 +385,19 @@
 		color: #c4341f;
 		font-size: 17px;
 		font-weight: 400;
+	}
+
+	/* Helper text under a field. Sits inside .section's 38px flex gap, so pull it
+	   back up to read as part of the field above rather than a separate row. */
+	.field-note {
+		margin: -28px 0 0;
+		color: #858790;
+		font-size: 14px;
+		font-weight: 400;
+	}
+
+	.field-note--warn {
+		color: #8a6d1f;
 	}
 
 	.section {
