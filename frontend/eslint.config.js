@@ -18,7 +18,9 @@ export default [
 				extraFileExtensions: ['.svelte']
 			},
 			globals: {
-				...globals.browser
+				...globals.browser,
+				File: 'readonly',
+				console: 'readonly'
 			}
 		},
 		plugins: {
