@@ -23,6 +23,7 @@
 		"@sveltejs/vite-plugin-svelte": "^6.2.4",
 		"@tailwindcss/forms": "^0.5.11",
 		"@tailwindcss/vite": "^4.1.18",
+		"@types/geojson": "^7946.0.16",
 		"@typescript-eslint/eslint-plugin": "^8.54.0",
 		"@typescript-eslint/parser": "^8.54.0",
 		"eslint": "^9.39.2",
@@ -39,6 +40,8 @@
 		"vite": "^7.3.2"
 	},
 	"dependencies": {
-		"firebase": "^12.14.0"
+		"@mapbox/mapbox-gl-geocoder": "^5.1.2",
+		"firebase": "^12.14.0",
+		"mapbox-gl": "^3.25.0"
 	}
 }
