@@ -241,3 +241,18 @@ export type StoredFileDTO = {
   farm_id: string;
   content_type: string | null;
 };
+
+export type ImageDimensionsDTO = {
+  width: number;
+  height: number;
+};
+
+export type ImageDTO = {
+  id: string;
+  farm_id: string;
+  storage_key: string;
+  content_type: string;
+  size: number;
+  dimensions: ImageDimensionsDTO;
+  index: number;
+};
