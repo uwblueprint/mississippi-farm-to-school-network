@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
@@ -49,8 +49,8 @@
 	let minimumOrder = $state('');
 	let deliveryDetails = $state('');
 
-	let coverPhoto = $state<File[]>([]);
-	let carouselPhotos = $state<File[]>([]);
+	let farmPhotos = $state<File[]>([]);
+	let coverIndex = $state(0);
 
 	let submitted = $state(false);
 	let showLeaveModal = $state(false);
@@ -266,8 +266,7 @@
 			f2sExperience !== '' ||
 			minimumOrder !== '' ||
 			deliveryDetails !== '' ||
-			coverPhoto.length > 0 ||
-			carouselPhotos.length > 0
+			farmPhotos.length > 0
 	);
 
 	function digitsOnly(value: string) {
@@ -353,12 +352,34 @@
 		touched.county = true;
 	}
 
-	function handleCoverChange(details: { acceptedFiles: File[] }) {
-		coverPhoto = details.acceptedFiles;
+	const photoUrls = new Map<File, string>();
+
+	function photoUrl(file: File) {
+		let url = photoUrls.get(file);
+		if (!url) {
+			url = URL.createObjectURL(file);
+			photoUrls.set(file, url);
+		}
+		return url;
 	}
 
-	function handleCarouselChange(details: { acceptedFiles: File[] }) {
-		carouselPhotos = details.acceptedFiles;
+	onDestroy(() => {
+		for (const url of photoUrls.values()) {
+			URL.revokeObjectURL(url);
+		}
+	});
+
+	function handlePhotosChange(details: { acceptedFiles: File[] }) {
+		for (const [file, url] of photoUrls) {
+			if (!details.acceptedFiles.includes(file)) {
+				URL.revokeObjectURL(url);
+				photoUrls.delete(file);
+			}
+		}
+		const previousCover = farmPhotos[coverIndex];
+		farmPhotos = details.acceptedFiles;
+		const nextIndex = previousCover ? farmPhotos.indexOf(previousCover) : -1;
+		coverIndex = nextIndex === -1 ? 0 : nextIndex;
 	}
 
 	function buildFarmPayload() {
@@ -408,8 +429,8 @@
 		const payload = buildFarmPayload();
 		console.log('createFarm payload', payload);
 		console.log('pending photos (upload not wired yet)', {
-			cover: coverPhoto[0]?.name ?? null,
-			carousel: carouselPhotos.map((file) => file.name)
+			cover: farmPhotos[coverIndex]?.name ?? null,
+			carousel: farmPhotos.filter((_, index) => index !== coverIndex).map((file) => file.name)
 		});
 
 		try {
@@ -441,12 +462,6 @@
 		} else {
 			history.back();
 		}
-	}
-
-	function formatSize(bytes: number) {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 	}
 </script>
 
@@ -490,19 +505,6 @@
 	</div>
 	{#if touched[field] && errors[field as keyof typeof errors]}
 		<span class="error-text">{errors[field as keyof typeof errors]}</span>
-	{/if}
-{/snippet}
-
-{#snippet fileList(files: File[])}
-	{#if files.length > 0}
-		<ul class="file-list">
-			{#each files as file (file.name + file.size)}
-				<li>
-					<span class="file-name">{file.name}</span>
-					<span class="file-size">{formatSize(file.size)}</span>
-				</li>
-			{/each}
-		</ul>
 	{/if}
 {/snippet}
 
@@ -771,7 +773,7 @@
 	<h2 class="section-title">Products offered</h2>
 
 	<div class="form-group">
-		<span class="field-label">Seasonal product and products offered</span>
+		<span class="field-label">Optional: Seasonal product and products offered</span>
 		{@render checkboxGroup(
 			'seasonalProducts',
 			SEASONAL_PRODUCTS,
@@ -784,7 +786,7 @@
 	{#if seasonalSelected}
 		<div class="form-group">
 			<label class="field-label" for="seasonal-detail"
-				>List each fruit, vegetable, herb, or dairy product offered</label
+				>Optional: List each fruit, vegetable, herb, or dairy product offered</label
 			>
 			<textarea
 				id="seasonal-detail"
@@ -797,7 +799,7 @@
 	{/if}
 
 	<div class="form-group">
-		<span class="field-label">Meat</span>
+		<span class="field-label">Optional: Meat</span>
 		{@render checkboxGroup(
 			'meatProducts',
 			MEAT_PRODUCTS,
@@ -809,7 +811,7 @@
 
 	{#if meatSelected}
 		<div class="form-group">
-			<label class="field-label" for="meat-detail">List each meat product offered</label>
+			<label class="field-label" for="meat-detail">Optional: List each meat product offered</label>
 			<textarea
 				id="meat-detail"
 				class="field"
@@ -821,7 +823,7 @@
 	{/if}
 
 	<div class="form-group">
-		<span class="field-label">Other</span>
+		<span class="field-label">Optional: Other</span>
 		{@render checkboxGroup(
 			'otherProducts',
 			OTHER_PRODUCTS,
@@ -833,7 +835,8 @@
 
 	{#if otherSelected}
 		<div class="form-group">
-			<label class="field-label" for="other-detail">List each other product offered</label>
+			<label class="field-label" for="other-detail">Optional: List each other product offered</label
+			>
 			<textarea
 				id="other-detail"
 				class="field"
@@ -858,7 +861,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Farm Experiences &amp; Services</span>
+		<span class="field-label">Optional: Farm Experiences &amp; Services</span>
 		{@render checkboxGroup(
 			'farmExperiences',
 			FARM_EXPERIENCES,
@@ -869,7 +872,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Farm Characteristics</span>
+		<span class="field-label">Optional: Farm Characteristics</span>
 		{@render checkboxGroup(
 			'farmCharacteristics',
 			FARM_CHARACTERISTICS,
@@ -880,7 +883,7 @@
 	</div>
 
 	<div class="form-group">
-		<span class="field-label">Farm to School Sales</span>
+		<span class="field-label">Optional: Farm to School Sales</span>
 		{@render checkboxGroup(
 			'farmToSchoolSales',
 			FARM_TO_SCHOOL_SALES,
@@ -950,56 +953,17 @@
 	<h2 class="section-title">Optional: Photos</h2>
 
 	<div class="form-group">
-		<p class="field-help">Upload cover photo of your farm on dashboard view.</p>
-
-		<FileUpload
-			accept="image/*"
-			maxFiles={1}
-			acceptedFiles={coverPhoto}
-			onFileChange={handleCoverChange}
-		>
-			<FileUpload.Label class="sr-only">Upload cover photo</FileUpload.Label>
-			<FileUpload.Dropzone
-				class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
-			>
-				<svg
-					width="28"
-					height="28"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="#131927"
-					stroke-width="1.6"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M12 16V4" />
-					<path d="M8 8l4-4 4 4" />
-					<path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-				</svg>
-				<FileUpload.Trigger
-					class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
-				>
-					Upload farm photo
-				</FileUpload.Trigger>
-				<span class="text-xs text-[#9aa0a6]">JPG or PNG</span>
-				<FileUpload.HiddenInput />
-			</FileUpload.Dropzone>
-		</FileUpload>
-
-		{@render fileList(coverPhoto)}
-	</div>
-
-	<div class="form-group">
 		<p class="field-help">
 			Optional: Upload photos of your farm, operations, and/or products here for people to see when
-			they look at your farm up to 10 pics!
+			they look at your farm up to 10 pics! Click a photo to make it your cover photo on the
+			dashboard view.
 		</p>
 
 		<FileUpload
 			accept="image/*"
 			maxFiles={10}
-			acceptedFiles={carouselPhotos}
-			onFileChange={handleCarouselChange}
+			acceptedFiles={farmPhotos}
+			onFileChange={handlePhotosChange}
 		>
 			<FileUpload.Label class="sr-only">Upload farm photos</FileUpload.Label>
 			<FileUpload.Dropzone
@@ -1027,9 +991,43 @@
 				<span class="text-xs text-[#9aa0a6]">JPG or PNG up to 10 pics</span>
 				<FileUpload.HiddenInput />
 			</FileUpload.Dropzone>
-		</FileUpload>
 
-		{@render fileList(carouselPhotos)}
+			{#if farmPhotos.length > 0}
+				<FileUpload.ItemGroup class="file-list">
+					{#each farmPhotos as file, index (file.name + file.size)}
+						<FileUpload.Item {file} class={index === coverIndex ? 'cover-photo' : undefined}>
+							<button
+								class="tile-btn"
+								type="button"
+								aria-pressed={index === coverIndex}
+								aria-label={`Set ${file.name} as cover photo`}
+								onclick={() => (coverIndex = index)}
+							>
+								<img class="file-thumb" src={photoUrl(file)} alt="" />
+							</button>
+							<span class="file-name">{file.name}</span>
+							{#if index === coverIndex}
+								<span class="cover-badge">Cover</span>
+							{/if}
+							<FileUpload.ItemDeleteTrigger class="tile-delete" aria-label={`Remove ${file.name}`}>
+								<svg
+									width="12"
+									height="12"
+									viewBox="0 0 12 12"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="1.8"
+									stroke-linecap="round"
+								>
+									<path d="M2 2l8 8" />
+									<path d="M10 2l-8 8" />
+								</svg>
+							</FileUpload.ItemDeleteTrigger>
+						</FileUpload.Item>
+					{/each}
+				</FileUpload.ItemGroup>
+			{/if}
+		</FileUpload>
 	</div>
 
 	<div class="submit-section">
@@ -1360,30 +1358,118 @@
 		outline-offset: 2px;
 	}
 
-	.file-list {
+	:global(.file-list) {
 		list-style: none;
 		margin: 10px 0 0;
 		padding: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 10px;
 	}
 
-	.file-list li {
+	:global(.file-list li) {
+		display: block;
+		position: relative;
+		aspect-ratio: 1;
+		padding: 0;
+		border: 1px solid #d8d8d8;
+		border-radius: 10px;
+		overflow: hidden;
+		background: #fff;
+		transition:
+			border-color 120ms ease,
+			box-shadow 120ms ease;
+	}
+
+	:global(.file-list li.cover-photo) {
+		border-color: var(--mfsn-primary);
+		box-shadow: 0 0 0 2px var(--mfsn-primary);
+	}
+
+	:global(.file-list li:not(.cover-photo):hover:not(:has(.tile-delete:hover))),
+	:global(.file-list li:not(.cover-photo):has(.tile-btn:focus-visible)) {
+		border-color: color-mix(in srgb, var(--mfsn-primary) 55%, transparent);
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--mfsn-primary) 55%, transparent);
+	}
+
+	.tile-btn {
+		display: block;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
+	}
+
+	.file-thumb {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+	}
+
+	.file-name {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		padding: 16px 8px 6px;
+		background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+		color: #fff;
+		font-size: 11px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		pointer-events: none;
+	}
+
+	.cover-badge {
+		position: absolute;
+		top: 6px;
+		left: 6px;
+		padding: 2px 10px;
+		border-radius: 999px;
+		background: var(--mfsn-primary);
+		color: #fff;
+		font-size: 11px;
+		font-weight: 600;
+	}
+
+	:global(.tile-delete) {
+		position: absolute;
+		top: 6px;
+		right: 6px;
 		display: flex;
 		align-items: center;
-		justify-content: space-between;
-		gap: 12px;
-		padding: 8px 12px;
-		border: 1px solid #d8d8d8;
-		border-radius: 6px;
-		background: #fff;
-		font-size: 14px;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: rgba(19, 25, 39, 0.55);
+		color: #fff;
+		cursor: pointer;
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			background 120ms ease,
+			transform 120ms ease,
+			opacity 120ms ease;
 	}
 
-	.file-size {
-		color: #666;
-		font-size: 12px;
+	:global(.file-list li:hover .tile-delete),
+	:global(.tile-delete:focus-visible) {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	:global(.tile-delete:hover),
+	:global(.tile-delete:focus-visible) {
+		background: #d23b3b;
+		transform: scale(1.1);
 	}
 
 	.submit-section {
