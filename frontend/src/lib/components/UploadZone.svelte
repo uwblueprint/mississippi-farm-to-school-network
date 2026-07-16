@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
+	import { IMAGE_ACCEPT, filesFromDrop, suppressWindowDrop } from '$lib/fileDrop';
 
 	interface Props {
 		title: string;
@@ -19,7 +20,7 @@
 		title,
 		hint,
 		onFiles,
-		accept = 'image/png,image/jpeg',
+		accept = IMAGE_ACCEPT,
 		multiple = true,
 		disabled = false
 	}: Props = $props();
@@ -42,29 +43,6 @@
 		if (el.files && el.files.length > 0) onFiles?.(el.files);
 		// reset so picking the same file again still fires a change event
 		el.value = '';
-	}
-
-	// The file picker enforces `accept`, but a drop does NOT — anything can be
-	// dropped, so filter here to keep non-images out of the uploader.
-	function isAccepted(file: File): boolean {
-		const patterns = accept
-			.split(',')
-			.map((p) => p.trim())
-			.filter(Boolean);
-		if (patterns.length === 0) return true;
-		return patterns.some((pattern) => {
-			if (pattern.startsWith('.')) return file.name.toLowerCase().endsWith(pattern.toLowerCase());
-			if (pattern.endsWith('/*')) return file.type.startsWith(pattern.slice(0, -1));
-			return file.type === pattern;
-		});
-	}
-
-	// onFiles takes a FileList (same contract as the <input> path), so rebuild one
-	// from the filtered files rather than passing dataTransfer.files straight in.
-	function toFileList(files: File[]): FileList {
-		const transfer = new DataTransfer();
-		for (const file of files) transfer.items.add(file);
-		return transfer.files;
 	}
 
 	function handleDragEnter(event: DragEvent) {
@@ -94,36 +72,12 @@
 		isDragging = false;
 		if (disabled || !interactive) return;
 
-		const dropped = Array.from(event.dataTransfer?.files ?? []);
-		if (dropped.length === 0) return;
-
-		let valid = dropped.filter(isAccepted);
-		if (!multiple) valid = valid.slice(0, 1);
-
-		if (valid.length === 0) {
-			dropError = 'Only JPG or PNG images can be uploaded.';
-			return;
-		}
-		dropError = valid.length < dropped.length ? 'Some files were skipped — JPG or PNG only.' : '';
-		onFiles?.(toFileList(valid));
+		const { files, error } = filesFromDrop(event, accept, multiple);
+		dropError = error;
+		if (files) onFiles?.(files);
 	}
 
-	// Dropping a file anywhere outside a drop zone makes the browser navigate to
-	// it, which would silently discard unsaved form edits. Suppress that default
-	// while a zone is mounted; element-level drop handlers still run normally.
-	function suppressWindowDrop(event: DragEvent) {
-		event.preventDefault();
-	}
-
-	onMount(() => {
-		if (!interactive) return;
-		window.addEventListener('dragover', suppressWindowDrop);
-		window.addEventListener('drop', suppressWindowDrop);
-		return () => {
-			window.removeEventListener('dragover', suppressWindowDrop);
-			window.removeEventListener('drop', suppressWindowDrop);
-		};
-	});
+	onMount(() => (interactive ? suppressWindowDrop() : undefined));
 </script>
 
 {#snippet inner()}

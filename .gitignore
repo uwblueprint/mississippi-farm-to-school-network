@@ -54,3 +54,6 @@ docker-compose.override.yml
 # Coverage reports
 **/coverage
 **/.nyc_output
+
+# Local-only farm image uploads (USE_LOCAL_FILE_STORAGE demo path)
+backend/uploads/

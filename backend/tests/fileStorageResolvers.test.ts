@@ -55,17 +55,22 @@ const filesByFarm = fileStorageResolvers.Query.filesByFarm as (
 
 const OWNER = { id: 'owner-1', role: Role.FARMER, is_verified: true };
 const OTHER = { id: 'other-2', role: Role.FARMER, is_verified: true };
+const SIGNED_URL = 'https://signed.example/read';
+const HELLO_BASE64 = Buffer.from('hello').toString('base64');
+
+beforeEach(() => {
+  mockGetFarmById.mockResolvedValue({
+    id: 'farm-1',
+    owner_user_id: 'owner-1',
+    status: FarmStatus.APPROVED,
+  });
+  mockGetCurrentUser.mockResolvedValue(OWNER);
+  mockGetFile.mockResolvedValue(SIGNED_URL);
+});
 
 describe('fileStorageResolvers uploadFarmImage', () => {
   beforeEach(() => {
-    mockGetFarmById.mockResolvedValue({
-      id: 'farm-1',
-      owner_user_id: 'owner-1',
-      status: FarmStatus.APPROVED,
-    });
-    mockGetCurrentUser.mockResolvedValue(OWNER);
     mockUploadBytes.mockResolvedValue(undefined);
-    mockGetFile.mockResolvedValue('https://signed.example/read');
     mockCreateFileRecord.mockImplementation(async (storageKey: string, name: string) => ({
       id: storageKey.split('/')[2],
       storage_key: storageKey,
@@ -77,10 +82,14 @@ describe('fileStorageResolvers uploadFarmImage', () => {
   });
 
   test('uploads bytes and returns signed url for the farm owner', async () => {
-    const dataBase64 = Buffer.from('hello').toString('base64');
     const result = await uploadFarmImage(
       null,
-      { farmId: 'farm-1', originalFileName: 'a.png', contentType: 'image/png', dataBase64 },
+      {
+        farmId: 'farm-1',
+        originalFileName: 'a.png',
+        contentType: 'image/png',
+        dataBase64: HELLO_BASE64,
+      },
       { firebaseUid: 'fb-owner' }
     );
 
@@ -97,17 +106,21 @@ describe('fileStorageResolvers uploadFarmImage', () => {
       'farm-1',
       'image/png'
     );
-    expect(result.url).toBe('https://signed.example/read');
+    expect(result.url).toBe(SIGNED_URL);
     expect(result.originalFileName).toBe('a.png');
   });
 
   test('rejects a non-owner non-admin user', async () => {
     mockGetCurrentUser.mockResolvedValue(OTHER);
-    const dataBase64 = Buffer.from('hello').toString('base64');
     await expect(
       uploadFarmImage(
         null,
-        { farmId: 'farm-1', originalFileName: 'a.png', contentType: 'image/png', dataBase64 },
+        {
+          farmId: 'farm-1',
+          originalFileName: 'a.png',
+          contentType: 'image/png',
+          dataBase64: HELLO_BASE64,
+        },
         { firebaseUid: 'fb-other' }
       )
     ).rejects.toThrow();
@@ -128,13 +141,6 @@ describe('fileStorageResolvers uploadFarmImage', () => {
 
 describe('fileStorageResolvers filesByFarm', () => {
   beforeEach(() => {
-    mockGetFarmById.mockResolvedValue({
-      id: 'farm-1',
-      owner_user_id: 'owner-1',
-      status: FarmStatus.APPROVED,
-    });
-    mockGetCurrentUser.mockResolvedValue(OWNER);
-    mockGetFile.mockResolvedValue('https://signed.example/read');
     mockGetRecordsByFarm.mockResolvedValue([
       {
         id: 'file-1',
@@ -154,7 +160,7 @@ describe('fileStorageResolvers filesByFarm', () => {
         fileId: 'file-1',
         originalFileName: 'a.png',
         contentType: 'image/png',
-        url: 'https://signed.example/read',
+        url: SIGNED_URL,
       },
     ]);
     expect(mockGetFile).toHaveBeenCalledWith('farms/farm-1/file-1');

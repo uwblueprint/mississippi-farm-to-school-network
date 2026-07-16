@@ -5,8 +5,11 @@
 	interface Props {
 		/** Farm id (used by callers to build hrefs / mutation targets). */
 		id?: string;
-		/** Farm image source (e.g. a Firebase signed URL from getFile()). */
-		imageUrl: string;
+		/**
+		 * Farm image source (e.g. a signed URL from getFile()). When absent/null
+		 * the card shows an empty grey block instead.
+		 */
+		imageUrl?: string | null;
 		/** Accessibility label for the image. */
 		imageAlt?: string;
 		/** Title line (farm name). */
@@ -60,12 +63,17 @@
 			{statusStyle.label}
 		</div>
 	{/if}
-	<div
-		class="farm-card__image"
-		role="img"
-		aria-label={imageAlt}
-		style="background-image: url('{imageUrl}')"
-	></div>
+	{#if imageUrl}
+		<div
+			class="farm-card__image"
+			role="img"
+			aria-label={imageAlt}
+			style="background-image: url('{imageUrl}')"
+		></div>
+	{:else}
+		<!-- Farm has no uploaded image: plain grey block, not announced to AT. -->
+		<div class="farm-card__image" aria-hidden="true"></div>
+	{/if}
 	<div class="farm-card__body">
 		<div class="farm-card__text">
 			{#if title}<span class="farm-card__title">{title}</span>{/if}
@@ -127,7 +135,7 @@
 		border-bottom: 1.922px solid #d9d9d9; /* divider matching the outer card border */
 		border-bottom-left-radius: 11.535px;
 		border-bottom-right-radius: 11.535px;
-		background-color: lightgray; /* fallback while image loads */
+		background-color: #e6e6e6; /* empty state, and fallback while an image loads */
 		background-repeat: no-repeat;
 		background-size: cover;
 		background-position: center;

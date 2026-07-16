@@ -12,6 +12,9 @@
 		farm_address: string;
 		home_county: string;
 		status: FarmStatus;
+		/** The farm's first uploaded image; null when it has none (FarmCard then
+		 *  renders an empty grey block). */
+		primary_image_url: string | null;
 	}
 
 	const MY_FARMS = `
@@ -22,13 +25,10 @@
 				farm_address
 				home_county
 				status
+				primary_image_url
 			}
 		}
 	`;
-
-	// Card image placeholder until per-farm gallery images are wired (farm images
-	// come from the file service via filesByFarm, not from the FarmDTO).
-	const PLACEHOLDER_IMAGE = 'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900';
 
 	let farms = $state<FarmListItem[]>([]);
 	let loading = $state(true);
@@ -75,7 +75,7 @@
 			{#each farms as farm (farm.id)}
 				<FarmCard
 					id={farm.id}
-					imageUrl={PLACEHOLDER_IMAGE}
+					imageUrl={farm.primary_image_url}
 					imageAlt={farm.farm_name}
 					title={farm.farm_name}
 					subtitle={farm.farm_address}
