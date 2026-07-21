@@ -39,19 +39,36 @@ const farmResolvers = {
     },
     farms: async (
       _parent: undefined,
-      { filter }: { filter?: FarmFilter },
+      {
+        filter,
+        pageNumber: rawPageNumber,
+        pageSize: rawPageSize,
+      }: { filter?: FarmFilter; pageNumber?: number | null; pageSize?: number | null },
       context: AuthContext
     ) => {
+      const pageNumber = rawPageNumber ?? 1;
+      const pageSize = rawPageSize ?? 50;
+
+      if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+        throw new Error('pageNumber must be an integer >= 1');
+      }
+      if (!Number.isInteger(pageSize) || pageSize < 1) {
+        throw new Error('pageSize must be an integer >= 1');
+      }
+
       const isAdmin = await authHelper
         .requireRole(context, [Role.ADMIN])
         .then(() => true)
         .catch(() => false);
 
       if (!isAdmin) {
-        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+        return farmService.getFarms(pageNumber, pageSize, {
+          ...filter,
+          status: FarmStatus.APPROVED,
+        });
       }
 
-      return farmService.getFarms(filter);
+      return farmService.getFarms(pageNumber, pageSize, filter);
     },
     farmById: async (
       _parent: undefined,

@@ -55,8 +55,15 @@ const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
 describe('FarmService.getFarms', () => {
   let service: FarmService;
 
+  // Ordering applied to every farm list query (mirrors FARM_LIST_ORDER in the implementation).
+  const FARM_LIST_ORDER: [string, string][] = [
+    ['home_county', 'ASC'],
+    ['farm_name', 'ASC'],
+  ];
+
   beforeEach(() => {
     service = new FarmService();
+    MockFarm.findAll.mockReset();
   });
 
   // ── no filter ──────────────────────────────────────────────────────────────
@@ -67,16 +74,16 @@ describe('FarmService.getFarms', () => {
 
     const result = await service.getFarms();
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
     expect(result).toHaveLength(2);
   });
 
   test('filter with all fields undefined: returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({});
+    await service.getFarms(undefined, undefined, {});
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
   });
 
   test('no farms in database: returns empty array', async () => {
@@ -92,20 +99,22 @@ describe('FarmService.getFarms', () => {
   test('filter by status: passes status to where clause', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ status: FarmStatus.APPROVED });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.APPROVED },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by status PENDING_APPROVAL', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ status: FarmStatus.PENDING_APPROVAL });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.PENDING_APPROVAL });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.PENDING_APPROVAL },
+      order: FARM_LIST_ORDER,
     });
   });
 
@@ -114,20 +123,22 @@ describe('FarmService.getFarms', () => {
   test('filter approved=true: sets status to APPROVED', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ approved: true });
+    await service.getFarms(undefined, undefined, { approved: true });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.APPROVED },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter approved=false: excludes APPROVED farms', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ approved: false });
+    await service.getFarms(undefined, undefined, { approved: false });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: { [Op.ne]: FarmStatus.APPROVED } },
+      order: FARM_LIST_ORDER,
     });
   });
 
@@ -135,7 +146,7 @@ describe('FarmService.getFarms', () => {
     // When both status and approved provided, status wins
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ status: FarmStatus.REJECTED, approved: true });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.REJECTED, approved: true });
 
     const call = MockFarm.findAll.mock.calls[0][0] as any;
     expect(call.where.status).toBe(FarmStatus.REJECTED);
@@ -146,50 +157,54 @@ describe('FarmService.getFarms', () => {
   test('filter by home_county: passes exact match to where clause', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ home_county: 'Hinds' });
+    await service.getFarms(undefined, undefined, { home_county: 'Hinds' });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { home_county: 'Hinds' },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by counties_served: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties_served: ['Hinds'] });
+    await service.getFarms(undefined, undefined, { counties_served: ['Hinds'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { counties_served: { [Op.overlap]: ['Hinds'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by cities_served: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ cities_served: ['Jackson'] });
+    await service.getFarms(undefined, undefined, { cities_served: ['Jackson'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { cities_served: { [Op.overlap]: ['Jackson'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by food_categories: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ food_categories: ['Vegetables'] });
+    await service.getFarms(undefined, undefined, { food_categories: ['Vegetables'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { food_categories: { [Op.overlap]: ['Vegetables'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('empty array filter: ignores empty array, returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties_served: [], food_categories: [] });
+    await service.getFarms(undefined, undefined, { counties_served: [], food_categories: [] });
 
     // Empty arrays should not add where conditions
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
   });
 
   // ── combined filters ──────────────────────────────────────────────────────
@@ -197,7 +212,7 @@ describe('FarmService.getFarms', () => {
   test('combining status + counties_served + food_categories', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({
+    await service.getFarms(undefined, undefined, {
       status: FarmStatus.APPROVED,
       counties_served: ['Hinds'],
       food_categories: ['Vegetables'],
@@ -209,7 +224,46 @@ describe('FarmService.getFarms', () => {
         counties_served: { [Op.overlap]: ['Hinds'] },
         food_categories: { [Op.overlap]: ['Vegetables'] },
       },
+      order: FARM_LIST_ORDER,
     });
+  });
+
+  // ── pagination ────────────────────────────────────────────────────────────
+
+  test('paginates with limit and offset when both page args provided', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(2, 10);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: {},
+      order: FARM_LIST_ORDER,
+      limit: 10,
+      offset: 10,
+    });
+  });
+
+  test('first page uses offset 0', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(1, 25, { home_county: 'Hinds' });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { home_county: 'Hinds' },
+      order: FARM_LIST_ORDER,
+      limit: 25,
+      offset: 0,
+    });
+  });
+
+  test('does not paginate when only pageNumber is provided', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(3);
+
+    const call = MockFarm.findAll.mock.calls[0][0] as any;
+    expect(call.limit).toBeUndefined();
+    expect(call.offset).toBeUndefined();
   });
 
   // ── filters matching no farms ─────────────────────────────────────────────
@@ -217,7 +271,7 @@ describe('FarmService.getFarms', () => {
   test('filters matching no farms: returns empty array', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    const result = await service.getFarms({
+    const result = await service.getFarms(undefined, undefined, {
       counties_served: ['NonExistentCounty'],
     });
 

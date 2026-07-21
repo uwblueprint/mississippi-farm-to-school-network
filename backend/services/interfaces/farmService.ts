@@ -30,12 +30,16 @@ interface IFarmService {
   getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]>;
 
   /**
-   * Get farms with optional filtering
+   * Get farms with optional filtering and pagination, ordered by home county then farm name.
+   * Pagination is applied only when both pageNumber and pageSize are provided; otherwise all
+   * matching farms are returned.
+   * @param pageNumber optional 1-based page index
+   * @param pageSize optional number of farms per page
    * @param filter optional farm filter criteria
    * @returns array of FarmDTOs
    * @throws Error if farm retrieval fails
    */
-  getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>>;
+  getFarms(pageNumber?: number, pageSize?: number, filter?: FarmFilter): Promise<Array<FarmDTO>>;
 
   /**
    * Update a farm by id
