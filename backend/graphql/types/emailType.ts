@@ -6,7 +6,22 @@ const emailType = gql`
   }
 
   type Mutation {
-    sendEmail(to: String!, subject: String!, htmlBody: String!): Boolean!
+    sendEmail(
+      to: String!
+      subject: String!
+      htmlBody: String
+      title: String
+      body: String
+      actionButtonLabel: String
+      actionButtonHref: String
+      previewText: String
+      footerText: String
+      recipientName: String
+      reasonText: String
+      ctaText: String
+      ctaUrl: String
+      isFarmerEmail: Boolean
+    ): Boolean!
   }
 `;
 

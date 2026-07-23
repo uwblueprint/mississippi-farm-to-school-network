@@ -77,16 +77,13 @@ const FirebaseRestClient = {
 
     const responseJson: PasswordSignInResponse | RequestError = await response.json();
 
-    if (!response.ok) {
-      const errorMessage = [
-        'Failed to sign-in via Firebase REST API, status code =',
-        `${response.status},`,
-        'error message =',
-        (responseJson as RequestError).error.message,
-      ];
-      Logger.error(errorMessage.join(' '));
+  if (!response.ok) {
+      const errorData = responseJson as RequestError;
+      const errorMessage = `Firebase API Error: ${response.status} - ${errorData.error.message}`;
+      
+      Logger.error(errorMessage);
 
-      throw new Error('Failed to sign in via Firebase REST API.');
+      throw new Error(errorMessage);
     }
 
     return {

@@ -101,14 +101,15 @@ class AuthService implements IAuthService {
 
     try {
       const resetLink = await firebaseAdmin.auth().generatePasswordResetLink(email);
-      const emailBody = `
-      Hello,
-      <br><br>
-      We have received a password reset request for your account.
-      Please click the following link to reset it.
-      <strong>This link is only valid for 1 hour.</strong>
-      <br><br>
-      <a href=${resetLink}>Reset Password</a>`;
+      const emailBody = {
+        recipientName: email,
+        title: 'Reset your password',
+        previewText: 'Use the link below to reset your password.',
+        body: `We have received a password reset request for your account. Please use the button below to continue resetting your password. This link is only valid for 1 hour.`,
+        ctaText: 'Reset password',
+        ctaUrl: resetLink,
+        isFarmerEmail: true,
+      };
 
       await this.emailService.sendEmail(email, 'Your Password Reset Link', emailBody);
     } catch (error) {
@@ -127,13 +128,15 @@ class AuthService implements IAuthService {
 
     try {
       const emailVerificationLink = await firebaseAdmin.auth().generateEmailVerificationLink(email);
-      const emailBody = `
-      Hello,
-      <br><br>
-      Please click the following link to verify your email and activate your account.
-      <strong>This link is only valid for 1 hour.</strong>
-      <br><br>
-      <a href=${emailVerificationLink}>Verify email</a>`;
+      const emailBody = {
+        recipientName: email,
+        title: 'Verify your email',
+        previewText: 'Complete your email verification to activate your account.',
+        body: `Please click the button below to verify your email and activate your account. This link is only valid for 1 hour.`,
+        ctaText: 'Verify email',
+        ctaUrl: emailVerificationLink,
+        isFarmerEmail: true,
+      };
 
       await this.emailService.sendEmail(email, 'Verify your email', emailBody);
     } catch (error) {

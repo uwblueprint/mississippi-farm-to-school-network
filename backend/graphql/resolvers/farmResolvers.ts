@@ -5,6 +5,7 @@ import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
 import {
+  ActiveFarmRejectionDTO,
   CreateFarmInput,
   FarmDTO,
   FarmFilter,
@@ -73,7 +74,7 @@ const farmResolvers = {
       _parent: undefined,
       { farmId }: { farmId: string },
       context: AuthContext
-    ): Promise<FarmRejectionDTO | null> => {
+    ): Promise<ActiveFarmRejectionDTO | null> => {
       await authHelper.requireEmailVerified(context);
       const farm = await Farm.findByPk(farmId);
       if (!farm) {
@@ -94,9 +95,14 @@ const farmResolvers = {
       const createdFarm = await farmService.createFarm(currentUser.id, input);
 
       const subject = 'New Farm Application Submitted';
-      const emailBody = `<h2>New Farm Application Submitted</h2>
-                      <p>A new farm application has been submitted for ${input.farm_name}.</p>
-                      <p>Please review the application and approve or reject it.</p>`;
+      const emailBody = {
+        title: 'New Farm Application Submitted',
+        previewText: 'A new farm application is ready for review.',
+        body: `A new farm application has been submitted for ${input.farm_name}. Please review the application and approve or reject it.`,
+        ctaText: 'Review application',
+        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
+        isFarmerEmail: false,
+      };
       try {
         await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
       } catch {

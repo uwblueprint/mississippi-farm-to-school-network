@@ -9,6 +9,31 @@ export type NodemailerConfig = {
   };
 };
 
+export type EmailActionButton = {
+  label: string;
+  href: string;
+};
+
+export type EmailTemplateData = {
+  title?: string;
+  body?: string;
+  actionButton?: EmailActionButton;
+  previewText?: string;
+  footerText?: string;
+  brandName?: string;
+  recipientName?: string;
+  reasonText?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  isFarmerEmail?: boolean;
+};
+
+export type EmailServiceOptions = {
+  brandName?: string;
+  brandUrl?: string;
+  supportEmail?: string;
+};
+
 export enum FarmStatus {
   PENDING_APPROVAL = 'PENDING_APPROVAL',
   APPROVED = 'APPROVED',

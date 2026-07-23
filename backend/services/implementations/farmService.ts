@@ -82,9 +82,14 @@ class FarmService implements IFarmService {
     }
 
     const subject = 'New Farm Application Submitted';
-    const emailBody = `<h2>New Farm Application Submitted</h2>
-                      <p>A new farm application has been submitted for ${createdFarm.farm_name}.</p>
-                      <p>Please review the application and approve or reject it.</p>`;
+    const emailBody = {
+      title: 'New Farm Application Submitted',
+      previewText: 'A new farm application is ready for review.',
+      body: `A new farm application has been submitted for ${createdFarm.farm_name}. Please review the application and approve or reject it.`,
+      ctaText: 'Review application',
+      ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
+      isFarmerEmail: false,
+    };
 
     try {
       await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
@@ -236,9 +241,14 @@ class FarmService implements IFarmService {
     }
 
     const subject = 'Your Farm Has Been Approved!';
-    const emailBody = `<h2>Your Farm Has Been Approved!</h2>
-                      <p>Congratulations! Your farm <strong>${updatedFarm.farm_name}</strong> has been approved.</p>
-                      <p>Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.</p>`;
+    const emailBody = {
+      title: 'Your Farm Has Been Approved!',
+      previewText: 'Your farm is now live on the Mississippi Farm to School Network.',
+      body: `Congratulations! Your farm ${updatedFarm.farm_name} has been approved. Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.`,
+      ctaText: 'View your farm',
+      ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/farms/${updatedFarm.id}`,
+      isFarmerEmail: true,
+    };
 
     let ownerEmail: string;
     try {
@@ -597,14 +607,15 @@ class FarmService implements IFarmService {
     diff: FarmFieldDiff[]
   ): Promise<void> {
     const subject = `Farm Resubmitted: ${farm.farm_name}`;
-    const emailBody = `<h2>Farm Resubmitted for Review</h2>
-      <p><strong>Farm:</strong> ${farm.farm_name}</p>
-      <p><strong>Farm ID:</strong> ${farm.id}</p>
-      <p><strong>Previous rejection reason:</strong> ${rejectionReason}</p>
-      <p><strong>Farmer changes:</strong></p>
-      <ul>
-        ${this.formatDiffSummary(diff)}
-      </ul>`;
+    const emailBody = {
+      title: 'Farm Resubmitted for Review',
+      previewText: 'A farm has been resubmitted with updates for admin review.',
+      body: `Farm: ${farm.farm_name}\nFarm ID: ${farm.id}\nPrevious rejection reason: ${rejectionReason}\nFarmer changes:\n${this.formatDiffSummary(diff)}`,
+      reasonText: `A farmer has updated the farm application after a rejection. Review the changes below.`,
+      ctaText: 'Review application',
+      ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
+      isFarmerEmail: false,
+    };
 
     try {
       await emailService.sendEmail(ADMIN_RESUBMISSION_EMAIL, subject, emailBody);
