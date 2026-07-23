@@ -38,7 +38,8 @@ export const EmailLayout = (props: EmailLayoutProps) => {
 
   const resolvedCtaText = ctaText ?? actionButton?.label;
   const resolvedCtaUrl = ctaUrl ?? actionButton?.href;
-  const heroImageUrl = 'https://raw.githubusercontent.com/dcheng6775/msfn-temp/main/hero.png';
+  const heroImageUrl =
+    'https://firebasestorage.googleapis.com/v0/b/mississippi-farm-to-scho-11069.firebasestorage.app/o/hero.png?alt=media&token=8a60b1b2-a1d6-43c5-a062-e72bf425c5bb';
 
   return (
     <Html lang="en">
@@ -78,10 +79,18 @@ export const EmailLayout = (props: EmailLayoutProps) => {
             {isFarmerEmail ? (
               <>
                 <Text style={footerText}>
-                  You&apos;re receiving this email because you&apos;re a registered farmer on the MFSN Farm Fresh Map. Contact support at <a href="mailto:info@uwblueprint.org" style={footerLink}>info@uwblueprint.org</a>
+                  You&apos;re receiving this email because you&apos;re a registered farmer on the
+                  MFSN Farm Fresh Map. Contact support at{' '}
+                  <a href="mailto:info@uwblueprint.org" style={footerLink}>
+                    info@uwblueprint.org
+                  </a>
                 </Text>
                 <Text style={footerText}>
-                  MFSN Farm Fresh Map &ndash; <a href="https://yourmaplink.com" style={footerLink}>View Map</a><br />
+                  MFSN Farm Fresh Map &ndash;{' '}
+                  <a href="https://yourmaplink.com" style={footerLink}>
+                    View Map
+                  </a>
+                  <br />
                   &copy; {new Date().getFullYear()} Mississippi Farm to School Network
                 </Text>
               </>
@@ -94,7 +103,10 @@ export const EmailLayout = (props: EmailLayoutProps) => {
                   &copy; {new Date().getFullYear()} Mississippi Farm to School Network
                 </Text>
                 <Text style={footerText}>
-                  Contact support at <a href="mailto:info@uwblueprint.org" style={footerLink}>info@uwblueprint.org</a>
+                  Contact support at{' '}
+                  <a href="mailto:info@uwblueprint.org" style={footerLink}>
+                    info@uwblueprint.org
+                  </a>
                 </Text>
               </>
             )}
@@ -112,7 +124,11 @@ class EmailService implements IEmailService {
 
   private sender: string;
 
-  constructor(nodemailerConfig: NodemailerConfig, displayName?: string, options?: EmailServiceOptions) {
+  constructor(
+    nodemailerConfig: NodemailerConfig,
+    displayName?: string,
+    options?: EmailServiceOptions
+  ) {
     this.transporter = nodemailer.createTransport(nodemailerConfig);
     this.brandName = options?.brandName ?? displayName ?? 'Mississippi Farm to School Network';
 
@@ -131,8 +147,13 @@ class EmailService implements IEmailService {
     return render(React.createElement(EmailLayout, templateProps));
   }
 
-  async sendEmail(to: string, subject: string, template: string | EmailTemplateData): Promise<void> {
-    const html: string = typeof template === 'string' ? template : await this.renderTemplate(template);
+  async sendEmail(
+    to: string,
+    subject: string,
+    template: string | EmailTemplateData
+  ): Promise<void> {
+    const html: string =
+      typeof template === 'string' ? template : await this.renderTemplate(template);
 
     const mailOptions = {
       from: this.sender,
@@ -160,10 +181,9 @@ const main = {
   padding: '40px 0',
 };
 
-
 const heroSection = {
   textAlign: 'center' as const,
-  lineHeight: '0', 
+  lineHeight: '0',
 };
 
 const heroImage = {
@@ -189,8 +209,8 @@ const heading = {
   fontFamily: '"DM Sans", sans-serif',
   fontSize: '16px',
   fontStyle: 'normal',
-  lineHeight: '24px', 
-  color: '#000000',     
+  lineHeight: '24px',
+  color: '#000000',
   margin: '0 0 24px 0',
 };
 
@@ -198,11 +218,10 @@ const bodyText = {
   fontFamily: '"DM Sans", sans-serif',
   fontSize: '16px',
   fontStyle: 'normal',
-  lineHeight: '24px', 
-  color: '#000000',     
+  lineHeight: '24px',
+  color: '#000000',
   margin: '0 0 24px 0',
 };
-
 
 const previewStyle = {
   margin: '0 0 16px 0',
@@ -255,9 +274,6 @@ const footerLink = {
   textDecoration: 'underline',
 };
 
-
-
-
 const container = {
   backgroundColor: '#ffffff',
   margin: '0 auto',
@@ -265,4 +281,3 @@ const container = {
   maxWidth: '600px',
   boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
 };
-

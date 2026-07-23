@@ -1,5 +1,5 @@
 import { EmailTemplateData } from '@/types';
- 
+
 interface IEmailService {
   /**
    * Send email
@@ -11,6 +11,5 @@ interface IEmailService {
   sendEmail(to: string, subject: string, template: string | EmailTemplateData): Promise<void>;
   renderTemplate(template: EmailTemplateData): Promise<string>;
 }
- 
+
 export default IEmailService;
- 
