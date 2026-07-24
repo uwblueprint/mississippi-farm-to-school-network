@@ -113,8 +113,11 @@ const makeFarmInstance = (overrides: Partial<FarmRow> = {}): FarmRow => {
     save: jest.fn().mockResolvedValue(undefined),
     reload: jest.fn().mockResolvedValue(undefined),
     toJSON() {
-      const { save: _save, reload: _reload, toJSON: _toJSON, ...data } = this;
-      return { ...data };
+      const data = { ...this } as Record<string, unknown>;
+      delete data.save;
+      delete data.reload;
+      delete data.toJSON;
+      return data;
     },
     ...overrides,
   };
