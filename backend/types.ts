@@ -199,6 +199,7 @@ export interface FarmFilter {
   cities_served?: string[];
   food_categories?: string[];
   approved?: boolean;
+  is_archived?: boolean;
 }
 
 export type ActiveFarmRejectionDTO = Pick<

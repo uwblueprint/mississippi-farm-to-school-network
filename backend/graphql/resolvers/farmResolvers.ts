@@ -48,7 +48,7 @@ const farmResolvers = {
         .catch(() => false);
 
       if (!isAdmin) {
-        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED, is_archived: false });
       }
 
       return farmService.getFarms(filter);

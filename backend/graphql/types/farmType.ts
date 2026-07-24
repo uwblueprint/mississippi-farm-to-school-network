@@ -97,6 +97,7 @@ const farmType = gql`
     cities_served: [String!]
     food_categories: [String!]
     approved: Boolean
+    is_archived: Boolean
   }
 
   input UpdateFarmInput {

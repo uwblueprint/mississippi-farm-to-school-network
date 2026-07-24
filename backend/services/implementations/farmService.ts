@@ -104,6 +104,7 @@ class FarmService implements IFarmService {
       const farms = await Farm.findAll({
         where: {
           status: FarmStatus.APPROVED,
+          is_archived: false,
           location: literal(
             `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
           ),
@@ -152,6 +153,8 @@ class FarmService implements IFarmService {
       if (filter?.food_categories?.length) {
         where.food_categories = { [Op.overlap]: filter.food_categories };
       }
+
+      where.is_archived = filter?.is_archived ?? false;
 
       const farms = await Farm.findAll({ where });
       return this.convertToFarmDTOs(farms);
@@ -451,7 +454,7 @@ class FarmService implements IFarmService {
 
   async getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]> {
     try {
-      const farms = await Farm.findAll({ where: { status } });
+      const farms = await Farm.findAll({ where: { status, is_archived: false } });
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
