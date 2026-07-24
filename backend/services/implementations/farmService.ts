@@ -352,6 +352,7 @@ class FarmService implements IFarmService {
       f2s_experience: data.f2s_experience,
       interested_in_f2s: data.interested_in_f2s,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()
@@ -436,6 +437,7 @@ class FarmService implements IFarmService {
       f2s_experience: data.f2s_experience,
       interested_in_f2s: data.interested_in_f2s,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()

@@ -48,6 +48,7 @@ const farmType = gql`
     f2s_experience: Boolean!
     interested_in_f2s: Boolean!
     status: FarmStatus!
+    is_archived: Boolean!
     createdAt: String!
     updatedAt: String!
   }
