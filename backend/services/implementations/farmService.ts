@@ -477,6 +477,50 @@ class FarmService implements IFarmService {
     }
   }
 
+  async archiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is already archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = true;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to archive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async unarchiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (!farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is not archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = false;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
   private getRejectedSnapshot(
     farmJson: Record<string, unknown>,
     farmBeforeUpdate: FarmDTO

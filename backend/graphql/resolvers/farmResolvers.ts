@@ -146,6 +146,24 @@ const farmResolvers = {
 
       return farmService.resubmitFarm(id, currentUser.id, input);
     },
+
+    archiveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.archiveFarm(id);
+    },
+
+    unarchiveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.unarchiveFarm(id);
+    },
   },
 
   FarmDTO: {
