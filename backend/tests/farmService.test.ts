@@ -212,6 +212,33 @@ describe('FarmService.getFarms', () => {
     });
   });
 
+  // ── archived filter ─────────────────────────────────────────────────────────
+
+  test('default (no is_archived): returns all farms with no archived constraint', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms({ status: FarmStatus.APPROVED });
+
+    const call = MockFarm.findAll.mock.calls[0][0] as any;
+    expect(call.where.is_archived).toBeUndefined();
+  });
+
+  test('is_archived=true: returns only archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow({ is_archived: true })] as any);
+
+    await service.getFarms({ is_archived: true });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: true } });
+  });
+
+  test('is_archived=false explicitly: excludes archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms({ is_archived: false });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
+  });
+
   // ── filters matching no farms ─────────────────────────────────────────────
 
   test('filters matching no farms: returns empty array', async () => {
@@ -304,6 +331,14 @@ describe('FarmService.getFarmsByProximity', () => {
     expect(dWithinSql).toContain(`${radiusKm * 1000}`);
   });
 
+  test('excludes archived farms from proximity search', async () => {
+    MockFarm.findAll.mockResolvedValue([]);
+
+    await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    expect(getProximitySql().where).toMatchObject({ is_archived: false });
+  });
+
   test('sorts results by ST_Distance ascending', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
@@ -362,6 +397,124 @@ describe('FarmService.getFarmsByProximity', () => {
 
     await expect(service.getFarmsByProximity(lat, lng, radiusKm)).rejects.toThrow(
       'PostGIS query failed'
+    );
+  });
+});
+
+// ─── FarmService.getFarmsByStatus ────────────────────────────────────────────
+
+describe('FarmService.getFarmsByStatus', () => {
+  let service: FarmService;
+
+  beforeEach(() => {
+    service = new FarmService();
+    MockFarm.findAll.mockReset();
+  });
+
+  test('excludes archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarmsByStatus(FarmStatus.PENDING_APPROVAL);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { status: FarmStatus.PENDING_APPROVAL, is_archived: false },
+    });
+  });
+});
+
+// ─── FarmService.archiveFarm / unarchiveFarm ─────────────────────────────────
+
+describe('FarmService.archiveFarm / unarchiveFarm', () => {
+  let service: FarmService;
+
+  const makeInstance = (overrides: Partial<Record<string, unknown>> = {}) => {
+    const data = { ...makeFarmRow(), ...overrides };
+    return {
+      ...data,
+      save: jest.fn().mockResolvedValue(undefined),
+      reload: jest.fn().mockResolvedValue(undefined),
+      toJSON() {
+        return { ...this };
+      },
+    };
+  };
+
+  beforeEach(() => {
+    service = new FarmService();
+    MockFarm.findByPk.mockReset();
+  });
+
+  test('archiveFarm sets is_archived to true and persists', async () => {
+    const instance = makeInstance({ is_archived: false });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect((instance as any).is_archived).toBe(true);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(result.is_archived).toBe(true);
+  });
+
+  test('archiveFarm does not change the farm status', async () => {
+    const instance = makeInstance({ is_archived: false, status: FarmStatus.APPROVED });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect(result.status).toBe(FarmStatus.APPROVED);
+  });
+
+  test('archiveFarm is a no-op when already archived', async () => {
+    const instance = makeInstance({ is_archived: true });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect(instance.save).not.toHaveBeenCalled();
+    expect(result.is_archived).toBe(true);
+  });
+
+  test('archiveFarm throws when the farm does not exist', async () => {
+    MockFarm.findByPk.mockResolvedValue(null);
+
+    await expect(service.archiveFarm('missing')).rejects.toThrow('Farm with id missing not found.');
+  });
+
+  test('unarchiveFarm sets is_archived to false and persists', async () => {
+    const instance = makeInstance({ is_archived: true });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect((instance as any).is_archived).toBe(false);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(result.is_archived).toBe(false);
+  });
+
+  test('unarchiveFarm preserves the farm status (restores prior state)', async () => {
+    const instance = makeInstance({ is_archived: true, status: FarmStatus.REJECTED });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect(result.status).toBe(FarmStatus.REJECTED);
+  });
+
+  test('unarchiveFarm is a no-op when not archived', async () => {
+    const instance = makeInstance({ is_archived: false });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect(instance.save).not.toHaveBeenCalled();
+    expect(result.is_archived).toBe(false);
+  });
+
+  test('unarchiveFarm throws when the farm does not exist', async () => {
+    MockFarm.findByPk.mockResolvedValue(null);
+
+    await expect(service.unarchiveFarm('missing')).rejects.toThrow(
+      'Farm with id missing not found.'
     );
   });
 });

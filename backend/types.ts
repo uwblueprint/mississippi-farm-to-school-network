@@ -104,6 +104,7 @@ export type FarmDTO = {
   f2s_experience: boolean;
   interested_in_f2s: boolean;
   status: FarmStatus;
+  is_archived: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -198,6 +199,7 @@ export interface FarmFilter {
   cities_served?: string[];
   food_categories?: string[];
   approved?: boolean;
+  is_archived?: boolean;
 }
 
 export type ActiveFarmRejectionDTO = Pick<

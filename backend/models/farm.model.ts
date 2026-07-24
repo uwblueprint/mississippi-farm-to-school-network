@@ -94,6 +94,9 @@ export default class Farm extends Model {
   })
   status!: FarmStatus;
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  is_archived!: boolean;
+
   @Column({ type: DataType.DATE, allowNull: false })
   createdAt!: Date;
 

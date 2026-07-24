@@ -48,6 +48,7 @@ const farmType = gql`
     f2s_experience: Boolean!
     interested_in_f2s: Boolean!
     status: FarmStatus!
+    is_archived: Boolean!
     createdAt: String!
     updatedAt: String!
   }
@@ -96,6 +97,7 @@ const farmType = gql`
     cities_served: [String!]
     food_categories: [String!]
     approved: Boolean
+    is_archived: Boolean
   }
 
   input UpdateFarmInput {
@@ -138,6 +140,8 @@ const farmType = gql`
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+    archiveFarm(id: ID!): FarmDTO!
+    unarchiveFarm(id: ID!): FarmDTO!
   }
 
   type ActiveFarmRejectionDTO {
