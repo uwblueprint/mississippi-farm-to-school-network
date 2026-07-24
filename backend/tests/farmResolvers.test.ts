@@ -172,6 +172,14 @@ describe('farmResolvers.Query.farms', () => {
 
     expect(mockGetFarms).toHaveBeenCalledWith({ is_archived: true });
   });
+
+  test('admin: no filter returns all farms (archived and active)', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+
+    await farms(undefined, {}, authContext);
+
+    expect(mockGetFarms).toHaveBeenCalledWith(undefined);
+  });
 });
 
 describe('farmResolvers.Query.latestActiveFarmRejection', () => {

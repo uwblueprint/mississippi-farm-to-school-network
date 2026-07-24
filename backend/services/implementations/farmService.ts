@@ -154,7 +154,9 @@ class FarmService implements IFarmService {
         where.food_categories = { [Op.overlap]: filter.food_categories };
       }
 
-      where.is_archived = filter?.is_archived ?? false;
+      if (filter?.is_archived !== undefined) {
+        where.is_archived = filter.is_archived;
+      }
 
       const farms = await Farm.findAll({ where });
       return this.convertToFarmDTOs(farms);

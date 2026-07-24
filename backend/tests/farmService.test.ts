@@ -67,7 +67,7 @@ describe('FarmService.getFarms', () => {
 
     const result = await service.getFarms();
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
     expect(result).toHaveLength(2);
   });
 
@@ -76,7 +76,7 @@ describe('FarmService.getFarms', () => {
 
     await service.getFarms({});
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
   });
 
   test('no farms in database: returns empty array', async () => {
@@ -95,7 +95,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ status: FarmStatus.APPROVED });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.APPROVED, is_archived: false },
+      where: { status: FarmStatus.APPROVED },
     });
   });
 
@@ -105,7 +105,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ status: FarmStatus.PENDING_APPROVAL });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.PENDING_APPROVAL, is_archived: false },
+      where: { status: FarmStatus.PENDING_APPROVAL },
     });
   });
 
@@ -117,7 +117,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ approved: true });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.APPROVED, is_archived: false },
+      where: { status: FarmStatus.APPROVED },
     });
   });
 
@@ -127,7 +127,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ approved: false });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: { [Op.ne]: FarmStatus.APPROVED }, is_archived: false },
+      where: { status: { [Op.ne]: FarmStatus.APPROVED } },
     });
   });
 
@@ -149,7 +149,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ home_county: 'Hinds' });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { home_county: 'Hinds', is_archived: false },
+      where: { home_county: 'Hinds' },
     });
   });
 
@@ -159,7 +159,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ counties_served: ['Hinds'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { counties_served: { [Op.overlap]: ['Hinds'] }, is_archived: false },
+      where: { counties_served: { [Op.overlap]: ['Hinds'] } },
     });
   });
 
@@ -169,7 +169,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ cities_served: ['Jackson'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { cities_served: { [Op.overlap]: ['Jackson'] }, is_archived: false },
+      where: { cities_served: { [Op.overlap]: ['Jackson'] } },
     });
   });
 
@@ -179,7 +179,7 @@ describe('FarmService.getFarms', () => {
     await service.getFarms({ food_categories: ['Vegetables'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { food_categories: { [Op.overlap]: ['Vegetables'] }, is_archived: false },
+      where: { food_categories: { [Op.overlap]: ['Vegetables'] } },
     });
   });
 
@@ -188,8 +188,8 @@ describe('FarmService.getFarms', () => {
 
     await service.getFarms({ counties_served: [], food_categories: [] });
 
-    // Empty arrays should not add where conditions (aside from the default archived filter)
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
+    // Empty arrays should not add where conditions
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
   });
 
   // ── combined filters ──────────────────────────────────────────────────────
@@ -208,20 +208,19 @@ describe('FarmService.getFarms', () => {
         status: FarmStatus.APPROVED,
         counties_served: { [Op.overlap]: ['Hinds'] },
         food_categories: { [Op.overlap]: ['Vegetables'] },
-        is_archived: false,
       },
     });
   });
 
   // ── archived filter ─────────────────────────────────────────────────────────
 
-  test('default (no is_archived): excludes archived farms', async () => {
+  test('default (no is_archived): returns all farms with no archived constraint', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
     await service.getFarms({ status: FarmStatus.APPROVED });
 
     const call = MockFarm.findAll.mock.calls[0][0] as any;
-    expect(call.where.is_archived).toBe(false);
+    expect(call.where.is_archived).toBeUndefined();
   });
 
   test('is_archived=true: returns only archived farms', async () => {
@@ -232,7 +231,7 @@ describe('FarmService.getFarms', () => {
     expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: true } });
   });
 
-  test('is_archived=false explicitly: still excludes archived farms', async () => {
+  test('is_archived=false explicitly: excludes archived farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
     await service.getFarms({ is_archived: false });
