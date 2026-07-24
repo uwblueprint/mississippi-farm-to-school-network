@@ -120,6 +120,18 @@ const farmResolvers = {
 
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
+      if (farm.is_archived) {
+        const isAdmin = await authHelper
+          .requireRole(context, [Role.ADMIN])
+          .then(() => true)
+          .catch(() => false);
+        if (!isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
+      }
+
       return farmService.updateFarm(id, input, farm);
     },
 
@@ -143,6 +155,18 @@ const farmResolvers = {
         throw new Error(`Farm with id ${id} not found.`);
       }
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+
+      if (farm.is_archived) {
+        const isAdmin = await authHelper
+          .requireRole(context, [Role.ADMIN])
+          .then(() => true)
+          .catch(() => false);
+        if (!isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
+      }
 
       return farmService.resubmitFarm(id, currentUser.id, input);
     },
