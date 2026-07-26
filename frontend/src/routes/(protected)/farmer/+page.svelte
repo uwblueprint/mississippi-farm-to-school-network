@@ -1,7 +1,5 @@
 <script lang="ts">
-	import OnboardingFlow from '$lib/components/OnboardingFlow.svelte';
-
-	let flow = $state<ReturnType<typeof OnboardingFlow>>();
+	import { goto } from '$app/navigation';
 </script>
 
 <svelte:head>
@@ -12,9 +10,7 @@
 	<h1 class="text-3xl font-bold text-surface-950-50">FARMER PAGE</h1>
 </section>
 
-<button class="add-farm" type="button" onclick={() => flow?.completeAddFarm()}>Add Farm</button>
-
-<OnboardingFlow bind:this={flow} />
+<button class="add-farm" type="button" onclick={() => goto('/new-farm')}>Add Farm</button>
 
 <style>
 	.add-farm {

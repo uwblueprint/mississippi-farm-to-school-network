@@ -1,8 +1,9 @@
 <script lang="ts">
-	import { onDestroy, untrack } from 'svelte';
+	import { onDestroy, onMount, untrack } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
+	import { getFirebaseAuth } from '$lib/firebase';
 
 	let { data } = $props();
 
@@ -56,6 +57,14 @@
 	let showLeaveModal = $state(false);
 	let allowLeave = $state(false);
 	let pendingUrl = $state<URL | null>(null);
+
+	onMount(() => {
+		// When the layout auth bypass is active, still prefill from the Firebase session.
+		if (!email) {
+			const currentEmail = getFirebaseAuth().currentUser?.email;
+			if (currentEmail) email = currentEmail;
+		}
+	});
 
 	const NONE = 'None of the above';
 	const DELIVERY_AVAILABLE = 'Delivery Available';
@@ -994,7 +1003,7 @@
 
 			{#if farmPhotos.length > 0}
 				<FileUpload.ItemGroup class="file-list">
-					{#each farmPhotos as file, index (file.name + file.size)}
+					{#each farmPhotos as file, index (`${index}-${file.name}-${file.size}-${file.lastModified}`)}
 						<FileUpload.Item {file} class={index === coverIndex ? 'cover-photo' : undefined}>
 							<button
 								class="tile-btn"

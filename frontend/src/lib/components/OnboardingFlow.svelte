@@ -3,7 +3,9 @@
 	import { goto } from '$app/navigation';
 	import OnboardingModal from './OnboardingModal.svelte';
 
-	const FARM_CREATION_ROUTE = '/new-farm';
+	const FARMER_ROUTE = '/farmer';
+	const ONBOARDING_STORAGE_KEY = 'mfsn.farmerOnboarding.completed';
+	const ADD_FARM_STEP = 1;
 
 	interface ModalPosition {
 		top?: string;
@@ -21,7 +23,12 @@
 		position?: ModalPosition;
 	}
 
-	const ADD_FARM_STEP = 1;
+	interface Props {
+		/** Called after the tour is finished or skipped (defaults to /farmer). */
+		onComplete?: () => void;
+	}
+
+	let { onComplete }: Props = $props();
 
 	const steps: Step[] = [
 		{
@@ -61,21 +68,49 @@
 	const current = $derived(steps[step]);
 	const stepLabel = $derived(`Step ${step + 1} of ${steps.length}`);
 
+	function persistCompleted() {
+		try {
+			localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
+		} catch {
+			// ignore quota / private-mode failures
+		}
+	}
+
+	function finish(nextRoute = FARMER_ROUTE) {
+		dismissed = true;
+		persistCompleted();
+		if (onComplete && nextRoute === FARMER_ROUTE) {
+			onComplete();
+			return;
+		}
+		goto(nextRoute);
+	}
+
 	onMount(() => {
+		try {
+			if (localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1') {
+				finish(FARMER_ROUTE);
+				return;
+			}
+		} catch {
+			// show onboarding if storage is unavailable
+		}
 		visible = true;
 	});
 
 	export function advance() {
 		if (step === steps.length - 1) {
-			goto(FARM_CREATION_ROUTE);
+			finish(FARMER_ROUTE);
 			return;
 		}
 		step += 1;
 	}
 
 	export function completeAddFarm() {
-		if (step === ADD_FARM_STEP) {
-			advance();
+		// During the “Add a Farm” tip, the button advances the tour so the
+		// remaining helper steps still show. Real create-farm is on /farmer after.
+		if (!dismissed && step === ADD_FARM_STEP) {
+			step += 1;
 		}
 	}
 
@@ -84,12 +119,12 @@
 	}
 
 	function handleClose() {
-		dismissed = true;
+		finish(FARMER_ROUTE);
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
-			dismissed = true;
+			finish(FARMER_ROUTE);
 		}
 	}
 
