@@ -1,5 +1,6 @@
 import type { MigrationFn } from 'umzug/lib/types';
 import type { Sequelize } from 'sequelize-typescript';
+import { DataTypes } from 'sequelize';
 
 export const up: MigrationFn = async (params) => {
   const sequelize = params.context as Sequelize;
@@ -11,6 +12,12 @@ export const up: MigrationFn = async (params) => {
     'ALTER TABLE "farms" ALTER COLUMN "counties_served" TYPE VARCHAR(255) USING "counties_served"[1];'
   );
   await queryInterface.renameColumn('farms', 'counties_served', 'county');
+
+  // main added home_county; farmer onboarding uses a single `county` field instead
+  const table = await queryInterface.describeTable('farms');
+  if (table.home_county) {
+    await queryInterface.removeColumn('farms', 'home_county');
+  }
 
   await queryInterface.sequelize.query(
     'ALTER TABLE "farms" ALTER COLUMN "minimum_order" TYPE INTEGER USING "minimum_order"::integer;'
@@ -29,6 +36,12 @@ export const down: MigrationFn = async (params) => {
   await queryInterface.sequelize.query(
     'ALTER TABLE "farms" ALTER COLUMN "counties_served" TYPE VARCHAR(255)[] USING ARRAY["counties_served"];'
   );
+
+  await queryInterface.addColumn('farms', 'home_county', {
+    type: DataTypes.STRING,
+    allowNull: false,
+    defaultValue: '',
+  });
 
   await queryInterface.renameColumn('farms', 'product_categories', 'food_categories');
 };

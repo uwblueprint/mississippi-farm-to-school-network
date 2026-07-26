@@ -2,6 +2,7 @@ import { gql } from 'apollo-server';
 
 const farmType = gql`
   scalar JSON
+
   enum FarmStatus {
     PENDING_APPROVAL
     APPROVED
@@ -136,14 +137,24 @@ const farmType = gql`
 
   type Query {
     farms(filter: FarmFilter): [FarmDTO!]!
+    farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
+    latestActiveFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
   }
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
+    resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+  }
+
+  type ActiveFarmRejectionDTO {
+    id: ID!
+    farm_id: ID!
+    rejection_reason: String!
+    created_at: String!
   }
 `;
 

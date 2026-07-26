@@ -1,3 +1,4 @@
+import { AuthenticationError } from 'apollo-server';
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
 import {
@@ -75,6 +76,11 @@ class UserService implements IUserService {
       }
       if (user.is_verified) {
         throw new Error(`User with email ${email} is already verified.`);
+      }
+
+      const firebaseUser = await firebaseAdmin.auth().getUser(user.firebase_uid);
+      if (!firebaseUser.emailVerified) {
+        throw new AuthenticationError('You must verify your email to access this resource.');
       }
 
       await user.update({ is_verified: true });
