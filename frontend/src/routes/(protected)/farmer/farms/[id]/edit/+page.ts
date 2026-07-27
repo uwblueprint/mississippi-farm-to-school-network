@@ -1,12 +1,7 @@
 import { error, redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import { gqlClient } from '$lib/graphqlClient';
-import {
-	farmToFormModel,
-	type FarmDTO,
-	type FarmFormModel,
-	type FarmStatus
-} from '$lib/farmMapping';
+import { farmToFormModel, type FarmDTO, type FarmFormModel } from '$lib/farmMapping';
 
 // Client-side load: the (protected) subtree is `ssr = false` and authenticates
 // with the Firebase ID token (via gqlClient), not a server cookie. Mirrors the
@@ -101,7 +96,6 @@ export const load: PageLoad = async ({ params }) => {
 	}
 
 	const form: FarmFormModel = farmToFormModel(farm);
-	const status: FarmStatus = farm.status;
 
 	// Rejection banner + image gallery are independent and non-fatal — degrade to
 	// null / [] if either fails so the page still renders.
@@ -112,13 +106,11 @@ export const load: PageLoad = async ({ params }) => {
 		gqlClient<{ filesByFarm: FarmImage[] }>(FILES_BY_FARM, { farmId: id })
 	]);
 
-	let rejection: RejectionInfo | null = null;
-	if (rejectionRes.status === 'fulfilled') {
-		const r = rejectionRes.value.latestActiveFarmRejection;
-		if (r) {
-			rejection = { reason: r.rejection_reason, createdAt: r.created_at };
-		}
-	}
+	const r =
+		rejectionRes.status === 'fulfilled' ? rejectionRes.value.latestActiveFarmRejection : null;
+	const rejection: RejectionInfo | null = r
+		? { reason: r.rejection_reason, createdAt: r.created_at }
+		: null;
 
 	const images: FarmImage[] =
 		imagesRes.status === 'fulfilled' ? (imagesRes.value.filesByFarm ?? []) : [];
@@ -129,5 +121,5 @@ export const load: PageLoad = async ({ params }) => {
 		form.dashboardImageName = images[0].originalFileName;
 	}
 
-	return { form, status, rejection, images };
+	return { form, status: farm.status, rejection, images };
 };

@@ -78,7 +78,8 @@
 		<div class="farm-card__text">
 			{#if title}<span class="farm-card__title">{title}</span>{/if}
 			{#if subtitle}<span class="farm-card__subtitle">{subtitle}</span>{/if}
-			{#if subtitle2}<span class="farm-card__subtitle farm-card__subtitle--muted">{subtitle2}</span>{/if}
+			{#if subtitle2}<span class="farm-card__subtitle farm-card__subtitle--muted">{subtitle2}</span
+				>{/if}
 		</div>
 		{@render children?.()}
 	</div>

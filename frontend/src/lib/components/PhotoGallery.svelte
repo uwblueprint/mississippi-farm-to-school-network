@@ -11,11 +11,20 @@
 		/** Files dropped onto the "Add Photos" tile. Omit to disable drag-and-drop. */
 		onFiles?: (files: FileList) => void;
 		accept?: string;
+		disabled?: boolean;
 	}
 
-	let { photos, onAdd, onRemove, onFiles, accept = IMAGE_ACCEPT }: Props = $props();
+	let {
+		photos,
+		onAdd,
+		onRemove,
+		onFiles,
+		accept = IMAGE_ACCEPT,
+		disabled = false
+	}: Props = $props();
 
 	const droppable = $derived(!!onFiles);
+	const canDrop = $derived(droppable && !disabled);
 
 	let isDragging = $state(false);
 	let dropError = $state('');
@@ -25,7 +34,7 @@
 
 	function handleDragEnter(event: DragEvent) {
 		event.preventDefault();
-		if (!droppable) return;
+		if (!canDrop) return;
 		dragDepth += 1;
 		isDragging = true;
 	}
@@ -33,11 +42,11 @@
 	function handleDragOver(event: DragEvent) {
 		// Required: without preventDefault the browser refuses the drop entirely.
 		event.preventDefault();
-		if (droppable && event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+		if (canDrop && event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
 	}
 
 	function handleDragLeave() {
-		if (!droppable) return;
+		if (!canDrop) return;
 		dragDepth = Math.max(0, dragDepth - 1);
 		if (dragDepth === 0) isDragging = false;
 	}
@@ -46,7 +55,7 @@
 		event.preventDefault();
 		dragDepth = 0;
 		isDragging = false;
-		if (!droppable) return;
+		if (!canDrop) return;
 
 		const { files, error } = filesFromDrop(event, accept, true);
 		dropError = error;
@@ -69,10 +78,24 @@
 		ondragover={handleDragOver}
 		ondragleave={handleDragLeave}
 		ondrop={handleDrop}
+		{disabled}
 	>
 		<span class="gallery-add__plus">
-			<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-				<path d="M12 5V19M5 12H19" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				width="24"
+				height="24"
+				viewBox="0 0 24 24"
+				fill="none"
+				aria-hidden="true"
+			>
+				<path
+					d="M12 5V19M5 12H19"
+					stroke="black"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				/>
 			</svg>
 		</span>
 		<!-- Resting label matches the mock; swap it only while dragging. -->
@@ -104,6 +127,11 @@
 		transition:
 			border-color 0.15s ease,
 			background-color 0.15s ease;
+	}
+
+	.gallery-add:disabled {
+		opacity: 0.6;
+		cursor: default;
 	}
 
 	/* Drag-over affordance; matches UploadZone's. */

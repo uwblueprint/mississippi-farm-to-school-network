@@ -8,6 +8,7 @@
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
+	import { IMAGE_ACCEPT, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
 	import {
 		formModelToUpdateInput,
 		optionLabels,
@@ -78,6 +79,12 @@
 	// Public gallery photos come from the file service (filesByFarm via the loader).
 	const galleryPhotos = $derived(data.images.map((img) => ({ id: img.fileId, url: img.url })));
 
+	// Also file-service owned (the loader overlays it from the first image), and not
+	// editable — so it tracks the loader rather than living in `farm`, which would
+	// hold the value captured at init and disagree with the gallery after an
+	// upload or a remove.
+	const dashboardImageName = $derived(data.form.dashboardImageName);
+
 	const rejectedDate = $derived(
 		data.rejection ? new Date(data.rejection.createdAt).toLocaleDateString() : ''
 	);
@@ -108,10 +115,21 @@
 
 	async function uploadFiles(files: FileList | null) {
 		if (!files || files.length === 0) return;
+
+		// filesFromDrop caps the drop path; the file pickers reach here unfiltered,
+		// so re-apply the same limit for every upload surface.
+		const valid = Array.from(files).filter((file) => file.size <= MAX_UPLOAD_BYTES);
+		const oversized = files.length - valid.length;
+		if (valid.length === 0) {
+			actionError = `Images must be under ${MAX_UPLOAD_LABEL}.`;
+			return;
+		}
+
 		uploading = true;
-		actionError = '';
+		actionError =
+			oversized > 0 ? `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.` : '';
 		try {
-			for (const file of Array.from(files)) {
+			for (const file of valid) {
 				const dataBase64 = toBase64(new Uint8Array(await file.arrayBuffer()));
 				await gqlClient(UPLOAD_FARM_IMAGE, {
 					farmId,
@@ -120,12 +138,20 @@
 					dataBase64
 				});
 			}
-			await invalidateAll();
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Upload failed.';
 		} finally {
+			// Files uploaded before an error are already persisted, so refresh either way.
+			await invalidateAll();
 			uploading = false;
 		}
+	}
+
+	function handleGalleryChange(event: Event) {
+		const el = event.currentTarget as HTMLInputElement;
+		if (el.files && el.files.length > 0) uploadFiles(el.files);
+		// reset so picking the same file again still fires a change event
+		el.value = '';
 	}
 
 	async function removePhoto(fileId: string) {
@@ -152,8 +178,21 @@
 	<div class="action-bar">
 		<ActionButton variant="outline" href="/farmer/farms">
 			{#snippet iconLeft()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-					<path d="M19 12H5M12 5L5 12L12 19" stroke="#696C78" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					aria-hidden="true"
+				>
+					<path
+						d="M19 12H5M12 5L5 12L12 19"
+						stroke="#696C78"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			{/snippet}
 			Back
@@ -162,8 +201,21 @@
 		<ActionButton variant="primary" type="submit" disabled={saving}>
 			{saving ? 'Saving…' : 'Save'}
 			{#snippet iconRight()}
-				<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-					<path d="M20 6L9 17L4 12" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+				<svg
+					xmlns="http://www.w3.org/2000/svg"
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					aria-hidden="true"
+				>
+					<path
+						d="M20 6L9 17L4 12"
+						stroke="white"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					/>
 				</svg>
 			{/snippet}
 		</ActionButton>
@@ -175,9 +227,9 @@
 	bind:this={galleryInput}
 	class="visually-hidden-file"
 	type="file"
-	accept="image/png,image/jpeg"
+	accept={IMAGE_ACCEPT}
 	multiple
-	onchange={(e) => uploadFiles((e.currentTarget as HTMLInputElement).files)}
+	onchange={handleGalleryChange}
 />
 
 <!-- Client-side save (auth via Firebase ID token in gqlClient). Fields bind to
@@ -190,9 +242,13 @@
 
 	{#if data.rejection}
 		<div class="rejection-banner" role="alert">
-			<span class="rejection-banner__title">This farm was rejected{rejectedDate ? ` on ${rejectedDate}` : ''}.</span>
+			<span class="rejection-banner__title"
+				>This farm was rejected{rejectedDate ? ` on ${rejectedDate}` : ''}.</span
+			>
 			<span class="rejection-banner__reason">{data.rejection.reason}</span>
-			<span class="rejection-banner__hint">Update the details below and save to resubmit for review.</span>
+			<span class="rejection-banner__hint"
+				>Update the details below and save to resubmit for review.</span
+			>
 		</div>
 	{/if}
 
@@ -208,8 +264,8 @@
 			onFiles={uploadFiles}
 			disabled={uploading}
 		/>
-		{#if farm.dashboardImageName}
-			<a class="file-link" href="#dashboard-photo">{farm.dashboardImageName}</a>
+		{#if dashboardImageName}
+			<span class="file-link">{dashboardImageName}</span>
 		{/if}
 	</section>
 
@@ -239,6 +295,7 @@
 			onAdd={() => galleryInput?.click()}
 			onFiles={uploadFiles}
 			onRemove={removePhoto}
+			disabled={uploading}
 		/>
 	</section>
 
@@ -267,7 +324,11 @@
 			<TextField label="*Optional: Instagram" bind:value={farm.instagram} optional />
 			<TextField label="*Optional: Facebook" bind:value={farm.facebook} optional />
 			<TextField label="*Optional: Website" bind:value={farm.website} optional />
-			<TextField label="*Optional: Other (social media + username)" bind:value={farm.other} optional />
+			<TextField
+				label="*Optional: Other (social media + username)"
+				bind:value={farm.other}
+				optional
+			/>
 		</div>
 	</section>
 
@@ -278,10 +339,20 @@
 
 		<!-- TODO(backend-mapping): no `growing_practices` column exists, so this
 		     group is local-only and will come back blank on reload. -->
-		<ChoiceGroup label="Growing Practices" options={GROWING_PRACTICE_OPTIONS} type="checkbox" bind:value={farm.growingPractices} />
+		<ChoiceGroup
+			label="Growing Practices"
+			options={GROWING_PRACTICE_OPTIONS}
+			type="checkbox"
+			bind:value={farm.growingPractices}
+		/>
 
 		<!-- food_categories[] — stores the selected labels verbatim. -->
-		<ChoiceGroup label="Food Categories" options={FOOD_CATEGORY_OPTIONS} type="checkbox" bind:value={farm.foodCategories} />
+		<ChoiceGroup
+			label="Food Categories"
+			options={FOOD_CATEGORY_OPTIONS}
+			type="checkbox"
+			bind:value={farm.foodCategories}
+		/>
 
 		<!-- TODO(backend-mapping): no `seasonal_products` column exists, so this is
 		     NOT persisted — it will come back blank on reload. -->
@@ -289,14 +360,36 @@
 
 		<!-- Each checkbox below maps to exactly one backend boolean column; the
 		     label -> column mapping lives in farmMapping's *_OPTIONS tables. -->
-		<ChoiceGroup label="Food Safety & Certifications" options={FOOD_SAFETY_LABELS} type="checkbox" bind:value={farm.foodSafety} />
-		<ChoiceGroup label="Farm Experiences & Services" options={EXPERIENCE_LABELS} type="checkbox" bind:value={farm.experiences} />
-		<ChoiceGroup label="Farm Characteristics" options={CHARACTERISTIC_LABELS} type="checkbox" bind:value={farm.characteristics} />
-		<ChoiceGroup label="Farm to School Sales" options={SCHOOL_SALES_LABELS} type="checkbox" bind:value={farm.schoolSales} />
+		<ChoiceGroup
+			label="Food Safety & Certifications"
+			options={FOOD_SAFETY_LABELS}
+			type="checkbox"
+			bind:value={farm.foodSafety}
+		/>
+		<ChoiceGroup
+			label="Farm Experiences & Services"
+			options={EXPERIENCE_LABELS}
+			type="checkbox"
+			bind:value={farm.experiences}
+		/>
+		<ChoiceGroup
+			label="Farm Characteristics"
+			options={CHARACTERISTIC_LABELS}
+			type="checkbox"
+			bind:value={farm.characteristics}
+		/>
+		<ChoiceGroup
+			label="Farm to School Sales"
+			options={SCHOOL_SALES_LABELS}
+			type="checkbox"
+			bind:value={farm.schoolSales}
+		/>
 	</section>
 
 	<div class="footer-actions">
-		<ActionButton variant="primary" type="submit" block disabled={saving}>{saving ? 'Saving…' : 'Save'}</ActionButton>
+		<ActionButton variant="primary" type="submit" block disabled={saving}
+			>{saving ? 'Saving…' : 'Save'}</ActionButton
+		>
 		<ActionButton variant="danger" onclick={deleteFarm}>Delete Farm</ActionButton>
 	</div>
 

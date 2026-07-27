@@ -12,10 +12,23 @@
 		{#if imageUrl}<img src={imageUrl} alt="" />{/if}
 	</div>
 	<button type="button" class="gallery-item__remove" aria-label="Remove photo" onclick={onRemove}>
-		<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="24"
+			height="24"
+			viewBox="0 0 24 24"
+			fill="none"
+			aria-hidden="true"
+		>
 			<rect x="0.5" y="0.5" width="23" height="23" rx="11.5" fill="white" />
 			<rect x="0.5" y="0.5" width="23" height="23" rx="11.5" stroke="#D6D6D6" />
-			<path d="M17 7L7 17M7 7L17 17" stroke="#131927" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+			<path
+				d="M17 7L7 17M7 7L17 17"
+				stroke="#131927"
+				stroke-width="2"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
 		</svg>
 	</button>
 </div>

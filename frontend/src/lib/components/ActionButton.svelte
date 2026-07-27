@@ -43,12 +43,7 @@
 	}: Props = $props();
 
 	const classes = $derived(
-		[
-			'action-btn',
-			`action-btn--${variant}`,
-			block ? 'action-btn--block' : '',
-			className
-		]
+		['action-btn', `action-btn--${variant}`, block ? 'action-btn--block' : '', className]
 			.filter(Boolean)
 			.join(' ')
 	);

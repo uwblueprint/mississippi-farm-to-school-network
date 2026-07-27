@@ -69,13 +69,7 @@ export const SCHOOL_SALES_OPTIONS: BooleanFieldOption[] = [
 ];
 
 /** food_categories[] is a free taxonomy, not booleans — plain string options. */
-export const FOOD_CATEGORY_OPTIONS: string[] = [
-	'Vegetables',
-	'Fruits',
-	'Grains',
-	'Dairy',
-	'Meats'
-];
+export const FOOD_CATEGORY_OPTIONS: string[] = ['Vegetables', 'Fruits', 'Grains', 'Dairy', 'Meats'];
 
 /** TODO(backend-mapping): no `growing_practices` column exists, so this group is
  *  local-only until one is added. */
@@ -165,6 +159,9 @@ export interface FarmFormModel {
 	facebook: string;
 	website: string;
 	other: string;
+	/** Not a form control: the loaded social_media keys with no control, held so
+	 *  formModelToUpdateInput can send them back unchanged. */
+	unmanagedSocialMedia: SocialMedia;
 	/** Selected labels from FOOD_CATEGORY_OPTIONS; maps to food_categories[]. */
 	foodCategories: string[];
 	/** Selected labels; each maps to one boolean column (see *_OPTIONS above). */
@@ -177,6 +174,20 @@ export interface FarmFormModel {
 	/** TODO(backend-mapping): no backend column — local UI state only. */
 	seasonal: string;
 	dashboardImageName: string;
+}
+
+/** The social_media blob keys that have a form control and are rewritten on save. */
+const FORM_MANAGED_SOCIAL_KEYS = new Set(['instagram', 'facebook', 'other', 'website']);
+
+/**
+ * The blob keys with no form control (e.g. twitter, youtube set by admin tooling
+ * or an import). The backend REPLACES social_media wholesale rather than merging
+ * it, so these must ride through the form model or an edit would drop them. Pure.
+ */
+function unmanagedSocial(social: SocialMedia): SocialMedia {
+	return Object.fromEntries(
+		Object.entries(social).filter(([key]) => !FORM_MANAGED_SOCIAL_KEYS.has(key))
+	);
 }
 
 /** backend string[] -> comma-separated form field. Pure. */
@@ -230,6 +241,7 @@ export function farmToFormModel(farm: FarmDTO): FarmFormModel {
 		other: social.other ?? '',
 		// website has a dedicated clean field; fall back to the blob if present.
 		website: farm.website ?? social.website ?? '',
+		unmanagedSocialMedia: unmanagedSocial(social),
 
 		description: farm.description ?? '',
 
@@ -272,8 +284,9 @@ export function farmToFormModel(farm: FarmDTO): FarmFormModel {
  */
 export function formModelToUpdateInput(m: FarmFormModel): UpdateFarmInput {
 	// Rebuild the social_media JSON blob from the discrete contact fields,
-	// omitting empty values to avoid persisting blank keys.
-	const social_media: SocialMedia = {};
+	// omitting empty values to avoid persisting blank keys. Keys with no form
+	// control are carried over as-is (the backend replaces the blob wholesale).
+	const social_media: SocialMedia = { ...m.unmanagedSocialMedia };
 	if (m.instagram.trim()) social_media.instagram = m.instagram.trim();
 	if (m.facebook.trim()) social_media.facebook = m.facebook.trim();
 	if (m.other.trim()) social_media.other = m.other.trim();

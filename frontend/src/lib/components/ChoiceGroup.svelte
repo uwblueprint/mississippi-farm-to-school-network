@@ -13,19 +13,11 @@
 		value: string[] | string;
 	}
 
-	let {
-		label,
-		options,
-		type = 'checkbox',
-		name = '',
-		value = $bindable()
-	}: Props = $props();
+	let { label, options, type = 'checkbox', name = '', value = $bindable() }: Props = $props();
 
 	function toggle(option: string) {
 		const current = Array.isArray(value) ? value : [];
-		value = current.includes(option)
-			? current.filter((o) => o !== option)
-			: [...current, option];
+		value = current.includes(option) ? current.filter((o) => o !== option) : [...current, option];
 	}
 </script>
 

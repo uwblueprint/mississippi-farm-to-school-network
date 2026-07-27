@@ -23,6 +23,31 @@ type FarmImageDTO = {
 
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || '';
 
+/** Mirror of IMAGE_ACCEPT in frontend/src/lib/fileDrop.ts; keep the two in sync. */
+const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
+
+/** Mirrors MAX_UPLOAD_BYTES in frontend/src/lib/fileDrop.ts; keep the two in sync. */
+const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
+
+/**
+ * The declared contentType comes from the client and can lie. Uploads are served
+ * back under whatever type they were stored with, so the bytes have to be the
+ * image they claim to be — otherwise HTML declared as "image/png" is stored as
+ * HTML and executes on the storage origin.
+ */
+const sniffImageType = (buffer: Buffer): 'image/png' | 'image/jpeg' | null => {
+  if (buffer.subarray(0, PNG_MAGIC.length).equals(PNG_MAGIC)) {
+    return 'image/png';
+  }
+  if (buffer.subarray(0, JPEG_MAGIC.length).equals(JPEG_MAGIC)) {
+    return 'image/jpeg';
+  }
+  return null;
+};
+
 // LOCAL DEMO ESCAPE HATCH: Firebase Cloud Storage 403s on every write while the
 // project's billing account is disabled, which blocks image uploads entirely.
 // Setting USE_LOCAL_FILE_STORAGE=true swaps in a disk-backed implementation of
@@ -74,7 +99,10 @@ const fileStorageResolvers = {
 
       const records = await storedFileService.getRecordsByFarm(farmId);
 
-      return Promise.all(records.map((record) => toFarmImageDTO(record)));
+      // A single unreadable/missing file must not empty the whole gallery — the
+      // images that still resolve keep rendering.
+      const results = await Promise.allSettled(records.map((record) => toFarmImageDTO(record)));
+      return results.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
     },
   },
   Mutation: {
@@ -100,6 +128,15 @@ const fileStorageResolvers = {
       const buffer = Buffer.from(dataBase64, 'base64');
       if (buffer.length === 0) {
         throw new UserInputError('dataBase64 did not decode to any file bytes.');
+      }
+      if (buffer.length > MAX_UPLOAD_BYTES) {
+        throw new UserInputError('Image must be under 10MB.');
+      }
+      if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+        throw new UserInputError('Only JPG or PNG images can be uploaded.');
+      }
+      if (sniffImageType(buffer) !== contentType) {
+        throw new UserInputError('File contents do not match the declared image type.');
       }
 
       const fileId = randomUUID();
@@ -187,7 +224,13 @@ const fileStorageResolvers = {
       }
       await authHelper.requireOwnerOrAdmin(context, record.owner_user_id);
 
-      await fileStorageService.deleteFile(record.storage_key);
+      try {
+        await fileStorageService.deleteFile(record.storage_key);
+      } catch {
+        // An already-missing blob must not strand its record: the row would then
+        // be undeletable, and the record being gone is the desired end state
+        // either way. The storage layer has already logged the reason.
+      }
       await storedFileService.deleteFileRecordById(fileId);
       return true;
     },

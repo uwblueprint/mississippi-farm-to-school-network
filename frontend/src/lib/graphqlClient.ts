@@ -31,10 +31,7 @@ function currentUserReady(auth: ReturnType<typeof getFirebaseAuth>): Promise<Aut
 	});
 }
 
-export async function gqlClient<T>(
-	query: string,
-	variables?: Record<string, unknown>
-): Promise<T> {
+export async function gqlClient<T>(query: string, variables?: Record<string, unknown>): Promise<T> {
 	const user = await currentUserReady(getFirebaseAuth());
 	if (!user) {
 		throw new Error('You must be signed in.');
@@ -49,6 +46,18 @@ export async function gqlClient<T>(
 		},
 		body: JSON.stringify({ query, variables })
 	});
+
+	if (!res.ok) {
+		// The body parser rejects an oversized request before Apollo sees it, so a
+		// 413 body is markup rather than JSON or anything worth showing a user.
+		if (res.status === 413) {
+			throw new Error('Request is too large.');
+		}
+		const text = await res.text().catch(() => '');
+		throw new Error(
+			`GraphQL request failed: ${res.status} ${res.statusText}${text ? ` - ${text}` : ''}`
+		);
+	}
 
 	const json = await res.json();
 	if (json.errors?.length) {

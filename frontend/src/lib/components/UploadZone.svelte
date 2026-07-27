@@ -40,14 +40,17 @@
 
 	function handleChange(event: Event) {
 		const el = event.currentTarget as HTMLInputElement;
-		if (el.files && el.files.length > 0) onFiles?.(el.files);
+		if (el.files && el.files.length > 0) {
+			dropError = '';
+			onFiles?.(el.files);
+		}
 		// reset so picking the same file again still fires a change event
 		el.value = '';
 	}
 
 	function handleDragEnter(event: DragEvent) {
 		event.preventDefault();
-		if (disabled || !interactive) return;
+		if (disabled) return;
 		dragDepth += 1;
 		isDragging = true;
 	}
@@ -55,13 +58,13 @@
 	function handleDragOver(event: DragEvent) {
 		// Required: without preventDefault the browser refuses the drop entirely.
 		event.preventDefault();
-		if (!disabled && interactive && event.dataTransfer) {
+		if (!disabled && event.dataTransfer) {
 			event.dataTransfer.dropEffect = 'copy';
 		}
 	}
 
 	function handleDragLeave() {
-		if (disabled || !interactive) return;
+		if (disabled) return;
 		dragDepth = Math.max(0, dragDepth - 1);
 		if (dragDepth === 0) isDragging = false;
 	}
@@ -70,7 +73,7 @@
 		event.preventDefault();
 		dragDepth = 0;
 		isDragging = false;
-		if (disabled || !interactive) return;
+		if (disabled) return;
 
 		const { files, error } = filesFromDrop(event, accept, multiple);
 		dropError = error;
@@ -82,8 +85,21 @@
 
 {#snippet inner()}
 	<span class="upload-zone__icon">
-		<svg xmlns="http://www.w3.org/2000/svg" width="35" height="35" viewBox="0 0 35 35" fill="none" aria-hidden="true">
-			<path d="M30.625 21.875V23.625C30.625 26.0752 30.625 27.3003 30.1482 28.2362C29.7287 29.0594 29.0594 29.7287 28.2362 30.1482C27.3003 30.625 26.0752 30.625 23.625 30.625H11.375C8.92477 30.625 7.69966 30.625 6.76379 30.1482C5.94058 29.7287 5.27129 29.0594 4.85185 28.2362C4.375 27.3003 4.375 26.0752 4.375 23.625V21.875M10.2083 11.6667L17.5 4.375L24.7917 11.6667M17.5 4.375V21.875" stroke="black" stroke-width="2.91667" stroke-linecap="round" stroke-linejoin="round" />
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			width="35"
+			height="35"
+			viewBox="0 0 35 35"
+			fill="none"
+			aria-hidden="true"
+		>
+			<path
+				d="M30.625 21.875V23.625C30.625 26.0752 30.625 27.3003 30.1482 28.2362C29.7287 29.0594 29.0594 29.7287 28.2362 30.1482C27.3003 30.625 26.0752 30.625 23.625 30.625H11.375C8.92477 30.625 7.69966 30.625 6.76379 30.1482C5.94058 29.7287 5.27129 29.0594 4.85185 28.2362C4.375 27.3003 4.375 26.0752 4.375 23.625V21.875M10.2083 11.6667L17.5 4.375L24.7917 11.6667M17.5 4.375V21.875"
+				stroke="black"
+				stroke-width="2.91667"
+				stroke-linecap="round"
+				stroke-linejoin="round"
+			/>
 		</svg>
 	</span>
 	<!-- Swap the title while dragging so the resting design still matches the

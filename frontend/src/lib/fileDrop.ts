@@ -6,6 +6,15 @@
 /** The image formats the farm image uploader accepts. */
 export const IMAGE_ACCEPT = 'image/png,image/jpeg';
 
+// Base64 inflates bytes by ~4/3, so this caps a single request near 14MB — well
+// under apollo-server's 50mb body limit, past which the 413 comes back as plain
+// text and never parses as JSON. Mirrored by MAX_UPLOAD_BYTES in
+// backend/graphql/resolvers/fileStorageResolvers.ts; keep the two in sync.
+export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+
+/** MAX_UPLOAD_BYTES in the form the rejection copy shows users. */
+export const MAX_UPLOAD_LABEL = '10MB';
+
 /**
  * An <input type="file"> enforces `accept` for the user, but a DROP does not —
  * anything at all can be dropped onto a target. This filter is the only thing
@@ -14,7 +23,7 @@ export const IMAGE_ACCEPT = 'image/png,image/jpeg';
  * Supports the three `accept` forms: exact MIME ("image/png"), wildcard
  * ("image/*"), and extension (".png").
  */
-export function isAccepted(file: File, accept: string): boolean {
+function isAccepted(file: File, accept: string): boolean {
 	const patterns = accept
 		.split(',')
 		.map((pattern) => pattern.trim())
@@ -32,7 +41,7 @@ export function isAccepted(file: File, accept: string): boolean {
  * Rebuild a FileList from plain Files, so drop callers can hand back the same
  * type the <input type="file"> path produces (onFiles takes a FileList).
  */
-export function toFileList(files: File[]): FileList {
+function toFileList(files: File[]): FileList {
 	const transfer = new DataTransfer();
 	for (const file of files) transfer.items.add(file);
 	return transfer.files;
@@ -52,16 +61,27 @@ export function filesFromDrop(event: DragEvent, accept: string, multiple: boolea
 		return { files: null, error: '' };
 	}
 
-	let valid = dropped.filter((file) => isAccepted(file, accept));
-	if (!multiple) valid = valid.slice(0, 1);
+	const accepted = dropped.filter((file) => isAccepted(file, accept));
+	const withinLimit = accepted.filter((file) => file.size <= MAX_UPLOAD_BYTES);
+	const valid = multiple ? withinLimit : withinLimit.slice(0, 1);
+
+	const wrongType = accepted.length < dropped.length;
+	const oversized = withinLimit.length < accepted.length;
 
 	if (valid.length === 0) {
-		return { files: null, error: 'Only JPG or PNG images can be uploaded.' };
+		return {
+			files: null,
+			error: oversized
+				? `Images must be under ${MAX_UPLOAD_LABEL}.`
+				: 'Only JPG or PNG images can be uploaded.'
+		};
 	}
-	return {
-		files: toFileList(valid),
-		error: valid.length < dropped.length ? 'Some files were skipped — JPG or PNG only.' : ''
-	};
+
+	let error = '';
+	if (oversized) error = `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.`;
+	else if (wrongType) error = 'Some files were skipped — JPG or PNG only.';
+
+	return { files: toFileList(valid), error };
 }
 
 /**

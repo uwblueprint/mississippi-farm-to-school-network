@@ -56,7 +56,8 @@ const filesByFarm = fileStorageResolvers.Query.filesByFarm as (
 const OWNER = { id: 'owner-1', role: Role.FARMER, is_verified: true };
 const OTHER = { id: 'other-2', role: Role.FARMER, is_verified: true };
 const SIGNED_URL = 'https://signed.example/read';
-const HELLO_BASE64 = Buffer.from('hello').toString('base64');
+const PNG_BYTES = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x01]);
+const PNG_BASE64 = PNG_BYTES.toString('base64');
 
 beforeEach(() => {
   mockGetFarmById.mockResolvedValue({
@@ -69,6 +70,13 @@ beforeEach(() => {
 });
 
 describe('fileStorageResolvers uploadFarmImage', () => {
+  const UPLOAD_ARGS = {
+    farmId: 'farm-1',
+    originalFileName: 'a.png',
+    contentType: 'image/png',
+    dataBase64: PNG_BASE64,
+  };
+
   beforeEach(() => {
     mockUploadBytes.mockResolvedValue(undefined);
     mockCreateFileRecord.mockImplementation(async (storageKey: string, name: string) => ({
@@ -82,22 +90,13 @@ describe('fileStorageResolvers uploadFarmImage', () => {
   });
 
   test('uploads bytes and returns signed url for the farm owner', async () => {
-    const result = await uploadFarmImage(
-      null,
-      {
-        farmId: 'farm-1',
-        originalFileName: 'a.png',
-        contentType: 'image/png',
-        dataBase64: HELLO_BASE64,
-      },
-      { firebaseUid: 'fb-owner' }
-    );
+    const result = await uploadFarmImage(null, UPLOAD_ARGS, { firebaseUid: 'fb-owner' });
 
     expect(mockUploadBytes).toHaveBeenCalledTimes(1);
     const [storageKey, buffer, contentType] = mockUploadBytes.mock.calls[0];
     expect(storageKey).toMatch(/^farms\/farm-1\//);
     expect(Buffer.isBuffer(buffer)).toBe(true);
-    expect(buffer.toString()).toBe('hello');
+    expect(buffer.equals(PNG_BYTES)).toBe(true);
     expect(contentType).toBe('image/png');
     expect(mockCreateFileRecord).toHaveBeenCalledWith(
       storageKey,
@@ -112,28 +111,13 @@ describe('fileStorageResolvers uploadFarmImage', () => {
 
   test('rejects a non-owner non-admin user', async () => {
     mockGetCurrentUser.mockResolvedValue(OTHER);
-    await expect(
-      uploadFarmImage(
-        null,
-        {
-          farmId: 'farm-1',
-          originalFileName: 'a.png',
-          contentType: 'image/png',
-          dataBase64: HELLO_BASE64,
-        },
-        { firebaseUid: 'fb-other' }
-      )
-    ).rejects.toThrow();
+    await expect(uploadFarmImage(null, UPLOAD_ARGS, { firebaseUid: 'fb-other' })).rejects.toThrow();
     expect(mockUploadBytes).not.toHaveBeenCalled();
   });
 
   test('rejects empty decoded bytes', async () => {
     await expect(
-      uploadFarmImage(
-        null,
-        { farmId: 'farm-1', originalFileName: 'a.png', contentType: 'image/png', dataBase64: '' },
-        { firebaseUid: 'fb-owner' }
-      )
+      uploadFarmImage(null, { ...UPLOAD_ARGS, dataBase64: '' }, { firebaseUid: 'fb-owner' })
     ).rejects.toThrow('did not decode');
     expect(mockUploadBytes).not.toHaveBeenCalled();
   });

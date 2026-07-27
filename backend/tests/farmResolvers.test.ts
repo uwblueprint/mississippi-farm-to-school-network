@@ -15,20 +15,6 @@ jest.mock('@/services/implementations/farmService', () => ({
   })),
 }));
 
-jest.mock('@/models/farm.model', () => ({
-  __esModule: true,
-  default: {
-    findByPk: (...args: unknown[]) => mockFarmFindByPk(...args),
-  },
-}));
-
-jest.mock('@/utilities/authHelpers', () => ({
-  __esModule: true,
-  default: {
-    requireOwnerOrAdmin: (...args: unknown[]) => mockRequireOwnerOrAdmin(...args),
-  },
-}));
-
 jest.mock('@/services/implementations/userService', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({})),
