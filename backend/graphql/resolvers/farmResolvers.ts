@@ -5,7 +5,6 @@ import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import Farm from '@/models/farm.model';
 import {
-  ActiveFarmRejectionDTO,
   CreateFarmInput,
   FarmDTO,
   FarmFilter,
@@ -74,7 +73,7 @@ const farmResolvers = {
       _parent: undefined,
       { farmId }: { farmId: string },
       context: AuthContext
-    ): Promise<ActiveFarmRejectionDTO | null> => {
+    ): Promise<FarmRejectionDTO | null> => {
       await authHelper.requireEmailVerified(context);
       const farm = await Farm.findByPk(farmId);
       if (!farm) {
