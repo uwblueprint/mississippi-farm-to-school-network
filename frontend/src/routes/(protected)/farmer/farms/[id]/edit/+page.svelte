@@ -9,16 +9,18 @@
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
 	import { IMAGE_ACCEPT, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
+	import { formModelToUpdateInput } from '$lib/farmMapping';
 	import {
-		formModelToUpdateInput,
-		optionLabels,
-		FOOD_CATEGORY_OPTIONS,
-		GROWING_PRACTICE_OPTIONS,
-		FOOD_SAFETY_OPTIONS,
-		EXPERIENCE_OPTIONS,
-		CHARACTERISTIC_OPTIONS,
-		SCHOOL_SALES_OPTIONS
-	} from '$lib/farmMapping';
+		NONE_OF_THE_ABOVE,
+		GROWING_PRACTICES,
+		SEASONAL_PRODUCTS,
+		MEAT_PRODUCTS,
+		OTHER_PRODUCTS,
+		FOOD_SAFETY_CERTIFICATIONS,
+		FARM_EXPERIENCES,
+		FARM_CHARACTERISTICS,
+		FARM_TO_SCHOOL_SALES
+	} from '$lib/constants/farmOptions';
 
 	let { data }: { data: PageData } = $props();
 
@@ -68,13 +70,12 @@
 	// formModelToUpdateInput actually sends them on save.
 	const farm = $state({ ...data.form });
 
-	// Checkbox option labels. The boolean groups come from farmMapping, which owns
-	// the label -> backend column mapping (single source of truth for both the UI
-	// and the read/write mapping).
-	const FOOD_SAFETY_LABELS = optionLabels(FOOD_SAFETY_OPTIONS);
-	const EXPERIENCE_LABELS = optionLabels(EXPERIENCE_OPTIONS);
-	const CHARACTERISTIC_LABELS = optionLabels(CHARACTERISTIC_OPTIONS);
-	const SCHOOL_SALES_LABELS = optionLabels(SCHOOL_SALES_OPTIONS);
+	// Checkbox option labels come from $lib/constants/farmOptions (the frontend
+	// mirror of the backend's allowed values); the selected labels are stored
+	// verbatim in the backend string-array columns. The backend also accepts
+	// "None of the above" for these two groups.
+	const GROWING_PRACTICE_OPTIONS = [...GROWING_PRACTICES, NONE_OF_THE_ABOVE];
+	const FOOD_SAFETY_OPTIONS = [...FOOD_SAFETY_CERTIFICATIONS, NONE_OF_THE_ABOVE];
 
 	// Public gallery photos come from the file service (filesByFarm via the loader).
 	const galleryPhotos = $derived(data.images.map((img) => ({ id: img.fileId, url: img.url })));
@@ -306,11 +307,7 @@
 
 		<TextField label="Farm Name" bind:value={farm.name} />
 		<TextField label="Farm address" bind:value={farm.address} />
-		<TextField label="Home County" bind:value={farm.homeCounty} />
-		<!-- Kept as two fields: they map 1:1 onto the backend's counties_served[]
-		     and cities_served[], which are filtered on independently. -->
-		<TextField label="Counties Served" bind:value={farm.counties} />
-		<p class="field-note">Separate multiple counties with commas.</p>
+		<TextField label="County" bind:value={farm.county} />
 		<TextField label="Cities Served" bind:value={farm.cities} />
 		<p class="field-note">Separate multiple cities with commas.</p>
 	</section>
@@ -335,53 +332,43 @@
 	<section class="section">
 		<h2 class="section__heading">Farm Profile</h2>
 
-		<TextField label="Farm Description" bind:value={farm.description} multiline />
-
-		<!-- TODO(backend-mapping): no `growing_practices` column exists, so this
-		     group is local-only and will come back blank on reload. -->
+		<!-- Each group binds the selected labels verbatim to its backend
+		     string-array column (see farmMapping / $lib/constants/farmOptions). -->
 		<ChoiceGroup
 			label="Growing Practices"
 			options={GROWING_PRACTICE_OPTIONS}
-			type="checkbox"
 			bind:value={farm.growingPractices}
 		/>
 
-		<!-- food_categories[] — stores the selected labels verbatim. -->
 		<ChoiceGroup
-			label="Food Categories"
-			options={FOOD_CATEGORY_OPTIONS}
-			type="checkbox"
-			bind:value={farm.foodCategories}
+			label="Seasonal Products"
+			options={SEASONAL_PRODUCTS}
+			bind:value={farm.seasonalProducts}
 		/>
+		<ChoiceGroup label="Meat Products" options={MEAT_PRODUCTS} bind:value={farm.meatProducts} />
+		<ChoiceGroup label="Other Products" options={OTHER_PRODUCTS} bind:value={farm.otherProducts} />
 
-		<!-- TODO(backend-mapping): no `seasonal_products` column exists, so this is
-		     NOT persisted — it will come back blank on reload. -->
+		<!-- seasonal_products_detail — free-text detail for the products above. -->
 		<TextField label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
 
-		<!-- Each checkbox below maps to exactly one backend boolean column; the
-		     label -> column mapping lives in farmMapping's *_OPTIONS tables. -->
 		<ChoiceGroup
 			label="Food Safety & Certifications"
-			options={FOOD_SAFETY_LABELS}
-			type="checkbox"
+			options={FOOD_SAFETY_OPTIONS}
 			bind:value={farm.foodSafety}
 		/>
 		<ChoiceGroup
 			label="Farm Experiences & Services"
-			options={EXPERIENCE_LABELS}
-			type="checkbox"
+			options={FARM_EXPERIENCES}
 			bind:value={farm.experiences}
 		/>
 		<ChoiceGroup
 			label="Farm Characteristics"
-			options={CHARACTERISTIC_LABELS}
-			type="checkbox"
+			options={FARM_CHARACTERISTICS}
 			bind:value={farm.characteristics}
 		/>
 		<ChoiceGroup
 			label="Farm to School Sales"
-			options={SCHOOL_SALES_LABELS}
-			type="checkbox"
+			options={FARM_TO_SCHOOL_SALES}
 			bind:value={farm.schoolSales}
 		/>
 	</section>

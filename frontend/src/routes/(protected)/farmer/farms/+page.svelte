@@ -10,7 +10,7 @@
 		id: string;
 		farm_name: string;
 		farm_address: string;
-		home_county: string;
+		county: string;
 		status: FarmStatus;
 		/** The farm's first uploaded image; null when it has none (FarmCard then
 		 *  renders an empty grey block). */
@@ -23,7 +23,7 @@
 				id
 				farm_name
 				farm_address
-				home_county
+				county
 				status
 				primary_image_url
 			}
@@ -91,7 +91,7 @@
 					imageAlt={farm.farm_name}
 					title={farm.farm_name}
 					subtitle={farm.farm_address}
-					subtitle2={farm.home_county}
+					subtitle2={farm.county}
 					status={farm.status}
 					href={`/farmer/farms/${farm.id}/edit`}
 				/>

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import logoDefault from '$lib/assets/favicon.svg';
 
 	interface Props {
@@ -26,7 +26,7 @@
 		{ label: 'Contact MSFN', href: '/contact' }
 	];
 
-	const path = $derived($page.url.pathname);
+	const path = $derived(page.url.pathname);
 	const isActive = (href: string) => path === href || path.startsWith(href + '/');
 </script>
 

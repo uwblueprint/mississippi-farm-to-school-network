@@ -2,9 +2,9 @@
 // to a display label and badge colors. Keep these in sync with the backend
 // FarmStatus enum in backend/graphql/types/farmType.ts.
 
-export const FARM_STATUSES = ['APPROVED', 'PENDING_APPROVAL', 'REJECTED'] as const;
+import type { FarmStatus } from '$lib/types/farm';
 
-export type FarmStatus = (typeof FARM_STATUSES)[number];
+export type { FarmStatus };
 
 export interface FarmStatusStyle {
 	/** Text shown in the badge. */

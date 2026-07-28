@@ -14,26 +14,22 @@ const FARM_BY_ID = `
 			id
 			usda_farm_id
 			farm_name
-			description
 			farm_address
+			county
+			cities_served
 			primary_phone
 			primary_email
 			website
 			social_media
-			counties_served
-			cities_served
-			home_county
-			food_categories
-			bipoc_owned
-			gap_certified
-			food_safety_plan
-			agritourism
-			sells_at_markets
-			csa_boxes
-			online_sales
-			delivery
-			f2s_experience
-			interested_in_f2s
+			seasonal_products
+			meat_products
+			other_products
+			seasonal_products_detail
+			growing_practices
+			food_safety_certifications
+			farm_experiences
+			farm_characteristics
+			farm_to_school_sales
 			status
 		}
 	}
