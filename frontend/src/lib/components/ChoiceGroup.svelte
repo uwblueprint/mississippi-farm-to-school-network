@@ -6,12 +6,22 @@
 		label: string;
 		options: string[];
 		value: string[];
+		/** An option (e.g. "None of the above") that is mutually exclusive with
+		 *  the rest: checking it clears the others, and checking any other
+		 *  option clears it. */
+		exclusive?: string;
 	}
 
-	let { label, options, value = $bindable() }: Props = $props();
+	let { label, options, value = $bindable(), exclusive }: Props = $props();
 
 	function toggle(option: string) {
-		value = value.includes(option) ? value.filter((o) => o !== option) : [...value, option];
+		if (value.includes(option)) {
+			value = value.filter((o) => o !== option);
+		} else if (option === exclusive) {
+			value = [option];
+		} else {
+			value = [...value.filter((o) => o !== exclusive), option];
+		}
 	}
 </script>
 

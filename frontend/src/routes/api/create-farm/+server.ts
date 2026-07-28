@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { gqlRequest } from '$lib/server/graphql';
+import { gqlRequest, GqlOperationError } from '$lib/server/graphql';
 
 const CREATE_FARM_MUTATION = `
 	mutation CreateFarm($input: CreateFarmInput!) {
@@ -29,7 +29,12 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 		});
 		return json({ ok: true, farm: createFarm });
 	} catch (err) {
-		const message = err instanceof Error ? err.message : 'createFarm failed';
-		return json({ ok: false, errors: [{ message }] }, { status: 400 });
+		// Only an operation rejected by the backend is the client's fault; let
+		// transport/server failures propagate as a 500 (matches the pre-gqlRequest
+		// behavior).
+		if (err instanceof GqlOperationError) {
+			return json({ ok: false, errors: err.errors }, { status: 400 });
+		}
+		throw err;
 	}
 };

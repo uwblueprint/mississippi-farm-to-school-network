@@ -21,6 +21,15 @@ interface GraphQLResponse<T> {
 	errors?: GraphQLError[];
 }
 
+/** Thrown when the backend replied 200 but the payload carries GraphQL errors
+ *  (i.e. the operation itself was rejected — not a transport/server failure). */
+export class GqlOperationError extends Error {
+	constructor(public errors: GraphQLError[]) {
+		super(`GraphQL error: ${errors.map((e) => e.message).join('; ')}`);
+		this.name = 'GqlOperationError';
+	}
+}
+
 export interface GqlRequestOptions {
 	/** The GraphQL query or mutation document. */
 	query: string;
@@ -64,7 +73,7 @@ export async function gqlRequest<T>(opts: GqlRequestOptions): Promise<T> {
 	const json = (await res.json()) as GraphQLResponse<T>;
 
 	if (json.errors && json.errors.length > 0) {
-		throw new Error(`GraphQL error: ${json.errors.map((e) => e.message).join('; ')}`);
+		throw new GqlOperationError(json.errors);
 	}
 
 	if (json.data == null) {

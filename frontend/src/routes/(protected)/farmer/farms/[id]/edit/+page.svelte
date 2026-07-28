@@ -337,6 +337,7 @@
 		<ChoiceGroup
 			label="Growing Practices"
 			options={GROWING_PRACTICE_OPTIONS}
+			exclusive={NONE_OF_THE_ABOVE}
 			bind:value={farm.growingPractices}
 		/>
 
@@ -354,6 +355,7 @@
 		<ChoiceGroup
 			label="Food Safety & Certifications"
 			options={FOOD_SAFETY_OPTIONS}
+			exclusive={NONE_OF_THE_ABOVE}
 			bind:value={farm.foodSafety}
 		/>
 		<ChoiceGroup
