@@ -292,13 +292,20 @@
 		{/if}
 	</section>
 
-	<!-- Bucket 2: the public photo gallery grid (carousel_photos). -->
+	<!-- Bucket 2: the photo gallery (carousel_photos) — its own upload square,
+	     with the grid below holding the images uploaded to this gallery. -->
 	<section class="section">
 		<span class="section__subtitle">Photo Gallery</span>
 		<p class="section__hint">
 			*Optional: Upload photos of your farm, operations, and/or products here for people to see when
 			they look at your farm!
 		</p>
+		<UploadZone
+			title="Upload farm photos"
+			hint="JPG or PNG, up to 10 pics"
+			onFiles={handleGalleryFiles}
+			disabled={uploading}
+		/>
 		<PhotoGallery
 			photos={galleryPhotos}
 			onAdd={() => galleryInput?.click()}
