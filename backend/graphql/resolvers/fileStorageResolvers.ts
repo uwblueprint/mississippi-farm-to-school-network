@@ -240,19 +240,26 @@ const fileStorageResolvers = {
   // Lives here because this is where the stored-file + storage services are wired.
   FarmDTO: {
     /**
-     * The farm's first (oldest) uploaded image, or null when it has none.
+     * The farm's cover image, or null when it has none.
      *
-     * NOTE: stored_files has no `kind` column yet, so "the farm's image" can only
-     * mean images[0] — the same assumption the edit page's "Dashboard Image"
-     * makes. Once images are categorised, filter by kind here instead.
+     * `cover_photo` holds the stored_files id of the cover image (an id, not a
+     * URL — storage URLs are short-lived signed URLs, so they are resolved
+     * fresh on every read). Farms from before the cover/carousel buckets
+     * existed fall back to their first (oldest) uploaded image.
      */
-    primary_image_url: async (farm: { id: string }): Promise<string | null> => {
+    primary_image_url: async (farm: {
+      id: string;
+      cover_photo?: string | null;
+    }): Promise<string | null> => {
       try {
         const records = await storedFileService.getRecordsByFarm(farm.id);
         if (records.length === 0) {
           return null;
         }
-        return await fileStorageService.getFile(records[0].storage_key);
+        const cover = farm.cover_photo
+          ? records.find((record) => record.id === farm.cover_photo)
+          : undefined;
+        return await fileStorageService.getFile((cover ?? records[0]).storage_key);
       } catch {
         // A single unreadable/missing file must not fail the whole farms query —
         // the card just falls back to its empty state.

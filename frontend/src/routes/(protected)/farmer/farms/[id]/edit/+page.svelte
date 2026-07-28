@@ -77,14 +77,13 @@
 	const GROWING_PRACTICE_OPTIONS = [...GROWING_PRACTICES, NONE_OF_THE_ABOVE];
 	const FOOD_SAFETY_OPTIONS = [...FOOD_SAFETY_CERTIFICATIONS, NONE_OF_THE_ABOVE];
 
-	// Public gallery photos come from the file service (filesByFarm via the loader).
-	const galleryPhotos = $derived(data.images.map((img) => ({ id: img.fileId, url: img.url })));
-
-	// Also file-service owned (the loader overlays it from the first image), and not
-	// editable — so it tracks the loader rather than living in `farm`, which would
-	// hold the value captured at init and disagree with the gallery after an
-	// upload or a remove.
-	const dashboardImageName = $derived(data.form.dashboardImageName);
+	// The two image buckets, resolved by the loader from cover_photo /
+	// carousel_photos (stored_files ids) + filesByFarm. Derived from `data`
+	// rather than copied into `farm` so they track uploads/removals across
+	// invalidateAll().
+	const galleryPhotos = $derived(data.gallery.map((img) => ({ id: img.fileId, url: img.url })));
+	const galleryIds = $derived(data.gallery.map((img) => img.fileId));
+	const dashboardImageName = $derived(data.cover?.originalFileName ?? '');
 
 	const rejectedDate = $derived(
 		data.rejection ? new Date(data.rejection.createdAt).toLocaleDateString() : ''
@@ -114,31 +113,47 @@
 		}
 	}
 
-	async function uploadFiles(files: FileList | null) {
-		if (!files || files.length === 0) return;
+	// Persist a bucket assignment (cover_photo / carousel_photos hold
+	// stored_files ids). Sent separately from the main Save so image edits are
+	// immediate and never clobber unsaved field edits.
+	async function assignImages(input: { cover_photo?: string; carousel_photos?: string[] }) {
+		await gqlClient(UPDATE_FARM, { id: farmId, input });
+	}
 
-		// filesFromDrop caps the drop path; the file pickers reach here unfiltered,
-		// so re-apply the same limit for every upload surface.
+	// Upload each valid file to the farm's file pool and return the new
+	// stored_files ids. filesFromDrop caps the drop path; the file pickers reach
+	// here unfiltered, so re-apply the same limit for every upload surface.
+	async function uploadStoredFiles(files: FileList): Promise<string[]> {
 		const valid = Array.from(files).filter((file) => file.size <= MAX_UPLOAD_BYTES);
 		const oversized = files.length - valid.length;
 		if (valid.length === 0) {
 			actionError = `Images must be under ${MAX_UPLOAD_LABEL}.`;
-			return;
+			return [];
 		}
-
-		uploading = true;
 		actionError =
 			oversized > 0 ? `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.` : '';
+
+		const fileIds: string[] = [];
+		for (const file of valid) {
+			const dataBase64 = toBase64(new Uint8Array(await file.arrayBuffer()));
+			const res = await gqlClient<{ uploadFarmImage: { fileId: string } }>(UPLOAD_FARM_IMAGE, {
+				farmId,
+				originalFileName: file.name,
+				contentType: file.type || 'application/octet-stream',
+				dataBase64
+			});
+			fileIds.push(res.uploadFarmImage.fileId);
+		}
+		return fileIds;
+	}
+
+	// Dashboard Image bucket: the first valid file becomes the cover.
+	async function handleCoverFiles(files: FileList | null) {
+		if (!files || files.length === 0) return;
+		uploading = true;
 		try {
-			for (const file of valid) {
-				const dataBase64 = toBase64(new Uint8Array(await file.arrayBuffer()));
-				await gqlClient(UPLOAD_FARM_IMAGE, {
-					farmId,
-					originalFileName: file.name,
-					contentType: file.type || 'application/octet-stream',
-					dataBase64
-				});
-			}
+			const [fileId] = await uploadStoredFiles(files);
+			if (fileId) await assignImages({ cover_photo: fileId });
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Upload failed.';
 		} finally {
@@ -148,9 +163,25 @@
 		}
 	}
 
+	// Photo Gallery bucket: uploads append to carousel_photos. On legacy farms
+	// (files but empty bucket columns) this also persists the displayed split.
+	async function handleGalleryFiles(files: FileList | null) {
+		if (!files || files.length === 0) return;
+		uploading = true;
+		try {
+			const fileIds = await uploadStoredFiles(files);
+			if (fileIds.length > 0) await assignImages({ carousel_photos: [...galleryIds, ...fileIds] });
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : 'Upload failed.';
+		} finally {
+			await invalidateAll();
+			uploading = false;
+		}
+	}
+
 	function handleGalleryChange(event: Event) {
 		const el = event.currentTarget as HTMLInputElement;
-		if (el.files && el.files.length > 0) uploadFiles(el.files);
+		if (el.files && el.files.length > 0) handleGalleryFiles(el.files);
 		// reset so picking the same file again still fires a change event
 		el.value = '';
 	}
@@ -159,6 +190,7 @@
 		actionError = '';
 		try {
 			await gqlClient(DELETE_FILE, { fileId });
+			await assignImages({ carousel_photos: galleryIds.filter((id) => id !== fileId) });
 			await invalidateAll();
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Remove failed.';
@@ -257,12 +289,13 @@
 		<p class="form-error" role="alert">{actionError}</p>
 	{/if}
 
+	<!-- Bucket 1: the cover image shown on the farm dashboard card (cover_photo). -->
 	<section class="section">
 		<span class="section__subtitle">Dashboard Image</span>
 		<UploadZone
 			title="Upload new farm photo"
-			hint="JPG or PNG, up to 10 pics"
-			onFiles={uploadFiles}
+			hint="JPG or PNG"
+			onFiles={handleCoverFiles}
 			disabled={uploading}
 		/>
 		{#if dashboardImageName}
@@ -270,21 +303,7 @@
 		{/if}
 	</section>
 
-	<!-- Photo gallery (educator) -->
-	<section class="section">
-		<span class="section__subtitle">Photo Gallery</span>
-		<p class="section__hint">
-			*Optional: Upload photos of your farm, operations, and/or products here for educator view.
-		</p>
-		<UploadZone
-			title="Upload farm photos"
-			hint="JPG or PNG, up to 10 pics"
-			onFiles={uploadFiles}
-			disabled={uploading}
-		/>
-	</section>
-
-	<!-- Photo gallery (public) -->
+	<!-- Bucket 2: the public photo gallery grid (carousel_photos). -->
 	<section class="section">
 		<span class="section__subtitle">Photo Gallery</span>
 		<p class="section__hint">
@@ -294,7 +313,7 @@
 		<PhotoGallery
 			photos={galleryPhotos}
 			onAdd={() => galleryInput?.click()}
-			onFiles={uploadFiles}
+			onFiles={handleGalleryFiles}
 			onRemove={removePhoto}
 			disabled={uploading}
 		/>

@@ -30,6 +30,8 @@ const FARM_BY_ID = `
 			farm_experiences
 			farm_characteristics
 			farm_to_school_sales
+			cover_photo
+			carousel_photos
 			status
 		}
 	}
@@ -111,11 +113,22 @@ export const load: PageLoad = async ({ params }) => {
 	const images: FarmImage[] =
 		imagesRes.status === 'fulfilled' ? (imagesRes.value.filesByFarm ?? []) : [];
 
-	// The dashboard image name comes from the file service, not FarmDTO — overlay
-	// the first uploaded image's name if any.
-	if (images.length > 0) {
-		form.dashboardImageName = images[0].originalFileName;
+	// Split the farm's files into the two image buckets. cover_photo /
+	// carousel_photos hold stored_files ids (URLs are short-lived, so files are
+	// re-resolved via filesByFarm on every load).
+	const byId = new Map(images.map((img) => [img.fileId, img]));
+	let cover: FarmImage | null = farm.cover_photo ? (byId.get(farm.cover_photo) ?? null) : null;
+	let gallery: FarmImage[] = (farm.carousel_photos ?? [])
+		.map((fileId) => byId.get(fileId))
+		.filter((img): img is FarmImage => img !== undefined);
+
+	// Farms from before the buckets existed have files but empty bucket columns:
+	// show them under the legacy convention (first upload = cover, rest = gallery).
+	// The first bucket edit persists real assignments.
+	if (!cover && gallery.length === 0 && images.length > 0) {
+		cover = images[0];
+		gallery = images.slice(1);
 	}
 
-	return { form, status: farm.status, rejection, images };
+	return { form, status: farm.status, rejection, cover, gallery };
 };

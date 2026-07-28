@@ -43,6 +43,10 @@ export interface FarmDTO {
 	farm_experiences: string[];
 	farm_characteristics: string[];
 	farm_to_school_sales: string[];
+	/** stored_files id of the cover ("Dashboard") image; not a URL. */
+	cover_photo: string | null;
+	/** stored_files ids of the Photo Gallery images, in display order. */
+	carousel_photos: string[];
 	status: FarmStatus;
 }
 
@@ -112,7 +116,6 @@ export interface FarmFormModel {
 	schoolSales: string[];
 	/** Free text; maps to seasonal_products_detail. */
 	seasonal: string;
-	dashboardImageName: string;
 }
 
 /** The social_media blob keys that have a form control and are rewritten on save. */
@@ -177,10 +180,7 @@ export function farmToFormModel(farm: FarmDTO): FarmFormModel {
 		characteristics: farm.farm_characteristics ?? [],
 		schoolSales: farm.farm_to_school_sales ?? [],
 
-		seasonal: farm.seasonal_products_detail ?? '',
-		// Dashboard image name comes from the file service
-		// (StoredFile.original_file_name), not from FarmDTO; wired separately.
-		dashboardImageName: ''
+		seasonal: farm.seasonal_products_detail ?? ''
 	};
 }
 
