@@ -3,7 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import ActionButton from '$lib/components/ActionButton.svelte';
-	import TextField from '$lib/components/TextField.svelte';
+	import TextInput from '$lib/components/TextInput.svelte';
 	import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
@@ -303,12 +303,12 @@
 	<section class="section">
 		<h2 class="section__heading">Farm Basics</h2>
 
-		<TextField label="Farm ID#" value={farm.readableId} readonly />
+		<TextInput label="Farm ID#" value={farm.readableId} readonly />
 
-		<TextField label="Farm Name" bind:value={farm.name} />
-		<TextField label="Farm address" bind:value={farm.address} />
-		<TextField label="County" bind:value={farm.county} />
-		<TextField label="Cities Served" bind:value={farm.cities} />
+		<TextInput label="Farm Name" bind:value={farm.name} />
+		<TextInput label="Farm address" bind:value={farm.address} />
+		<TextInput label="County" bind:value={farm.county} />
+		<TextInput label="Cities Served" bind:value={farm.cities} />
 		<p class="field-note">Separate multiple cities with commas.</p>
 	</section>
 
@@ -316,16 +316,12 @@
 		<h2 class="section__heading">Primary Contact Information</h2>
 
 		<div class="field-grid">
-			<TextField label="Phone Number" bind:value={farm.phone} />
-			<TextField label="Email Address" bind:value={farm.email} />
-			<TextField label="*Optional: Instagram" bind:value={farm.instagram} optional />
-			<TextField label="*Optional: Facebook" bind:value={farm.facebook} optional />
-			<TextField label="*Optional: Website" bind:value={farm.website} optional />
-			<TextField
-				label="*Optional: Other (social media + username)"
-				bind:value={farm.other}
-				optional
-			/>
+			<TextInput label="Phone Number" bind:value={farm.phone} />
+			<TextInput label="Email Address" bind:value={farm.email} />
+			<TextInput label="*Optional: Instagram" bind:value={farm.instagram} />
+			<TextInput label="*Optional: Facebook" bind:value={farm.facebook} />
+			<TextInput label="*Optional: Website" bind:value={farm.website} />
+			<TextInput label="*Optional: Other (social media + username)" bind:value={farm.other} />
 		</div>
 	</section>
 
@@ -350,7 +346,7 @@
 		<ChoiceGroup label="Other Products" options={OTHER_PRODUCTS} bind:value={farm.otherProducts} />
 
 		<!-- seasonal_products_detail — free-text detail for the products above. -->
-		<TextField label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
+		<TextInput label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
 
 		<ChoiceGroup
 			label="Food Safety & Certifications"

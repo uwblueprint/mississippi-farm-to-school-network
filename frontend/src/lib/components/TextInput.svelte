@@ -14,6 +14,11 @@
 		error?: string;
 		errorCTA?: Snippet;
 		showPasswordToggle?: boolean;
+		/** Render a textarea instead of an input. */
+		multiline?: boolean;
+		rows?: number;
+		/** Render the value as plain text (no control), e.g. the Farm ID#. */
+		readonly?: boolean;
 		[name: string]: unknown;
 	}
 
@@ -30,6 +35,9 @@
 		error,
 		errorCTA,
 		showPasswordToggle = false,
+		multiline = false,
+		rows = 4,
+		readonly = false,
 		...rest
 	}: Props = $props();
 
@@ -42,9 +50,29 @@
 	);
 </script>
 
-<label class="field">
-	<span class="label">{label}</span>
-	{#if showPasswordToggle && isPasswordField}
+{#if readonly}
+	<div class="field">
+		<span class="label">{label}</span>
+		<span class="readonly-value">{value}</span>
+	</div>
+{:else}
+	<label class="field">
+		<span class="label">{label}</span>
+		{#if multiline}
+			<textarea
+				class="input textarea"
+				class:input--error={!!error}
+				{name}
+				id={inputId}
+				{placeholder}
+				{required}
+				{disabled}
+				{rows}
+				bind:value
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error && errorId ? errorId : undefined}
+			></textarea>
+		{:else if showPasswordToggle && isPasswordField}
 		<div class="input-wrapper">
 			<input
 				class="input--with-toggle input"
@@ -94,20 +122,21 @@
 			{...rest}
 		/>
 	{/if}
-	{#if error}
-		<p class="error" id={errorId} role="alert">
-			<img class="error-icon" src="/images/auth/error.svg" alt="" width="15" height="15" />
-			<span class="error-content">
-				<span>{error}</span>
-				{#if errorCTA}
-					<span class="error-cta">
-						{@render errorCTA()}
-					</span>
-				{/if}
-			</span>
-		</p>
-	{/if}
-</label>
+		{#if error}
+			<p class="error" id={errorId} role="alert">
+				<img class="error-icon" src="/images/auth/error.svg" alt="" width="15" height="15" />
+				<span class="error-content">
+					<span>{error}</span>
+					{#if errorCTA}
+						<span class="error-cta">
+							{@render errorCTA()}
+						</span>
+					{/if}
+				</span>
+			</p>
+		{/if}
+	</label>
+{/if}
 
 <style>
 	.field {
@@ -134,6 +163,17 @@
 		font-family: 'DM Sans', sans-serif;
 		font-size: 1.019375rem; /* ~16.31px */
 		line-height: 1.165rem; /* ~18.64px */
+	}
+
+	.textarea {
+		resize: vertical;
+	}
+
+	.readonly-value {
+		color: #383b4a;
+		font-family: 'DM Sans', sans-serif;
+		font-size: 1.019375rem;
+		line-height: normal;
 	}
 
 	.input::placeholder {

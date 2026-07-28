@@ -2,7 +2,7 @@
 	import '$lib/styles/auth/auth-form.css';
 	import { goto } from '$app/navigation';
 	import AuthPageLayout from '$lib/components/auth/AuthPageLayout.svelte';
-	import Button from '$lib/components/Button.svelte';
+	import ActionButton from '$lib/components/ActionButton.svelte';
 
 	interface Props {
 		heading: string;
@@ -25,6 +25,6 @@
 	</div>
 
 	{#snippet actions()}
-		<Button label={buttonLabel} onclick={() => goto(buttonHref)} />
+		<ActionButton variant="primary" block label={buttonLabel} onclick={() => goto(buttonHref)} />
 	{/snippet}
 </AuthPageLayout>

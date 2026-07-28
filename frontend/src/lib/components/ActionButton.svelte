@@ -18,6 +18,8 @@
 		disabled?: boolean;
 		/** Stretch to fill the container width (e.g. the full-width Save). */
 		block?: boolean;
+		/** Plain-text content; ignored when a children snippet is given. */
+		label?: string;
 		/** Leading icon (left of the label). */
 		iconLeft?: Snippet;
 		/** Trailing icon (right of the label). */
@@ -34,6 +36,7 @@
 		type = 'button',
 		disabled = false,
 		block = false,
+		label,
 		iconLeft,
 		iconRight,
 		children,
@@ -55,6 +58,8 @@
 	{/if}
 	{#if children}
 		<span class="action-btn__label">{@render children()}</span>
+	{:else if label}
+		<span class="action-btn__label">{label}</span>
 	{/if}
 	{#if iconRight}
 		<span class="action-btn__icon">{@render iconRight()}</span>
@@ -93,7 +98,7 @@
 
 	.action-btn:disabled {
 		opacity: 0.45;
-		cursor: default;
+		cursor: not-allowed;
 	}
 
 	.action-btn__icon {
@@ -121,12 +126,21 @@
 		color: #696c78;
 	}
 
-	/* --- Primary (Save) --- */
+	.action-btn--outline:hover:not(:disabled) {
+		background: #f5f6f8;
+	}
+
+	/* --- Primary (Save, auth CTAs) --- */
 	.action-btn--primary {
 		height: 50px;
-		border-color: #587244;
-		background: #587244;
+		border-color: var(--color-primary-button, #587244);
+		background: var(--color-primary-button, #587244);
 		color: #ffffff;
+	}
+
+	.action-btn--primary:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--color-primary-button, #587244) 88%, black);
+		border-color: color-mix(in srgb, var(--color-primary-button, #587244) 88%, black);
 	}
 
 	/* --- Danger (Delete Farm) --- */
