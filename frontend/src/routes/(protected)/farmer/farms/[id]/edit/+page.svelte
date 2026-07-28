@@ -7,6 +7,7 @@
 	import ChoiceGroup from '$lib/components/ChoiceGroup.svelte';
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
+	import RequestedChangesCard from '$lib/components/RequestedChangesCard.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
 	import { IMAGE_ACCEPT, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
 	import { formModelToUpdateInput } from '$lib/farmMapping';
@@ -84,10 +85,6 @@
 	const galleryPhotos = $derived(data.gallery.map((img) => ({ id: img.fileId, url: img.url })));
 	const galleryIds = $derived(data.gallery.map((img) => img.fileId));
 	const dashboardImageName = $derived(data.cover?.originalFileName ?? '');
-
-	const rejectedDate = $derived(
-		data.rejection ? new Date(data.rejection.createdAt).toLocaleDateString() : ''
-	);
 
 	let saving = $state(false);
 	let uploading = $state(false);
@@ -274,15 +271,7 @@
 	<h1 class="edit-title">Edit {farm.name}</h1>
 
 	{#if data.rejection}
-		<div class="rejection-banner" role="alert">
-			<span class="rejection-banner__title"
-				>This farm was rejected{rejectedDate ? ` on ${rejectedDate}` : ''}.</span
-			>
-			<span class="rejection-banner__reason">{data.rejection.reason}</span>
-			<span class="rejection-banner__hint"
-				>Update the details below and save to resubmit for review.</span
-			>
-		</div>
+		<RequestedChangesCard reason={data.rejection.reason} />
 	{/if}
 
 	{#if actionError}
@@ -441,32 +430,6 @@
 	/* Hidden file input driving the public gallery "Add Photos" tile. */
 	.visually-hidden-file {
 		display: none;
-	}
-
-	.rejection-banner {
-		display: flex;
-		flex-direction: column;
-		gap: 6px;
-		padding: 18px 22px;
-		border: 1px solid #f2c4bf;
-		border-radius: 10px;
-		background: #fce4e1;
-		color: #7a2318;
-	}
-
-	.rejection-banner__title {
-		font-size: 19px;
-		font-weight: 600;
-	}
-
-	.rejection-banner__reason {
-		font-size: 17px;
-		font-weight: 400;
-	}
-
-	.rejection-banner__hint {
-		font-size: 15px;
-		font-weight: 300;
 	}
 
 	.form-error {

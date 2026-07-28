@@ -2,6 +2,9 @@
 	import { onMount } from 'svelte';
 	import FarmCard from '$lib/components/FarmCard.svelte';
 	import ActionButton from '$lib/components/ActionButton.svelte';
+	import Modal from '$lib/components/Modal.svelte';
+	import RequestedChangesCard from '$lib/components/RequestedChangesCard.svelte';
+	import ApprovedCard from '$lib/components/ApprovedCard.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
 	import type { FarmStatus } from '$lib/farmStatus';
 
@@ -30,14 +33,65 @@
 		}
 	`;
 
+	const LATEST_REJECTION = `
+		query LatestActiveFarmRejection($farmId: ID!) {
+			latestActiveFarmRejection(farmId: $farmId) { rejection_reason }
+		}
+	`;
+
 	let farms = $state<FarmListItem[]>([]);
 	let loading = $state(true);
 	let errorMessage = $state('');
+
+	// Status popup shown after the farms load: a rejected farm surfaces its
+	// requested changes on every visit (it needs action); an approval is
+	// celebrated once per farm (tracked in localStorage).
+	type StatusPopup =
+		| { kind: 'rejected'; farm: FarmListItem; reason: string }
+		| { kind: 'approved'; farm: FarmListItem };
+	let statusPopup = $state<StatusPopup | null>(null);
+
+	const SEEN_APPROVED_KEY = 'mfsn:seen-approved-farms';
+
+	function seenApprovedIds(): string[] {
+		try {
+			return JSON.parse(localStorage.getItem(SEEN_APPROVED_KEY) ?? '[]');
+		} catch {
+			return [];
+		}
+	}
+
+	async function pickStatusPopup(loaded: FarmListItem[]) {
+		const rejected = loaded.find((farm) => farm.status === 'REJECTED');
+		if (rejected) {
+			let reason = 'Please review your farm details and resubmit your application.';
+			try {
+				const res = await gqlClient<{
+					latestActiveFarmRejection: { rejection_reason: string } | null;
+				}>(LATEST_REJECTION, { farmId: rejected.id });
+				reason = res.latestActiveFarmRejection?.rejection_reason ?? reason;
+			} catch {
+				// popup still shows with the generic reason
+			}
+			statusPopup = { kind: 'rejected', farm: rejected, reason };
+			return;
+		}
+
+		const seen = seenApprovedIds();
+		const approved = loaded.find((farm) => farm.status === 'APPROVED' && !seen.includes(farm.id));
+		if (approved) statusPopup = { kind: 'approved', farm: approved };
+	}
+
+	function closeApprovedPopup(farmId: string) {
+		localStorage.setItem(SEEN_APPROVED_KEY, JSON.stringify([...seenApprovedIds(), farmId]));
+		statusPopup = null;
+	}
 
 	onMount(async () => {
 		try {
 			const data = await gqlClient<{ myFarms: FarmListItem[] }>(MY_FARMS);
 			farms = data.myFarms;
+			await pickStatusPopup(farms);
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Failed to load your farms.';
 		} finally {
@@ -99,6 +153,30 @@
 		</div>
 	{/if}
 </section>
+
+{#if statusPopup?.kind === 'rejected'}
+	{@const popup = statusPopup}
+	<Modal label="Changes requested" onClose={() => (statusPopup = null)}>
+		<RequestedChangesCard
+			reason={popup.reason}
+			subtitle="We reviewed your application and are unable to approve it at this time"
+		>
+			{#snippet actions()}
+				<ActionButton variant="outline-primary" onclick={() => (statusPopup = null)}>
+					Back
+				</ActionButton>
+				<ActionButton variant="primary" href={`/farmer/farms/${popup.farm.id}/edit`}>
+					Edit Farm Details
+				</ActionButton>
+			{/snippet}
+		</RequestedChangesCard>
+	</Modal>
+{:else if statusPopup?.kind === 'approved'}
+	{@const popup = statusPopup}
+	<Modal label="Application approved" onClose={() => closeApprovedPopup(popup.farm.id)}>
+		<ApprovedCard />
+	</Modal>
+{/if}
 
 <style>
 	.farms-page {

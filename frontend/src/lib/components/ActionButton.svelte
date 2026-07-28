@@ -8,7 +8,7 @@
 	 * for Back / Save / Delete on the edit form. Renders as an <a> when `href` is
 	 * provided, otherwise a <button> — mirroring the action() pattern in FarmCard.
 	 */
-	type Variant = 'outline' | 'primary' | 'danger';
+	type Variant = 'outline' | 'outline-primary' | 'primary' | 'danger';
 
 	interface Props {
 		variant?: Variant;
@@ -128,6 +128,17 @@
 
 	.action-btn--outline:hover:not(:disabled) {
 		background: #f5f6f8;
+	}
+
+	/* --- Outline primary (modal "Back") --- */
+	.action-btn--outline-primary {
+		border-color: var(--mfsn-primary, #587244);
+		background: var(--mfsn-surface, #ffffff);
+		color: var(--mfsn-primary, #587244);
+	}
+
+	.action-btn--outline-primary:hover:not(:disabled) {
+		background: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
 	}
 
 	/* --- Primary (Save, auth CTAs) --- */
