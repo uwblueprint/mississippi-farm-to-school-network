@@ -303,12 +303,12 @@
 	<section class="section">
 		<h2 class="section__heading">Farm Basics</h2>
 
-		<TextInput label="Farm ID#" value={farm.readableId} readonly />
+		<TextInput size="lg" label="Farm ID#" value={farm.readableId} readonly />
 
-		<TextInput label="Farm Name" bind:value={farm.name} />
-		<TextInput label="Farm address" bind:value={farm.address} />
-		<TextInput label="County" bind:value={farm.county} />
-		<TextInput label="Cities Served" bind:value={farm.cities} />
+		<TextInput size="lg" label="Farm Name" bind:value={farm.name} />
+		<TextInput size="lg" label="Farm address" bind:value={farm.address} />
+		<TextInput size="lg" label="County" bind:value={farm.county} />
+		<TextInput size="lg" label="Cities Served" bind:value={farm.cities} />
 		<p class="field-note">Separate multiple cities with commas.</p>
 	</section>
 
@@ -316,12 +316,12 @@
 		<h2 class="section__heading">Primary Contact Information</h2>
 
 		<div class="field-grid">
-			<TextInput label="Phone Number" bind:value={farm.phone} />
-			<TextInput label="Email Address" bind:value={farm.email} />
-			<TextInput label="*Optional: Instagram" bind:value={farm.instagram} />
-			<TextInput label="*Optional: Facebook" bind:value={farm.facebook} />
-			<TextInput label="*Optional: Website" bind:value={farm.website} />
-			<TextInput label="*Optional: Other (social media + username)" bind:value={farm.other} />
+			<TextInput size="lg" label="Phone Number" bind:value={farm.phone} />
+			<TextInput size="lg" label="Email Address" bind:value={farm.email} />
+			<TextInput size="lg" label="*Optional: Instagram" bind:value={farm.instagram} />
+			<TextInput size="lg" label="*Optional: Facebook" bind:value={farm.facebook} />
+			<TextInput size="lg" label="*Optional: Website" bind:value={farm.website} />
+			<TextInput size="lg" label="*Optional: Other (social media + username)" bind:value={farm.other} />
 		</div>
 	</section>
 
@@ -346,7 +346,7 @@
 		<ChoiceGroup label="Other Products" options={OTHER_PRODUCTS} bind:value={farm.otherProducts} />
 
 		<!-- seasonal_products_detail — free-text detail for the products above. -->
-		<TextInput label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
+		<TextInput size="lg" label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
 
 		<ChoiceGroup
 			label="Food Safety & Certifications"

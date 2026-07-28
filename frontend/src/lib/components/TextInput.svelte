@@ -19,6 +19,9 @@
 		rows?: number;
 		/** Render the value as plain text (no control), e.g. the Farm ID#. */
 		readonly?: boolean;
+		/** 'md' is the auth-form spec; 'lg' is the farm edit form's Figma spec
+		 *  (larger light labels, Nunito input text, rounder corners). */
+		size?: 'md' | 'lg';
 		[name: string]: unknown;
 	}
 
@@ -38,6 +41,7 @@
 		multiline = false,
 		rows = 4,
 		readonly = false,
+		size = 'md',
 		...rest
 	}: Props = $props();
 
@@ -51,12 +55,12 @@
 </script>
 
 {#if readonly}
-	<div class="field">
+	<div class="field field--readonly" class:field--lg={size === 'lg'}>
 		<span class="label">{label}</span>
 		<span class="readonly-value">{value}</span>
 	</div>
 {:else}
-	<label class="field">
+	<label class="field" class:field--lg={size === 'lg'}>
 		<span class="label">{label}</span>
 		{#if multiline}
 			<textarea
@@ -167,6 +171,34 @@
 
 	.textarea {
 		resize: vertical;
+	}
+
+	/* --- size="lg": the farm edit form's Figma spec (ex-TextField) --- */
+	.field--lg .label {
+		font-size: 21px;
+		font-weight: 300;
+		color: #131927;
+	}
+
+	/* Readonly label (Farm ID#) — heavier than the light field labels */
+	.field--lg.field--readonly .label {
+		font-weight: 400;
+	}
+
+	.field--lg .input {
+		padding: 16.8px 22.4px;
+		border-width: 1.82px;
+		border-radius: 11.2px;
+		font-family: 'Nunito Variable', 'Nunito', 'DM Sans Variable', sans-serif;
+		font-size: 17.343px;
+		font-weight: 400;
+		line-height: normal;
+		color: #383b4a;
+	}
+
+	.field--lg .readonly-value {
+		font-family: 'Nunito Variable', 'Nunito', sans-serif;
+		font-size: 17.343px;
 	}
 
 	.readonly-value {
