@@ -336,7 +336,11 @@
 			<TextInput size="lg" label="*Optional: Instagram" bind:value={farm.instagram} />
 			<TextInput size="lg" label="*Optional: Facebook" bind:value={farm.facebook} />
 			<TextInput size="lg" label="*Optional: Website" bind:value={farm.website} />
-			<TextInput size="lg" label="*Optional: Other (social media + username)" bind:value={farm.other} />
+			<TextInput
+				size="lg"
+				label="*Optional: Other (social media + username)"
+				bind:value={farm.other}
+			/>
 		</div>
 	</section>
 
@@ -361,7 +365,12 @@
 		<ChoiceGroup label="Other Products" options={OTHER_PRODUCTS} bind:value={farm.otherProducts} />
 
 		<!-- seasonal_products_detail — free-text detail for the products above. -->
-		<TextInput size="lg" label="Seasonal product and products offered" bind:value={farm.seasonal} multiline />
+		<TextInput
+			size="lg"
+			label="Seasonal product and products offered"
+			bind:value={farm.seasonal}
+			multiline
+		/>
 
 		<ChoiceGroup
 			label="Food Safety & Certifications"

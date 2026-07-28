@@ -77,9 +77,41 @@
 				aria-describedby={error && errorId ? errorId : undefined}
 			></textarea>
 		{:else if showPasswordToggle && isPasswordField}
-		<div class="input-wrapper">
+			<div class="input-wrapper">
+				<input
+					class="input--with-toggle input"
+					class:input--error={!!error}
+					type={inputType}
+					{name}
+					id={inputId}
+					{autocomplete}
+					{placeholder}
+					{required}
+					{disabled}
+					bind:value
+					aria-invalid={error ? 'true' : undefined}
+					aria-describedby={error && errorId ? errorId : undefined}
+					{...rest}
+				/>
+				<button
+					type="button"
+					class="toggle-button"
+					aria-label={showPassword ? 'Hide password' : 'Show password'}
+					aria-pressed={showPassword}
+					onclick={() => (showPassword = !showPassword)}
+				>
+					<img
+						class="toggle-icon"
+						src={showPassword ? '/images/auth/eye-off.svg' : '/images/auth/eye.svg'}
+						alt=""
+						width="21"
+						height="21"
+					/>
+				</button>
+			</div>
+		{:else}
 			<input
-				class="input--with-toggle input"
+				class="input"
 				class:input--error={!!error}
 				type={inputType}
 				{name}
@@ -93,39 +125,7 @@
 				aria-describedby={error && errorId ? errorId : undefined}
 				{...rest}
 			/>
-			<button
-				type="button"
-				class="toggle-button"
-				aria-label={showPassword ? 'Hide password' : 'Show password'}
-				aria-pressed={showPassword}
-				onclick={() => (showPassword = !showPassword)}
-			>
-				<img
-					class="toggle-icon"
-					src={showPassword ? '/images/auth/eye-off.svg' : '/images/auth/eye.svg'}
-					alt=""
-					width="21"
-					height="21"
-				/>
-			</button>
-		</div>
-	{:else}
-		<input
-			class="input"
-			class:input--error={!!error}
-			type={inputType}
-			{name}
-			id={inputId}
-			{autocomplete}
-			{placeholder}
-			{required}
-			{disabled}
-			bind:value
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={error && errorId ? errorId : undefined}
-			{...rest}
-		/>
-	{/if}
+		{/if}
 		{#if error}
 			<p class="error" id={errorId} role="alert">
 				<img class="error-icon" src="/images/auth/error.svg" alt="" width="15" height="15" />
