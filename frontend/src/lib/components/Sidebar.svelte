@@ -9,21 +9,21 @@
 		profileName?: string;
 		/** Signed-in user's role (Farmer, Admin, …). */
 		profileRole?: string;
-		/** Signed-in user's headshot URL. */
+		/** Signed-in user's headshot URL; omitted -> initial-letter avatar. */
 		avatarUrl?: string;
 	}
 
 	let {
 		logoSrc = logoDefault,
-		profileName = 'Farmer Name',
+		profileName = 'Farmer',
 		profileRole = 'Farmer',
-		avatarUrl = 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200'
+		avatarUrl
 	}: Props = $props();
 
+	// TODO(routes): add a "Contact MSFN" item once a contact page exists.
 	const navItems = [
 		{ label: 'Farms', href: '/farmer/farms' },
-		{ label: 'Map', href: '/map' },
-		{ label: 'Contact MSFN', href: '/contact' }
+		{ label: 'Map', href: '/farms' }
 	];
 
 	const path = $derived(page.url.pathname);
@@ -50,12 +50,18 @@
 	<div class="sidebar__bottom">
 		<hr class="sidebar__divider" />
 		<div class="sidebar__profile">
-			<div
-				class="sidebar__avatar"
-				role="img"
-				aria-label={profileName}
-				style="background-image: url('{avatarUrl}')"
-			></div>
+			{#if avatarUrl}
+				<div
+					class="sidebar__avatar"
+					role="img"
+					aria-label={profileName}
+					style="background-image: url('{avatarUrl}')"
+				></div>
+			{:else}
+				<div class="sidebar__avatar sidebar__avatar--initial" role="img" aria-label={profileName}>
+					{profileName.charAt(0).toUpperCase()}
+				</div>
+			{/if}
 			<div class="sidebar__profile-text">
 				<span class="sidebar__profile-name">{profileName}</span>
 				<span class="sidebar__profile-role">{profileRole}</span>
@@ -136,6 +142,16 @@
 		align-items: center;
 		align-self: stretch;
 		gap: 16px;
+	}
+
+	.sidebar__avatar--initial {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		background-color: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
+		color: var(--mfsn-primary, #587244);
+		font-size: 18px;
+		font-weight: 500;
 	}
 
 	.sidebar__avatar {

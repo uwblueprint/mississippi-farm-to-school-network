@@ -15,9 +15,21 @@
 
 	let { label, onClose, children }: Props = $props();
 
+	let closeButton = $state<HTMLButtonElement | null>(null);
+
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') onClose();
 	}
+
+	// While open: lock the page scroll and move focus into the dialog.
+	$effect(() => {
+		const previousOverflow = document.body.style.overflow;
+		document.body.style.overflow = 'hidden';
+		closeButton?.focus();
+		return () => {
+			document.body.style.overflow = previousOverflow;
+		};
+	});
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -26,7 +38,13 @@
 	<button class="backdrop" type="button" aria-label="Close" onclick={onClose}></button>
 
 	<div class="panel">
-		<button class="close" type="button" aria-label="Close" onclick={onClose}>
+		<button
+			bind:this={closeButton}
+			class="close"
+			type="button"
+			aria-label="Close"
+			onclick={onClose}
+		>
 			<svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 				<path
 					d="M18 6L6 18M6 6L18 18"

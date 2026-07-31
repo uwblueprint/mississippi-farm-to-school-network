@@ -81,10 +81,14 @@
 	// The two image buckets, resolved by the loader from cover_photo /
 	// carousel_photos (stored_files ids) + filesByFarm. Derived from `data`
 	// rather than copied into `farm` so they track uploads/removals across
-	// invalidateAll().
+	// invalidateAll(). Writes are based on the PERSISTED ids (coverId/galleryIds),
+	// not the display subset, so a transiently unresolvable file is never evicted.
 	const galleryPhotos = $derived(data.gallery.map((img) => ({ id: img.fileId, url: img.url })));
-	const galleryIds = $derived(data.gallery.map((img) => img.fileId));
+	const galleryIds = $derived(data.galleryIds);
+	const coverId = $derived(data.coverId);
 	const dashboardImageName = $derived(data.cover?.originalFileName ?? '');
+
+	const MAX_GALLERY_PHOTOS = 10;
 
 	let saving = $state(false);
 	let uploading = $state(false);
@@ -112,16 +116,24 @@
 
 	// Persist a bucket assignment (cover_photo / carousel_photos hold
 	// stored_files ids). Sent separately from the main Save so image edits are
-	// immediate and never clobber unsaved field edits.
-	async function assignImages(input: { cover_photo?: string; carousel_photos?: string[] }) {
+	// immediate and never clobber unsaved field edits. ALWAYS writes both
+	// columns from the current state (+ the change), so the first edit of a
+	// legacy farm (files but empty columns) persists the displayed split
+	// instead of losing the other bucket.
+	async function assignImages(next: { cover?: string | null; gallery?: string[] }) {
+		const cover = next.cover !== undefined ? next.cover : coverId;
+		const input: { cover_photo?: string; carousel_photos: string[] } = {
+			carousel_photos: next.gallery ?? galleryIds
+		};
+		if (cover) input.cover_photo = cover;
 		await gqlClient(UPDATE_FARM, { id: farmId, input });
 	}
 
 	// Upload each valid file to the farm's file pool and return the new
 	// stored_files ids. filesFromDrop caps the drop path; the file pickers reach
 	// here unfiltered, so re-apply the same limit for every upload surface.
-	async function uploadStoredFiles(files: FileList): Promise<string[]> {
-		const valid = Array.from(files).filter((file) => file.size <= MAX_UPLOAD_BYTES);
+	async function uploadStoredFiles(files: File[]): Promise<string[]> {
+		const valid = files.filter((file) => file.size <= MAX_UPLOAD_BYTES);
 		const oversized = files.length - valid.length;
 		if (valid.length === 0) {
 			actionError = `Images must be under ${MAX_UPLOAD_LABEL}.`;
@@ -144,13 +156,29 @@
 		return fileIds;
 	}
 
-	// Dashboard Image bucket: the first valid file becomes the cover.
+	// Dashboard Image bucket: exactly one file becomes the cover (the zone is
+	// multiple={false}; the slice guards the programmatic path). The replaced
+	// cover file is deleted best-effort so it doesn't linger as an orphan.
 	async function handleCoverFiles(files: FileList | null) {
-		if (!files || files.length === 0) return;
+		if (!files || files.length === 0 || uploading) return;
 		uploading = true;
 		try {
-			const [fileId] = await uploadStoredFiles(files);
-			if (fileId) await assignImages({ cover_photo: fileId });
+			const previousCoverId = coverId;
+			const [fileId] = await uploadStoredFiles(Array.from(files).slice(0, 1));
+			if (fileId) {
+				await assignImages({ cover: fileId });
+				if (
+					previousCoverId &&
+					previousCoverId !== fileId &&
+					!galleryIds.includes(previousCoverId)
+				) {
+					try {
+						await gqlClient(DELETE_FILE, { fileId: previousCoverId });
+					} catch {
+						// best-effort cleanup; an orphaned old cover is harmless
+					}
+				}
+			}
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Upload failed.';
 		} finally {
@@ -160,14 +188,23 @@
 		}
 	}
 
-	// Photo Gallery bucket: uploads append to carousel_photos. On legacy farms
-	// (files but empty bucket columns) this also persists the displayed split.
+	// Photo Gallery bucket: uploads append to carousel_photos, capped at
+	// MAX_GALLERY_PHOTOS. On legacy farms (files but empty bucket columns)
+	// assignImages also persists the displayed cover.
 	async function handleGalleryFiles(files: FileList | null) {
-		if (!files || files.length === 0) return;
+		if (!files || files.length === 0 || uploading) return;
+		const remaining = MAX_GALLERY_PHOTOS - galleryIds.length;
+		if (remaining <= 0) {
+			actionError = `The gallery is full (${MAX_GALLERY_PHOTOS} photos max).`;
+			return;
+		}
 		uploading = true;
 		try {
-			const fileIds = await uploadStoredFiles(files);
-			if (fileIds.length > 0) await assignImages({ carousel_photos: [...galleryIds, ...fileIds] });
+			const fileIds = await uploadStoredFiles(Array.from(files).slice(0, remaining));
+			if (files.length > remaining) {
+				actionError = `Only ${remaining} more photo${remaining === 1 ? '' : 's'} fit — the gallery holds ${MAX_GALLERY_PHOTOS}.`;
+			}
+			if (fileIds.length > 0) await assignImages({ gallery: [...galleryIds, ...fileIds] });
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Upload failed.';
 		} finally {
@@ -183,14 +220,22 @@
 		el.value = '';
 	}
 
+	// Shares the `uploading` gate with the upload handlers: concurrent
+	// full-array carousel writes would clobber each other (last write wins).
 	async function removePhoto(fileId: string) {
+		if (uploading) return;
+		uploading = true;
 		actionError = '';
 		try {
+			// Unreference first, then delete the blob: if the delete fails the file
+			// is merely orphaned (invisible), never a dangling gallery entry.
+			await assignImages({ gallery: galleryIds.filter((id) => id !== fileId) });
 			await gqlClient(DELETE_FILE, { fileId });
-			await assignImages({ carousel_photos: galleryIds.filter((id) => id !== fileId) });
-			await invalidateAll();
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Remove failed.';
+		} finally {
+			await invalidateAll();
+			uploading = false;
 		}
 	}
 
@@ -284,6 +329,7 @@
 		<UploadZone
 			title="Upload new farm photo"
 			hint="JPG or PNG"
+			multiple={false}
 			onFiles={handleCoverFiles}
 			disabled={uploading}
 		/>

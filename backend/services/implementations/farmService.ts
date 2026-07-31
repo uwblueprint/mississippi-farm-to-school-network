@@ -43,6 +43,11 @@ const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'status',
+  // Image-bucket assignments are not substantive changes: uploading a photo to
+  // a REJECTED farm must not silently resubmit it (that path never resolves the
+  // farm_rejections row, unlike resubmitFarm).
+  'cover_photo',
+  'carousel_photos',
 ]);
 
 type FarmFieldDiff = {

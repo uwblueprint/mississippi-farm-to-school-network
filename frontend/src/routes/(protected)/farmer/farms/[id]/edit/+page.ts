@@ -116,19 +116,28 @@ export const load: PageLoad = async ({ params }) => {
 	// Split the farm's files into the two image buckets. cover_photo /
 	// carousel_photos hold stored_files ids (URLs are short-lived, so files are
 	// re-resolved via filesByFarm on every load).
+	//
+	// coverId/galleryIds are the PERSISTED ids and are what bucket writes must be
+	// based on; cover/gallery are the display subset (an id whose signed-URL
+	// resolution transiently failed is kept in galleryIds so an unrelated edit
+	// doesn't silently evict it from carousel_photos).
 	const byId = new Map(images.map((img) => [img.fileId, img]));
-	let cover: FarmImage | null = farm.cover_photo ? (byId.get(farm.cover_photo) ?? null) : null;
-	let gallery: FarmImage[] = (farm.carousel_photos ?? [])
+	let coverId: string | null = farm.cover_photo ?? null;
+	let galleryIds: string[] = farm.carousel_photos ?? [];
+	let cover: FarmImage | null = coverId ? (byId.get(coverId) ?? null) : null;
+	let gallery: FarmImage[] = galleryIds
 		.map((fileId) => byId.get(fileId))
 		.filter((img): img is FarmImage => img !== undefined);
 
 	// Farms from before the buckets existed have files but empty bucket columns:
 	// show them under the legacy convention (first upload = cover, rest = gallery).
-	// The first bucket edit persists real assignments.
-	if (!cover && gallery.length === 0 && images.length > 0) {
+	// The first bucket edit persists this full split (both columns).
+	if (!coverId && galleryIds.length === 0 && images.length > 0) {
 		cover = images[0];
+		coverId = images[0].fileId;
 		gallery = images.slice(1);
+		galleryIds = gallery.map((img) => img.fileId);
 	}
 
-	return { form, status: farm.status, rejection, cover, gallery };
+	return { form, status: farm.status, rejection, cover, coverId, gallery, galleryIds };
 };

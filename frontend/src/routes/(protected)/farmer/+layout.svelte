@@ -1,11 +1,21 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import { getFirebaseAuth } from '$lib/firebase';
 
 	let { children } = $props();
+
+	// The (protected) gate guarantees a signed-in user by the time this renders;
+	// surface their identity in the sidebar profile block.
+	let profileName = $state('Farmer');
+	onMount(() => {
+		const user = getFirebaseAuth().currentUser;
+		profileName = user?.displayName || user?.email || 'Farmer';
+	});
 </script>
 
 <div class="dashboard">
-	<Sidebar />
+	<Sidebar {profileName} />
 	<main class="dashboard__main">
 		{@render children()}
 	</main>
