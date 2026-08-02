@@ -33,13 +33,20 @@
 
 /* MFSN brand tokens — single source of truth for the design colors. */
 :root {
-	--mfsn-primary: #587244;
+	--mfsn-primary: var(--mfsn-primary-400);
 	--mfsn-primary-hover: #688750; /* a touch lighter than primary, for hover */
 	--mfsn-primary-tint: rgba(88, 114, 68, 0.08); /* faint primary wash for outlined hover */
 	--mfsn-text-primary: #131927; /* primary text + icons */
 	--mfsn-text-muted: #8a8f87; /* muted labels, e.g. onboarding step counter */
 	--mfsn-icon-close: #414141;
 	--mfsn-surface: #ffffff;
+
+	--mfsn-status-active-bg: var(--mfsn-success-50);
+	--mfsn-status-active-text: var(--mfsn-success-300);
+	--mfsn-status-scheduled-bg: var(--mfsn-warning-50);
+	--mfsn-status-scheduled-text: #bf8123;
+	--mfsn-status-expired-bg: #e0e8f7;
+	--mfsn-status-expired-text: var(--color-neutral-600);
 }
 
 /* Windows form styling fix (see Skeleton docs) */
