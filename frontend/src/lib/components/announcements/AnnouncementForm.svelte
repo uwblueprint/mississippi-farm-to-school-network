@@ -2,11 +2,6 @@
 	import { untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import type { Announcement } from '$lib/types/announcement';
-	import {
-		createAnnouncement,
-		deleteAnnouncement,
-		updateAnnouncement
-	} from '$lib/state/announcements.svelte';
 	import { showToast } from '$lib/state/toast.svelte';
 	import {
 		formatLongDate,
@@ -44,7 +39,8 @@
 	let linkInputEl: HTMLInputElement | undefined = $state();
 	let savedRange: Range | null = null;
 	let startDate = $state<string | null>(untrack(() => announcement?.startDate ?? null));
-	let endDate = $state<string | null>(untrack(() => announcement?.endDate ?? null));
+	let endDate = $state<string | null>(untrack(() => announcement?.endDate || null));
+	let submitting = $state(false);
 	let leftMonth = $state(
 		untrack(() => {
 			const base = announcement ? parseDate(announcement.startDate) : new Date();
@@ -270,26 +266,55 @@
 		rightMonth = new Date(rightMonth.getFullYear(), rightMonth.getMonth() + delta, 1);
 	}
 
-	function confirmSave() {
-		if (!startDate || !endDate) return;
-		const data = { message, startDate, endDate };
-		if (announcement) {
-			updateAnnouncement(announcement.id, data);
-			showToast('success', 'Changes saved');
-		} else {
-			createAnnouncement(data);
-			showToast('success', 'Announcement created');
+	async function submitRequest(url: string, method: string, body?: object) {
+		try {
+			const res = await fetch(url, {
+				method,
+				headers: { 'Content-Type': 'application/json' },
+				...(body ? { body: JSON.stringify(body) } : {})
+			});
+			const result = await res.json();
+			if (!result.ok) {
+				return result.errors?.[0]?.message ?? 'Something went wrong. Please try again.';
+			}
+			return null;
+		} catch {
+			return 'Something went wrong. Please try again.';
 		}
-		confirmKind = null;
-		goto('/admin/announcements');
 	}
 
-	function confirmDelete() {
-		if (!announcement) return;
-		deleteAnnouncement(announcement.id);
-		showToast('delete', 'Announcement deleted');
+	async function confirmSave() {
+		if (!startDate || !endDate || submitting) return;
+		submitting = true;
+		const failure = announcement
+			? await submitRequest(`/api/announcements/${announcement.id}`, 'PATCH', {
+					message,
+					startDate,
+					endDate
+				})
+			: await submitRequest('/api/announcements', 'POST', { message, startDate, endDate });
+		submitting = false;
 		confirmKind = null;
-		goto('/admin/announcements');
+		if (failure) {
+			showToast('error', failure);
+			return;
+		}
+		showToast('success', announcement ? 'Changes saved' : 'Announcement created');
+		goto('/admin/announcements', { invalidateAll: true });
+	}
+
+	async function confirmDelete() {
+		if (!announcement || submitting) return;
+		submitting = true;
+		const failure = await submitRequest(`/api/announcements/${announcement.id}`, 'DELETE');
+		submitting = false;
+		confirmKind = null;
+		if (failure) {
+			showToast('error', failure);
+			return;
+		}
+		showToast('delete', 'Announcement deleted');
+		goto('/admin/announcements', { invalidateAll: true });
 	}
 
 	function cancel() {
@@ -326,7 +351,7 @@
 <div class="announcement-form" style:--popover-reserve="{calendarsOpen ? popoverHeight + 12 : 0}px">
 	<header class="form-header">
 		<h1 class="form-heading">{heading}</h1>
-		{#if announcement}
+		{#if announcement && existingStatus !== 'expired'}
 			<button class="delete-button" type="button" onclick={() => (confirmKind = 'delete')}>
 				Delete
 			</button>

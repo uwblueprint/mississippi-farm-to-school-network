@@ -1,6 +1,5 @@
 <script lang="ts">
 	import type { Announcement, AnnouncementStatus } from '$lib/types/announcement';
-	import { announcements } from '$lib/state/announcements.svelte';
 	import { parseDate, statusOf } from '$lib/utils/announcement-dates';
 	import { stripHtml } from '$lib/utils/rich-text';
 	import AnnouncementCard from './AnnouncementCard.svelte';
@@ -25,6 +24,8 @@
 		segments: Segment[];
 		laneCount: number;
 	};
+
+	let { announcements }: { announcements: Announcement[] } = $props();
 
 	const now = new Date();
 	let monthCursor = $state(new Date(now.getFullYear(), now.getMonth(), 1));
@@ -59,7 +60,7 @@
 			result.push({ days, segments: [], laneCount: 0 });
 		}
 
-		const sorted = [...announcements.all].sort(
+		const sorted = [...announcements].sort(
 			(a, b) => a.startDate.localeCompare(b.startDate) || b.endDate.localeCompare(a.endDate)
 		);
 
@@ -70,7 +71,7 @@
 
 			for (const announcement of sorted) {
 				const start = parseDate(announcement.startDate).getTime();
-				const end = parseDate(announcement.endDate).getTime();
+				const end = announcement.endDate ? parseDate(announcement.endDate).getTime() : Infinity;
 				if (end < weekStart || start > weekEnd) continue;
 
 				const startCol = start <= weekStart ? 0 : Math.round((start - weekStart) / DAY_MS);

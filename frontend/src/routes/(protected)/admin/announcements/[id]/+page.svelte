@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { page } from '$app/state';
 	import AnnouncementForm from '$lib/components/announcements/AnnouncementForm.svelte';
-	import { getAnnouncement } from '$lib/state/announcements.svelte';
 
-	const announcement = $derived(getAnnouncement(page.params.id ?? ''));
+	let { data } = $props();
 </script>
 
 <svelte:head>
@@ -12,9 +10,9 @@
 
 <div class="announcement-page">
 	<div class="page-inner">
-		{#if announcement}
-			{#key announcement.id}
-				<AnnouncementForm heading="Edit Announcement" {announcement} />
+		{#if data.announcement}
+			{#key data.announcement.id}
+				<AnnouncementForm heading="Edit Announcement" announcement={data.announcement} />
 			{/key}
 		{:else}
 			<h1 class="not-found-heading">Announcement not found</h1>

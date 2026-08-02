@@ -4,6 +4,8 @@
 	import ViewTogglePill from '$lib/components/announcements/ViewTogglePill.svelte';
 	import plusIcon from '$lib/assets/announcements/plus-white.svg';
 
+	let { data } = $props();
+
 	let view = $state<'list' | 'calendar'>('list');
 </script>
 
@@ -24,9 +26,9 @@
 		</div>
 
 		{#if view === 'list'}
-			<AnnouncementsListView />
+			<AnnouncementsListView announcements={data.announcements} />
 		{:else}
-			<AnnouncementsCalendarView />
+			<AnnouncementsCalendarView announcements={data.announcements} />
 		{/if}
 	</div>
 </div>

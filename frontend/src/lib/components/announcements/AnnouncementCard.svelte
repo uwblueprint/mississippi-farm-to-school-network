@@ -26,19 +26,21 @@
 			<img class="icon-calendar" src={calendarIcon} alt="" />
 			<span>{formatLongDate(announcement.startDate)}</span>
 			<img class="icon-arrow" src={arrowIcon} alt="" />
-			<span>{formatLongDate(announcement.endDate)}</span>
+			<span>{announcement.endDate ? formatLongDate(announcement.endDate) : 'Ongoing'}</span>
 		</div>
 	</div>
 
 	{#if variant === 'popup'}
 		<div class="popup-actions">
-			<a
-				class="popup-action"
-				href="/admin/announcements/{announcement.id}"
-				aria-label="Edit announcement"
-			>
-				<img class="icon-edit" src={editIcon} alt="" />
-			</a>
+			{#if status !== 'expired'}
+				<a
+					class="popup-action"
+					href="/admin/announcements/{announcement.id}"
+					aria-label="Edit announcement"
+				>
+					<img class="icon-edit" src={editIcon} alt="" />
+				</a>
+			{/if}
 			<button class="popup-action" type="button" aria-label="Close" onclick={onclose}>
 				<img class="icon-close" src={closeIcon} alt="" />
 			</button>

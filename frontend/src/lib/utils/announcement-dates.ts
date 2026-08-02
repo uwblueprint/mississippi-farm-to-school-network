@@ -11,14 +11,13 @@ export function toDateString(date: Date): string {
 }
 
 export function startOfToday(): Date {
-	const now = new Date();
-	return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+	return parseDate(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' }));
 }
 
 export function statusOf(announcement: Announcement): AnnouncementStatus {
 	const today = startOfToday().getTime();
 	if (parseDate(announcement.startDate).getTime() > today) return 'scheduled';
-	if (parseDate(announcement.endDate).getTime() < today) return 'expired';
+	if (announcement.endDate && parseDate(announcement.endDate).getTime() < today) return 'expired';
 	return 'active';
 }
 

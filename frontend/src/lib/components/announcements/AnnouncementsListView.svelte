@@ -1,13 +1,15 @@
 <script lang="ts">
-	import { announcements } from '$lib/state/announcements.svelte';
+	import type { Announcement } from '$lib/types/announcement';
 	import { statusOf } from '$lib/utils/announcement-dates';
 	import AnnouncementCard from './AnnouncementCard.svelte';
 	import chevronDownIcon from '$lib/assets/announcements/chevron-down.svg';
 
+	let { announcements }: { announcements: Announcement[] } = $props();
+
 	let expiredOpen = $state(true);
 
 	const sorted = $derived(
-		[...announcements.all].sort((a, b) => a.startDate.localeCompare(b.startDate))
+		[...announcements].sort((a, b) => a.startDate.localeCompare(b.startDate))
 	);
 	const active = $derived(sorted.filter((a) => statusOf(a) === 'active'));
 	const upcoming = $derived(sorted.filter((a) => statusOf(a) === 'scheduled'));

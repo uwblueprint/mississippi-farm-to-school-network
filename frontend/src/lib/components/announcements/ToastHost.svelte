@@ -33,7 +33,7 @@
 				<span class="toast-badge">
 					<img class="icon-check" src={checkIcon} alt="" />
 				</span>
-			{:else}
+			{:else if toast.current.kind === 'delete'}
 				<img class="icon-trash" src={trashIcon} alt="" />
 			{/if}
 			<p class="toast-message">{toast.current.message}</p>
