@@ -15,6 +15,7 @@
 		parseDate,
 		statusOf
 	} from '$lib/utils/announcement-dates';
+	import { safeHref, serializeRichText, stripHtml } from '$lib/utils/rich-text';
 	import ConfirmDialog from './ConfirmDialog.svelte';
 	import MiniCalendar from './MiniCalendar.svelte';
 	import calendarIcon from '$lib/assets/announcements/calendar-20-green.svg';
@@ -33,37 +34,50 @@
 	let { heading, announcement }: Props = $props();
 
 	let message = $state(untrack(() => announcement?.message ?? ''));
+	let messageText = $state(untrack(() => stripHtml(announcement?.message ?? '')));
+	let baselineMessage = $state(untrack(() => announcement?.message ?? ''));
+	let editorEl: HTMLDivElement | undefined = $state();
+	let editorReady = false;
+	let activeFormats = $state({ bold: false, italic: false, underline: false, link: false });
+	let linkFieldOpen = $state(false);
+	let linkUrl = $state('');
+	let linkInputEl: HTMLInputElement | undefined = $state();
+	let savedRange: Range | null = null;
 	let startDate = $state<string | null>(untrack(() => announcement?.startDate ?? null));
 	let endDate = $state<string | null>(untrack(() => announcement?.endDate ?? null));
-	let calendarMonth = $state(
+	let leftMonth = $state(
 		untrack(() => {
 			const base = announcement ? parseDate(announcement.startDate) : new Date();
 			return new Date(base.getFullYear(), base.getMonth(), 1);
+		})
+	);
+	let rightMonth = $state(
+		untrack(() => {
+			const base = announcement ? parseDate(announcement.startDate) : new Date();
+			return new Date(base.getFullYear(), base.getMonth() + 1, 1);
 		})
 	);
 
 	let calendarsOpen = $state(false);
 	let confirmKind = $state<'save' | 'delete' | null>(null);
 	let datePickerEl: HTMLDivElement | undefined = $state();
-	let triggerEl: HTMLButtonElement | undefined = $state();
 	let popoverEl: HTMLDivElement | undefined = $state();
-	let popoverTop = $state(0);
-	let popoverLeft = $state(0);
-	let popoverPlaced = $state(false);
+	let popoverHeight = $state(0);
 
 	const isEdit = $derived(Boolean(announcement));
 	const existingStatus = $derived(announcement ? statusOf(announcement) : null);
-	const nextMonth = $derived(
-		new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + 1, 1)
-	);
-	const remaining = $derived(MAX_MESSAGE_LENGTH - message.length);
+	const remaining = $derived(MAX_MESSAGE_LENGTH - messageText.length);
 	const dirty = $derived(
-		message !== (announcement?.message ?? '') ||
+		message !== baselineMessage ||
 			startDate !== (announcement?.startDate ?? null) ||
 			endDate !== (announcement?.endDate ?? null)
 	);
 	const canSubmit = $derived(
-		dirty && message.trim().length > 0 && startDate !== null && endDate !== null
+		dirty &&
+			messageText.trim().length > 0 &&
+			remaining >= 0 &&
+			startDate !== null &&
+			endDate !== null
 	);
 	const submitLabel = $derived(isEdit ? 'Save Changes' : 'Create Announcement');
 	const dateLabel = $derived(
@@ -73,36 +87,152 @@
 	const startLabel = $derived(startDate ? formatLongDate(startDate) : '');
 	const endLabel = $derived(endDate ? formatLongDate(endDate) : '');
 
-	function placePopover() {
-		if (!triggerEl || !popoverEl) return;
-		const margin = 12;
-		const trigger = triggerEl.getBoundingClientRect();
-		const { width, height } = popoverEl.getBoundingClientRect();
+	$effect(() => {
+		if (!editorEl || editorReady) return;
+		editorEl.innerHTML = untrack(() => announcement?.message ?? '');
+		baselineMessage = serializeRichText(editorEl);
+		message = baselineMessage;
+		messageText = editorEl.textContent ?? '';
+		editorReady = true;
+	});
 
-		let top = trigger.bottom + margin;
-		if (top + height > window.innerHeight - margin) {
-			top = Math.max(margin, window.innerHeight - margin - height);
-		}
-
-		let left = trigger.left;
-		if (left + width > window.innerWidth - margin) {
-			left = Math.max(margin, window.innerWidth - margin - width);
-		}
-
-		popoverTop = top;
-		popoverLeft = left;
-		popoverPlaced = true;
+	function syncFromEditor() {
+		if (!editorEl) return;
+		message = serializeRichText(editorEl);
+		messageText = editorEl.textContent ?? '';
+		refreshActiveFormats();
 	}
 
-	$effect(() => {
-		if (!calendarsOpen) {
-			popoverPlaced = false;
+	function refreshActiveFormats() {
+		if (typeof document === 'undefined') return;
+		activeFormats = {
+			bold: document.queryCommandState('bold'),
+			italic: document.queryCommandState('italic'),
+			underline: document.queryCommandState('underline'),
+			link: Boolean(selectionAnchor())
+		};
+	}
+
+	function selectionAnchor(): HTMLAnchorElement | null {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0 || !editorEl) return null;
+		let node: Node | null = selection.getRangeAt(0).commonAncestorContainer;
+		while (node && node !== editorEl) {
+			if (node.nodeType === Node.ELEMENT_NODE && (node as HTMLElement).tagName === 'A') {
+				return node as HTMLAnchorElement;
+			}
+			node = node.parentNode;
+		}
+		return null;
+	}
+
+	function applyFormat(command: 'bold' | 'italic' | 'underline') {
+		if (!editorEl) return;
+		editorEl.focus();
+		document.execCommand('styleWithCSS', false, 'false');
+		document.execCommand(command);
+		syncFromEditor();
+	}
+
+	function selectRange(range: Range) {
+		const selection = window.getSelection();
+		selection?.removeAllRanges();
+		selection?.addRange(range);
+	}
+
+	function toggleLinkField() {
+		if (!editorEl) return;
+
+		if (linkFieldOpen) {
+			closeLinkField();
 			return;
 		}
 
-		placePopover();
+		const existing = selectionAnchor();
+		if (existing) {
+			editorEl.focus();
+			const anchorRange = document.createRange();
+			anchorRange.selectNodeContents(existing);
+			selectRange(anchorRange);
+			document.execCommand('unlink');
+			syncFromEditor();
+			return;
+		}
 
-		const reposition = () => placePopover();
+		const selection = window.getSelection();
+		if (!selection || selection.isCollapsed || selection.rangeCount === 0) return;
+		const range = selection.getRangeAt(0);
+		if (!editorEl.contains(range.commonAncestorContainer)) return;
+
+		savedRange = range.cloneRange();
+		linkUrl = '';
+		linkFieldOpen = true;
+		queueMicrotask(() => linkInputEl?.focus());
+	}
+
+	function applyLink() {
+		const href = safeHref(linkUrl);
+		if (!href || !editorEl || !savedRange) return;
+		editorEl.focus();
+		selectRange(savedRange);
+		document.execCommand('createLink', false, href);
+		syncFromEditor();
+		closeLinkField();
+	}
+
+	function closeLinkField() {
+		linkFieldOpen = false;
+		linkUrl = '';
+		savedRange = null;
+	}
+
+	function onLinkKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') {
+			event.preventDefault();
+			applyLink();
+		} else if (event.key === 'Escape') {
+			event.preventDefault();
+			closeLinkField();
+		}
+	}
+
+	function onEditorKeyDown(event: KeyboardEvent) {
+		if (event.key === 'Enter') event.preventDefault();
+	}
+
+	function onBeforeInput(event: InputEvent) {
+		if (!event.inputType.startsWith('insert')) return;
+		const selection = window.getSelection();
+		const replacing = selection && !selection.isCollapsed ? selection.toString().length : 0;
+		const incoming = event.data?.length ?? 0;
+		if (messageText.length - replacing + incoming > MAX_MESSAGE_LENGTH) event.preventDefault();
+	}
+
+	function onPaste(event: ClipboardEvent) {
+		event.preventDefault();
+		const selection = window.getSelection();
+		const replacing = selection && !selection.isCollapsed ? selection.toString().length : 0;
+		const room = MAX_MESSAGE_LENGTH - (messageText.length - replacing);
+		const text = (event.clipboardData?.getData('text/plain') ?? '').replace(/\s+/g, ' ');
+		if (room <= 0 || !text) return;
+		document.execCommand('insertText', false, text.slice(0, room));
+		syncFromEditor();
+	}
+
+	$effect(() => {
+		if (!calendarsOpen || !popoverEl) {
+			popoverHeight = 0;
+			return;
+		}
+
+		const element = popoverEl;
+		popoverHeight = element.offsetHeight;
+
+		const observer = new ResizeObserver(() => {
+			popoverHeight = element.offsetHeight;
+		});
+		observer.observe(element);
+
 		const onPointerDown = (event: PointerEvent) => {
 			if (!datePickerEl?.contains(event.target as Node | null)) calendarsOpen = false;
 		};
@@ -110,13 +240,10 @@
 			if (event.key === 'Escape') calendarsOpen = false;
 		};
 
-		window.addEventListener('scroll', reposition, true);
-		window.addEventListener('resize', reposition);
 		document.addEventListener('pointerdown', onPointerDown);
 		document.addEventListener('keydown', onKeyDown);
 		return () => {
-			window.removeEventListener('scroll', reposition, true);
-			window.removeEventListener('resize', reposition);
+			observer.disconnect();
 			document.removeEventListener('pointerdown', onPointerDown);
 			document.removeEventListener('keydown', onKeyDown);
 		};
@@ -135,13 +262,17 @@
 		endDate = value;
 	}
 
-	function shiftMonth(delta: number) {
-		calendarMonth = new Date(calendarMonth.getFullYear(), calendarMonth.getMonth() + delta, 1);
+	function shiftLeftMonth(delta: number) {
+		leftMonth = new Date(leftMonth.getFullYear(), leftMonth.getMonth() + delta, 1);
+	}
+
+	function shiftRightMonth(delta: number) {
+		rightMonth = new Date(rightMonth.getFullYear(), rightMonth.getMonth() + delta, 1);
 	}
 
 	function confirmSave() {
 		if (!startDate || !endDate) return;
-		const data = { message: message.trim(), startDate, endDate };
+		const data = { message, startDate, endDate };
 		if (announcement) {
 			updateAnnouncement(announcement.id, data);
 			showToast('success', 'Changes saved');
@@ -192,7 +323,7 @@
 	{/if}
 {/snippet}
 
-<div class="announcement-form">
+<div class="announcement-form" style:--popover-reserve="{calendarsOpen ? popoverHeight + 12 : 0}px">
 	<header class="form-header">
 		<h1 class="form-heading">{heading}</h1>
 		{#if announcement}
@@ -207,26 +338,89 @@
 			<h2 class="section-heading">Message</h2>
 			<div class="message-box">
 				<div class="message-field">
-					<label class="message-label" for="announcement-message">Message</label>
-					<textarea id="announcement-message" bind:value={message} maxlength={MAX_MESSAGE_LENGTH}
-					></textarea>
+					<span class="message-label" id="message-label">Message</span>
+					<div
+						class="message-input"
+						bind:this={editorEl}
+						contenteditable="true"
+						role="textbox"
+						tabindex="0"
+						aria-multiline="false"
+						aria-labelledby="message-label"
+						oninput={syncFromEditor}
+						onkeyup={refreshActiveFormats}
+						onmouseup={refreshActiveFormats}
+						onfocus={refreshActiveFormats}
+						onkeydown={onEditorKeyDown}
+						onbeforeinput={onBeforeInput}
+						onpaste={onPaste}
+					></div>
 				</div>
+
+				{#if linkFieldOpen}
+					<div class="link-field">
+						<input
+							class="link-input"
+							type="url"
+							placeholder="https://example.com"
+							bind:this={linkInputEl}
+							bind:value={linkUrl}
+							onkeydown={onLinkKeyDown}
+						/>
+						<button class="link-apply" type="button" onclick={applyLink}>Apply</button>
+						<button class="link-cancel" type="button" onclick={closeLinkField}>Cancel</button>
+					</div>
+				{/if}
 				<div class="message-footer">
 					<div class="format-toolbar">
-						<button class="format-button" type="button" aria-label="Insert link">
+						<button
+							class="format-button"
+							class:format-button--active={linkFieldOpen || activeFormats.link}
+							type="button"
+							aria-label="Insert link"
+							aria-pressed={linkFieldOpen || activeFormats.link}
+							onmousedown={(event) => event.preventDefault()}
+							onclick={toggleLinkField}
+						>
 							<img class="icon-link" src={linkIcon} alt="" />
 						</button>
-						<button class="format-button" type="button" aria-label="Bold">
+						<button
+							class="format-button"
+							class:format-button--active={activeFormats.bold}
+							type="button"
+							aria-label="Bold"
+							aria-pressed={activeFormats.bold}
+							onmousedown={(event) => event.preventDefault()}
+							onclick={() => applyFormat('bold')}
+						>
 							<img class="icon-bold" src={boldIcon} alt="" />
 						</button>
-						<button class="format-button" type="button" aria-label="Italic">
+						<button
+							class="format-button"
+							class:format-button--active={activeFormats.italic}
+							type="button"
+							aria-label="Italic"
+							aria-pressed={activeFormats.italic}
+							onmousedown={(event) => event.preventDefault()}
+							onclick={() => applyFormat('italic')}
+						>
 							<img class="icon-italic" src={italicIcon} alt="" />
 						</button>
-						<button class="format-button" type="button" aria-label="Underline">
+						<button
+							class="format-button"
+							class:format-button--active={activeFormats.underline}
+							type="button"
+							aria-label="Underline"
+							aria-pressed={activeFormats.underline}
+							onmousedown={(event) => event.preventDefault()}
+							onclick={() => applyFormat('underline')}
+						>
 							<img class="icon-underline" src={underlineIcon} alt="" />
 						</button>
 					</div>
-					<span class="char-count">{remaining} characters left</span>
+					<span class="char-count" class:char-count--over={remaining < 0}>
+						{remaining} characters left
+					</span>
 				</div>
 			</div>
 		</section>
@@ -237,7 +431,6 @@
 				<button
 					class="select-date-button"
 					type="button"
-					bind:this={triggerEl}
 					aria-expanded={calendarsOpen}
 					onclick={() => (calendarsOpen = !calendarsOpen)}
 				>
@@ -246,27 +439,21 @@
 				</button>
 
 				{#if calendarsOpen}
-					<div
-						class="calendars-popover"
-						bind:this={popoverEl}
-						style:top="{popoverTop}px"
-						style:left="{popoverLeft}px"
-						style:visibility={popoverPlaced ? 'visible' : 'hidden'}
-					>
+					<div class="calendars-popover" bind:this={popoverEl}>
 						<MiniCalendar
-							month={calendarMonth}
+							month={leftMonth}
 							rangeStart={startDate}
 							rangeEnd={endDate}
-							onprev={() => shiftMonth(-1)}
-							onnext={() => shiftMonth(1)}
+							onprev={() => shiftLeftMonth(-1)}
+							onnext={() => shiftLeftMonth(1)}
 							onselect={selectDate}
 						/>
 						<MiniCalendar
-							month={nextMonth}
+							month={rightMonth}
 							rangeStart={startDate}
 							rangeEnd={endDate}
-							onprev={() => shiftMonth(-1)}
-							onnext={() => shiftMonth(1)}
+							onprev={() => shiftRightMonth(-1)}
+							onnext={() => shiftRightMonth(1)}
 							onselect={selectDate}
 						/>
 					</div>
@@ -314,7 +501,7 @@
 		flex-direction: column;
 		gap: 2rem;
 		width: 100%;
-		padding-bottom: 7rem;
+		padding-bottom: calc(7rem + var(--popover-reserve, 0px));
 	}
 
 	.form-header {
@@ -396,23 +583,62 @@
 		color: #000000;
 	}
 
-	.message-box textarea {
+	.message-input {
 		flex: 1;
 		width: 100%;
-		padding: 0;
-		background: transparent;
-		border: none;
-		resize: none;
 		font-family: var(--type-b3-font);
 		font-weight: var(--type-b3-weight);
 		font-size: var(--type-b3-size);
 		line-height: 1.5rem;
 		color: #000000;
+		outline: none;
 	}
 
-	.message-box textarea:focus {
-		outline: none;
-		box-shadow: none;
+	.message-input :global(a) {
+		color: var(--mfsn-primary-500);
+		text-decoration: underline;
+	}
+
+	.link-field {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.link-input {
+		flex: 1;
+		min-width: 0;
+		height: 2.25rem;
+		padding: 0.25rem 0.625rem;
+		background: var(--color-neutral-0);
+		border: 1px solid var(--color-neutral-300);
+		border-radius: 0.5rem;
+		font-family: var(--type-b3-font);
+		font-size: var(--text-c1);
+		color: var(--color-text-primary);
+	}
+
+	.link-apply,
+	.link-cancel {
+		height: 2.25rem;
+		padding: 0.25rem 0.75rem;
+		border-radius: 0.5rem;
+		font-family: var(--type-button-font);
+		font-weight: var(--font-weight-medium);
+		font-size: var(--text-c1);
+		cursor: pointer;
+	}
+
+	.link-apply {
+		background: var(--mfsn-primary-400);
+		border: none;
+		color: #ffffff;
+	}
+
+	.link-cancel {
+		background: var(--color-neutral-0);
+		border: 1px solid var(--color-neutral-300);
+		color: var(--color-text-secondary);
 	}
 
 	.message-footer {
@@ -446,6 +672,15 @@
 
 	.format-button img {
 		display: block;
+	}
+
+	.format-button--active {
+		background: var(--color-neutral-200);
+		border-radius: 0.25rem;
+	}
+
+	.char-count--over {
+		color: var(--mfsn-secondary-500);
 	}
 
 	.icon-link {
@@ -508,13 +743,16 @@
 	}
 
 	.calendars-popover {
-		position: fixed;
+		position: absolute;
+		top: calc(100% + 0.75rem);
+		left: 0;
 		z-index: 45;
 		display: flex;
 		flex-wrap: wrap;
 		align-items: flex-start;
 		gap: 0.75rem;
-		max-width: calc(100vw - 1.5rem);
+		width: max-content;
+		max-width: calc(100vw - 3rem);
 	}
 
 	.form-action-bar {

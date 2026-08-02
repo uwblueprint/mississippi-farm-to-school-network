@@ -2,6 +2,7 @@
 	import type { Announcement, AnnouncementStatus } from '$lib/types/announcement';
 	import { announcements } from '$lib/state/announcements.svelte';
 	import { parseDate, statusOf } from '$lib/utils/announcement-dates';
+	import { stripHtml } from '$lib/utils/rich-text';
 	import AnnouncementCard from './AnnouncementCard.svelte';
 	import chevronLeftIcon from '$lib/assets/announcements/chevron-left.svg';
 	import chevronRightIcon from '$lib/assets/announcements/chevron-right.svg';
@@ -183,7 +184,7 @@
 							style:top="{BAR_TOP + segment.lane * BAR_STRIDE}px"
 							onclick={(event) => openPopup(event, segment.announcement)}
 						>
-							{segment.announcement.message}
+							{stripHtml(segment.announcement.message)}
 						</button>
 					{/each}
 				</div>

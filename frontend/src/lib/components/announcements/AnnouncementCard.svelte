@@ -21,7 +21,7 @@
 <article class="announcement-card" class:announcement-card--popup={variant === 'popup'}>
 	<div class="card-details">
 		<StatusTag {status} />
-		<p class="card-message">{announcement.message}</p>
+		<p class="card-message">{@html announcement.message}</p>
 		<div class="card-dates">
 			<img class="icon-calendar" src={calendarIcon} alt="" />
 			<span>{formatLongDate(announcement.startDate)}</span>
@@ -81,6 +81,11 @@
 		gap: 0.75rem;
 		flex: 1;
 		min-width: 0;
+	}
+
+	.card-message :global(a) {
+		color: var(--mfsn-primary-500);
+		text-decoration: underline;
 	}
 
 	.card-message {

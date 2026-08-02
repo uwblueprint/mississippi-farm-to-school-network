@@ -22,19 +22,16 @@
 		const year = month.getFullYear();
 		const monthIndex = month.getMonth();
 		const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
-		const leadingBlanks = new Date(year, monthIndex, 1).getDay();
+		const leadingDays = new Date(year, monthIndex, 1).getDay();
+		const rowCount = Math.ceil((leadingDays + daysInMonth) / 7);
+		const gridStart = 1 - leadingDays;
 
-		const cells: (Date | null)[] = [
-			...Array.from({ length: leadingBlanks }, () => null),
-			...Array.from({ length: daysInMonth }, (_, i) => new Date(year, monthIndex, i + 1))
-		];
-		while (cells.length % 7 !== 0) cells.push(null);
-
-		const rows: (Date | null)[][] = [];
-		for (let i = 0; i < cells.length; i += 7) {
-			rows.push(cells.slice(i, i + 7));
-		}
-		return rows;
+		return Array.from({ length: rowCount }, (_, row) =>
+			Array.from(
+				{ length: 7 },
+				(_, column) => new Date(year, monthIndex, gridStart + row * 7 + column)
+			)
+		);
 	});
 
 	function dayState(day: Date) {
@@ -42,6 +39,7 @@
 		const hasFullRange = rangeStart !== null && rangeEnd !== null && rangeStart !== rangeEnd;
 		return {
 			value,
+			muted: day.getMonth() !== month.getMonth() || day.getFullYear() !== month.getFullYear(),
 			isEndpoint: value === rangeStart || value === rangeEnd,
 			isRangeStart: hasFullRange && value === rangeStart,
 			isRangeEnd: hasFullRange && value === rangeEnd,
@@ -70,23 +68,20 @@
 	<div class="mini-grid">
 		{#each weeks as week, weekIndex (weekIndex)}
 			<div class="mini-week">
-				{#each week as day, dayIndex (dayIndex)}
-					{#if day}
-						{@const state = dayState(day)}
-						<button
-							class="mini-day"
-							class:mini-day--in-range={state.inRange}
-							class:mini-day--range-start={state.isRangeStart}
-							class:mini-day--range-end={state.isRangeEnd}
-							class:mini-day--endpoint={state.isEndpoint}
-							type="button"
-							onclick={() => onselect(state.value)}
-						>
-							<span class="mini-day-label">{day.getDate()}</span>
-						</button>
-					{:else}
-						<span class="mini-day mini-day--blank"></span>
-					{/if}
+				{#each week as day (day.getTime())}
+					{@const state = dayState(day)}
+					<button
+						class="mini-day"
+						class:mini-day--muted={state.muted}
+						class:mini-day--in-range={state.inRange}
+						class:mini-day--range-start={state.isRangeStart}
+						class:mini-day--range-end={state.isRangeEnd}
+						class:mini-day--endpoint={state.isEndpoint}
+						type="button"
+						onclick={() => onselect(state.value)}
+					>
+						<span class="mini-day-label">{day.getDate()}</span>
+					</button>
 				{/each}
 			</div>
 		{/each}
@@ -185,9 +180,8 @@
 		cursor: pointer;
 	}
 
-	.mini-day--blank {
-		cursor: default;
-		pointer-events: none;
+	.mini-day--muted {
+		color: var(--color-text-disabled);
 	}
 
 	.mini-day--in-range {
