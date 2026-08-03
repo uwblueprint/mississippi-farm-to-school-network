@@ -9,49 +9,57 @@ export type FoodCategorySection =
 	| 'Meat'
 	| 'Other';
 
-export type FarmFoodCategoryItems = Partial<Record<FoodCategorySection, string[]>>;
-
 export type FarmLocation = {
 	lat: number;
 	lng: number;
 };
 
+export type MarketSalesData = {
+	market: string;
+	times: string;
+};
+
+/**
+ * Live farm shape for the map UI, aligned with backend FarmDTO.
+ * `markerType`, `imageUrls`, and `thumbnailUrl` are adapter-derived for display.
+ */
 export type MapFarm = {
 	id: string;
 	owner_user_id: string;
-	usda_farm_id: number;
+	usda_farm_id: string | null;
 	farm_name: string;
-	description: string;
 	primary_phone: string;
 	primary_email: string;
 	website: string | null;
 	social_media: Record<string, unknown> | null;
 	farm_address: string;
-	counties_served: string[];
+	county: string;
 	cities_served: string[];
-	home_county: string;
 	location: FarmLocation;
-	food_categories: string[];
-	/** Mock-only breakdown of specific products per food category, until the backend supports per-item entry. */
-	food_category_items: FarmFoodCategoryItems;
-	market_sales_data: { market: string; times: string }[] | null;
-	bipoc_owned: boolean;
-	gap_certified: boolean;
-	food_safety_plan: boolean;
-	agritourism: boolean;
-	sells_at_markets: boolean;
-	csa_boxes: boolean;
-	online_sales: boolean;
-	delivery: boolean;
-	f2s_experience: boolean;
-	interested_in_f2s: boolean;
+	seasonal_products: string[];
+	meat_products: string[];
+	other_products: string[];
+	seasonal_products_detail: string | null;
+	meat_products_detail: string | null;
+	other_products_detail: string | null;
+	growing_practices: string[];
+	food_safety_certifications: string[];
+	farm_experiences: string[];
+	farm_characteristics: string[];
+	farm_to_school_sales: string[];
+	market_sales_data: MarketSalesData[] | null;
+	f2s_experience: string | null;
+	delivery_details: string | null;
+	cover_photo: string | null;
+	carousel_photos: string[];
 	status: FarmStatus;
-	markerType: FarmMarkerType;
-	/** Mock-only presentation images until the backend supports farm photos. */
-	imageUrls: string[];
-	thumbnailUrl: string;
 	createdAt: string;
 	updatedAt: string;
+	/** Derived for map marker styling. */
+	markerType: FarmMarkerType;
+	/** Resolved display URLs (placeholders until Part E). */
+	imageUrls: string[];
+	thumbnailUrl: string;
 };
 
 export type FarmTag =
