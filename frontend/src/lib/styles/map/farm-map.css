@@ -144,6 +144,17 @@
 	gap: 0;
 }
 
+.farm-map-sidebar__status {
+	margin: 1.25rem 1rem;
+	font-size: 0.9375rem;
+	color: #5c6370;
+	line-height: 1.4;
+}
+
+.farm-map-sidebar__status--error {
+	color: #b42318;
+}
+
 .farm-map-sidebar__list,
 .farm-detail-panel__scroll {
 	scrollbar-width: thin;

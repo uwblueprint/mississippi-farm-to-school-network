@@ -13,9 +13,18 @@
 		map: MapboxMap | null;
 		selectedFarmId?: string | null;
 		onSelectFarm?: (farm: MapFarm) => void;
+		loading?: boolean;
+		error?: string | null;
 	}
 
-	let { farms, map, selectedFarmId = $bindable(null), onSelectFarm }: Props = $props();
+	let {
+		farms,
+		map,
+		selectedFarmId = $bindable(null),
+		onSelectFarm,
+		loading = false,
+		error = null
+	}: Props = $props();
 
 	const selectedFarm = $derived(farms.find((farm) => farm.id === selectedFarmId) ?? null);
 	const selectedFarmIndex = $derived(
@@ -61,7 +70,9 @@
 			<div class="farm-map-sidebar__title-row">
 				<div class="farm-map-sidebar__title-group">
 					<h1 class="farm-map-sidebar__title">Farms</h1>
-					<span class="farm-map-sidebar__count">{farms.length} Results</span>
+					<span class="farm-map-sidebar__count">
+						{loading ? 'Loading…' : `${farms.length} Results`}
+					</span>
 				</div>
 
 				<FarmSortDropdown />
@@ -71,9 +82,17 @@
 		</div>
 
 		<div class="farm-map-sidebar__list">
-			{#each farms as farm (farm.id)}
-				<FarmListItem {farm} selected={selectedFarmId === farm.id} onSelect={handleSelect} />
-			{/each}
+			{#if loading}
+				<p class="farm-map-sidebar__status">Loading farms…</p>
+			{:else if error}
+				<p class="farm-map-sidebar__status farm-map-sidebar__status--error">{error}</p>
+			{:else if farms.length === 0}
+				<p class="farm-map-sidebar__status">No approved farms to show yet.</p>
+			{:else}
+				{#each farms as farm (farm.id)}
+					<FarmListItem {farm} selected={selectedFarmId === farm.id} onSelect={handleSelect} />
+				{/each}
+			{/if}
 		</div>
 	{/if}
 </aside>
