@@ -13,13 +13,24 @@ const CREATE_FARM_MUTATION = `
 
 export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 	const token = cookies.get('token');
+
+	if (!token) {
+		return json(
+			{
+				ok: false,
+				errors: [{ message: 'You must be logged in to create a farm.' }]
+			},
+			{ status: 401 }
+		);
+	}
+
 	const input = await request.json();
 
 	const res = await fetch('http://mfsn-backend:3000/graphql', {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
-			...(token ? { Authorization: `Bearer ${token}` } : {})
+			Authorization: `Bearer ${token}`
 		},
 		body: JSON.stringify({ query: CREATE_FARM_MUTATION, variables: { input } })
 	});
