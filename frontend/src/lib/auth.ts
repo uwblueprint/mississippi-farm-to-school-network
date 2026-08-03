@@ -1,10 +1,13 @@
 import { FirebaseError } from 'firebase/app';
 import {
 	createUserWithEmailAndPassword,
+	onIdTokenChanged,
 	sendEmailVerification,
 	sendPasswordResetEmail,
 	signInWithEmailAndPassword,
+	signOut,
 	type AuthError,
+	type Unsubscribe,
 	type User,
 	type UserCredential
 } from 'firebase/auth';
@@ -12,6 +15,9 @@ import { getFirebaseAuth } from '$lib/firebase';
 
 const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/** Cookie name expected by SvelteKit server routes (`create-farm`, `new-farm` layout). */
+export const AUTH_TOKEN_COOKIE = 'token';
+
 
 export type PasswordRequirement = {
 	id: string;
@@ -130,4 +136,46 @@ export async function sendPasswordResetEmailHandler(email: string) {
 	return sendPasswordResetEmail(auth, email, {
 		url: `${window.location.origin}/reset-password/success`
 	});
+}
+
+/**
+ * Writes the Firebase ID token into a cookie so SvelteKit server routes can
+ * forward `Authorization: Bearer <token>` to GraphQL.
+ */
+export function setAuthTokenCookie(idToken: string): void {
+	const secure =
+		typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+	document.cookie = `${AUTH_TOKEN_COOKIE}=${encodeURIComponent(idToken)}; path=/; Max-Age=3600; SameSite=Lax${secure}`;
+}
+
+export function clearAuthTokenCookie(): void {
+	document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; Max-Age=0; SameSite=Lax`;
+}
+
+/** Sync the `token` cookie from the current Firebase user (or clear it). */
+export async function syncAuthTokenCookie(user: User | null): Promise<void> {
+	if (!user) {
+		clearAuthTokenCookie();
+		return;
+	}
+
+	const idToken = await user.getIdToken();
+	setAuthTokenCookie(idToken);
+}
+
+/**
+ * Keep the `token` cookie aligned with Firebase Auth.
+ * Call once from the root layout; returns an unsubscribe function.
+ */
+export function subscribeAuthTokenCookie(): Unsubscribe {
+	const auth = getFirebaseAuth();
+	return onIdTokenChanged(auth, (user) => {
+		void syncAuthTokenCookie(user);
+	});
+}
+
+export async function logout(): Promise<void> {
+	const auth = getFirebaseAuth();
+	clearAuthTokenCookie();
+	await signOut(auth);
 }
