@@ -449,8 +449,7 @@
 			const result = await res.json();
 
 			if (!result.ok) {
-				submitError =
-					result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
+				submitError = result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
 				return;
 			}
 

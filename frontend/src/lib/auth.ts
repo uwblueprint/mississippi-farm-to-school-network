@@ -18,7 +18,6 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Cookie name expected by SvelteKit server routes (`create-farm`, `new-farm` layout). */
 export const AUTH_TOKEN_COOKIE = 'token';
 
-
 export type PasswordRequirement = {
 	id: string;
 	label: string;

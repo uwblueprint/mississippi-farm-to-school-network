@@ -26,8 +26,7 @@ const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
 	'Farmers Market': (farm) =>
 		hasOption(farm.farm_experiences, 'Farm Stand On-Site') ||
 		(farm.market_sales_data?.length ?? 0) > 0,
-	'Field Trips': (farm) =>
-		hasOption(farm.farm_experiences, 'Farm Tours/Field Trips Welcome')
+	'Field Trips': (farm) => hasOption(farm.farm_experiences, 'Farm Tours/Field Trips Welcome')
 };
 
 const TAG_ORDER: FarmTag[] = [
@@ -44,13 +43,12 @@ export function getFarmTags(farm: MapFarm): FarmTag[] {
 }
 
 /** Derive map marker type from FarmDTO option arrays. */
-export function getMarkerType(farm: Pick<
-	MapFarm,
-	| 'farm_experiences'
-	| 'farm_to_school_sales'
-	| 'food_safety_certifications'
-	| 'market_sales_data'
->): FarmMarkerType {
+export function getMarkerType(
+	farm: Pick<
+		MapFarm,
+		'farm_experiences' | 'farm_to_school_sales' | 'food_safety_certifications' | 'market_sales_data'
+	>
+): FarmMarkerType {
 	if (hasOption(farm.farm_experiences, 'CSA (Community Supported Agriculture) Available')) {
 		return 'csa';
 	}
@@ -110,10 +108,7 @@ export function getFarmProducts(farm: MapFarm): ProductRow[] {
 		});
 	}
 
-	if (
-		farm.meat_products.length > 0 &&
-		!farm.meat_products.includes('None of the above')
-	) {
+	if (farm.meat_products.length > 0 && !farm.meat_products.includes('None of the above')) {
 		const detail = splitDetail(farm.meat_products_detail);
 		rows.push({
 			icon: FOOD_CATEGORY_ICONS.Meat,
@@ -122,10 +117,7 @@ export function getFarmProducts(farm: MapFarm): ProductRow[] {
 		});
 	}
 
-	if (
-		farm.other_products.length > 0 &&
-		!farm.other_products.includes('None of the above')
-	) {
+	if (farm.other_products.length > 0 && !farm.other_products.includes('None of the above')) {
 		const detail = splitDetail(farm.other_products_detail);
 		rows.push({
 			icon: FOOD_CATEGORY_ICONS.Other,

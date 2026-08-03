@@ -56,13 +56,7 @@
 </svelte:head>
 
 <div class="farm-map-page">
-	<FarmListSidebar
-		{farms}
-		bind:selectedFarmId
-		{map}
-		{loading}
-		error={loadError}
-	/>
+	<FarmListSidebar {farms} bind:selectedFarmId {map} {loading} error={loadError} />
 	<div class="farm-map-panel">
 		<FarmMap {farms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
 	</div>

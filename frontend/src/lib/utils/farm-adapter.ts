@@ -2,7 +2,10 @@ import type { MapFarm } from '$lib/types/farm';
 import { getMarkerType } from '$lib/utils/farm-tags';
 
 /** Subset of FarmDTO fields returned by `/api/farms`. */
-export type FarmDto = Omit<MapFarm, 'markerType' | 'imageUrls' | 'thumbnailUrl' | 'cities_served'> & {
+export type FarmDto = Omit<
+	MapFarm,
+	'markerType' | 'imageUrls' | 'thumbnailUrl' | 'cities_served'
+> & {
 	cities_served: string[] | null;
 };
 
