@@ -51,7 +51,7 @@ const FARMS_BY_PROXIMITY_QUERY = `
 	}
 `;
 
-export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
+export const GET: RequestHandler = async ({ url, fetch }) => {
 	const lat = url.searchParams.get('lat');
 	const lng = url.searchParams.get('lng');
 	const radiusKm = url.searchParams.get('radiusKm');
@@ -61,11 +61,6 @@ export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
 	const headers: Record<string, string> = {
 		'Content-Type': 'application/json'
 	};
-
-	const token = cookies.get('token');
-	if (token) {
-		headers.Authorization = `Bearer ${token}`;
-	}
 
 	const body = useProximity
 		? {
