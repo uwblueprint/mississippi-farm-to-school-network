@@ -144,7 +144,9 @@ export function setAuthTokenCookie(idToken: string): void {
 }
 
 export function clearAuthTokenCookie(): void {
-	document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; Max-Age=0; SameSite=Lax`;
+	const secure =
+		typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
+	document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; Max-Age=0; SameSite=Lax${secure}`;
 }
 
 export async function syncAuthTokenCookie(user: User | null): Promise<void> {
