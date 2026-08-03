@@ -64,8 +64,7 @@ export async function attachFarmPhotos(
 				farmId,
 				contentType,
 				size: file.size,
-				dimensions,
-				index
+				dimensions
 			})
 		});
 		const confirmBody = await confirmRes.json();
