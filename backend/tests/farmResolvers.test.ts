@@ -250,9 +250,9 @@ describe('farmResolvers.Mutation.createFarm', () => {
     await expect(
       createFarm(null, { input: minimalCreateFarmInput }, authContext)
     ).rejects.toBeInstanceOf(AuthenticationError);
-    await expect(
-      createFarm(null, { input: minimalCreateFarmInput }, authContext)
-    ).rejects.toThrow('You must be logged in to access this resource.');
+    await expect(createFarm(null, { input: minimalCreateFarmInput }, authContext)).rejects.toThrow(
+      'You must be logged in to access this resource.'
+    );
 
     expect(mockCreateFarm).not.toHaveBeenCalled();
   });
@@ -265,9 +265,9 @@ describe('farmResolvers.Mutation.createFarm', () => {
     await expect(
       createFarm(null, { input: minimalCreateFarmInput }, authContext)
     ).rejects.toBeInstanceOf(AuthenticationError);
-    await expect(
-      createFarm(null, { input: minimalCreateFarmInput }, authContext)
-    ).rejects.toThrow('You must verify your email to access this resource.');
+    await expect(createFarm(null, { input: minimalCreateFarmInput }, authContext)).rejects.toThrow(
+      'You must verify your email to access this resource.'
+    );
 
     expect(mockCreateFarm).not.toHaveBeenCalled();
   });
@@ -280,9 +280,9 @@ describe('farmResolvers.Mutation.createFarm', () => {
     await expect(
       createFarm(null, { input: minimalCreateFarmInput }, authContext)
     ).rejects.toBeInstanceOf(ForbiddenError);
-    await expect(
-      createFarm(null, { input: minimalCreateFarmInput }, authContext)
-    ).rejects.toThrow('You do not have permission to access this resource.');
+    await expect(createFarm(null, { input: minimalCreateFarmInput }, authContext)).rejects.toThrow(
+      'You do not have permission to access this resource.'
+    );
 
     expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.FARMER]);
     expect(mockCreateFarm).not.toHaveBeenCalled();
