@@ -135,7 +135,7 @@
 			/>
 			<span class="farm-detail-panel__street">{farm.farm_address}</span>
 			<span class="farm-detail-panel__county-sep" aria-hidden="true">•</span>
-			<span class="farm-detail-panel__county">{farm.home_county}</span>
+			<span class="farm-detail-panel__county">{farm.county}</span>
 		</div>
 
 		<div class="farm-detail-panel__contact">
