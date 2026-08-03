@@ -6,7 +6,7 @@
 	import FarmDetailCard from '$lib/components/map/FarmDetailCard.svelte';
 	import MapLegend from '$lib/components/map/MapLegend.svelte';
 	import { MARKER_META } from '$lib/constants/markers';
-	import { farmsToGeoJSON } from '$lib/data/mock-farms';
+	import { farmsToGeoJSON } from '$lib/utils/farms-geojson';
 	import type { MapFarm } from '$lib/types/farm';
 
 	import 'mapbox-gl/dist/mapbox-gl.css';
@@ -23,6 +23,7 @@
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map = $state<MapboxMap | null>(null);
 	let missingToken = $state(false);
+	let farmsSourceReady = $state(false);
 
 	let farmPopup: mapboxgl.Popup | null = null;
 	let farmPopupMount: ReturnType<typeof mount> | null = null;
@@ -206,10 +207,19 @@
 		instance.on('load', () => {
 			addFarmLayers(instance);
 			wireMapEvents(instance);
+			farmsSourceReady = true;
 		});
 
 		map = instance;
 		onMapReady?.(instance);
+	});
+
+	$effect(() => {
+		if (!map || !farmsSourceReady) return;
+		const source = map.getSource('farms');
+		if (source && source.type === 'geojson') {
+			source.setData(farmsToGeoJSON(farms));
+		}
 	});
 
 	$effect(() => {
