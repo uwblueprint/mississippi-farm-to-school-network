@@ -1,17 +1,23 @@
-import { FarmStatus } from '@/types';
+import { AuthenticationError, ForbiddenError } from 'apollo-server';
+import { FarmStatus, Role } from '@/types';
 import type { AuthContext } from '@/middlewares/auth';
+import type { CreateFarmInput } from '@/types';
 
 const mockGetFarmsByProximity = jest.fn();
 const mockGetLatestActiveRejection = jest.fn();
+const mockCreateFarm = jest.fn();
 const mockRequireEmailVerified = jest.fn();
+const mockRequireRole = jest.fn();
 const mockRequireOwnerOrAdmin = jest.fn();
 const mockFindByPk = jest.fn();
+const mockSendEmail = jest.fn();
 
 jest.mock('@/services/implementations/farmService', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
     getFarmsByProximity: mockGetFarmsByProximity,
     getLatestActiveRejection: mockGetLatestActiveRejection,
+    createFarm: mockCreateFarm,
   })),
 }));
 
@@ -23,7 +29,7 @@ jest.mock('@/services/implementations/userService', () => ({
 jest.mock('@/services/implementations/emailService', () => ({
   __esModule: true,
   default: jest.fn().mockImplementation(() => ({
-    sendEmail: jest.fn(),
+    sendEmail: mockSendEmail,
   })),
 }));
 
@@ -31,6 +37,7 @@ jest.mock('@/utilities/authHelpers', () => ({
   __esModule: true,
   default: {
     requireEmailVerified: mockRequireEmailVerified,
+    requireRole: mockRequireRole,
     requireOwnerOrAdmin: mockRequireOwnerOrAdmin,
   },
 }));
@@ -55,7 +62,28 @@ const latestActiveFarmRejection = farmResolvers.Query.latestActiveFarmRejection 
   context: AuthContext
 ) => Promise<unknown>;
 
+const createFarm = farmResolvers.Mutation.createFarm as (
+  parent: unknown,
+  args: { input: CreateFarmInput },
+  context: AuthContext
+) => Promise<unknown>;
+
 const authContext = {} as AuthContext;
+
+const minimalCreateFarmInput = {
+  usda_farm_id: 'usda-1',
+  farm_name: 'Test Farm',
+  primary_phone: '6015550100',
+  primary_email: 'farmer@example.com',
+  farm_address: '123 Farm Rd, Jackson, MS',
+  county: 'Hinds',
+  location: { lat: 32.3, lng: -90.18 },
+  seasonal_products: ['Fruits and Vegetables'],
+  meat_products: [],
+  other_products: [],
+  growing_practices: ['Conventional'],
+  food_safety_certifications: ['None of the above'],
+} as CreateFarmInput;
 
 describe('farmResolvers.Query.farmsByProximity', () => {
   beforeEach(() => {
@@ -194,5 +222,85 @@ describe('farmResolvers.Query.latestActiveFarmRejection', () => {
 
     expect(result).toEqual(rejection);
     expect(mockGetLatestActiveRejection).toHaveBeenCalledWith(farmId);
+  });
+});
+
+describe('farmResolvers.Mutation.createFarm', () => {
+  const verifiedFarmer = {
+    id: 'farmer-user-1',
+    email: 'farmer@example.com',
+    role: Role.FARMER,
+    is_verified: true,
+  };
+
+  beforeEach(() => {
+    mockCreateFarm.mockReset();
+    mockRequireRole.mockReset();
+    mockSendEmail.mockReset();
+    mockRequireRole.mockResolvedValue(verifiedFarmer);
+    mockSendEmail.mockResolvedValue(undefined);
+    process.env.MAILER_USER = 'admin@example.com';
+  });
+
+  test('fails clearly when the request is unauthenticated', async () => {
+    mockRequireRole.mockRejectedValue(
+      new AuthenticationError('You must be logged in to access this resource.')
+    );
+
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toBeInstanceOf(AuthenticationError);
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toThrow('You must be logged in to access this resource.');
+
+    expect(mockCreateFarm).not.toHaveBeenCalled();
+  });
+
+  test('fails clearly when the email is not verified', async () => {
+    mockRequireRole.mockRejectedValue(
+      new AuthenticationError('You must verify your email to access this resource.')
+    );
+
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toBeInstanceOf(AuthenticationError);
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toThrow('You must verify your email to access this resource.');
+
+    expect(mockCreateFarm).not.toHaveBeenCalled();
+  });
+
+  test('fails clearly when the user is not a FARMER', async () => {
+    mockRequireRole.mockRejectedValue(
+      new ForbiddenError('You do not have permission to access this resource.')
+    );
+
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(
+      createFarm(null, { input: minimalCreateFarmInput }, authContext)
+    ).rejects.toThrow('You do not have permission to access this resource.');
+
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.FARMER]);
+    expect(mockCreateFarm).not.toHaveBeenCalled();
+  });
+
+  test('creates the farm for a verified farmer', async () => {
+    const created = {
+      id: 'farm-1',
+      farm_name: minimalCreateFarmInput.farm_name,
+      status: FarmStatus.PENDING_APPROVAL,
+      owner_user_id: verifiedFarmer.id,
+    };
+    mockCreateFarm.mockResolvedValue(created);
+
+    const result = await createFarm(null, { input: minimalCreateFarmInput }, authContext);
+
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.FARMER]);
+    expect(mockCreateFarm).toHaveBeenCalledWith(verifiedFarmer.id, minimalCreateFarmInput);
+    expect(result).toEqual(created);
   });
 });

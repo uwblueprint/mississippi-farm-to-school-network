@@ -90,7 +90,7 @@ const farmResolvers = {
       { input }: { input: CreateFarmInput },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      const currentUser = await authHelper.requireEmailVerified(context);
+      const currentUser = await authHelper.requireRole(context, [Role.FARMER]);
       const createdFarm = await farmService.createFarm(currentUser.id, input);
 
       const subject = 'New Farm Application Submitted';
