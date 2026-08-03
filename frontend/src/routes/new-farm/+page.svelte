@@ -4,6 +4,7 @@
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
 	import { getFirebaseAuth } from '$lib/firebase';
+	import { attachFarmPhotos } from '$lib/utils/farm-image-upload';
 
 	let { data } = $props();
 
@@ -451,6 +452,25 @@
 				submitError =
 					result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
 				return;
+			}
+
+			const farmId = result.farm?.id as string | undefined;
+			if (!farmId) {
+				submitError = 'Farm was created but no id was returned.';
+				return;
+			}
+
+			if (farmPhotos.length > 0) {
+				try {
+					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
+				} catch (photoError) {
+					submitted = true;
+					submitError =
+						photoError instanceof Error
+							? `${photoError.message} Your farm was created; you can add photos later.`
+							: 'Farm created, but photo upload failed. You can add photos later.';
+					return;
+				}
 			}
 
 			submitted = true;
