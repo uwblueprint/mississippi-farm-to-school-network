@@ -138,10 +138,6 @@ export async function sendPasswordResetEmailHandler(email: string) {
 	});
 }
 
-/**
- * Writes the Firebase ID token into a cookie so SvelteKit server routes can
- * forward `Authorization: Bearer <token>` to GraphQL.
- */
 export function setAuthTokenCookie(idToken: string): void {
 	const secure =
 		typeof window !== 'undefined' && window.location.protocol === 'https:' ? '; Secure' : '';
@@ -152,7 +148,6 @@ export function clearAuthTokenCookie(): void {
 	document.cookie = `${AUTH_TOKEN_COOKIE}=; path=/; Max-Age=0; SameSite=Lax`;
 }
 
-/** Sync the `token` cookie from the current Firebase user (or clear it). */
 export async function syncAuthTokenCookie(user: User | null): Promise<void> {
 	if (!user) {
 		clearAuthTokenCookie();
@@ -163,10 +158,6 @@ export async function syncAuthTokenCookie(user: User | null): Promise<void> {
 	setAuthTokenCookie(idToken);
 }
 
-/**
- * Keep the `token` cookie aligned with Firebase Auth.
- * Call once from the root layout; returns an unsubscribe function.
- */
 export function subscribeAuthTokenCookie(): Unsubscribe {
 	const auth = getFirebaseAuth();
 	return onIdTokenChanged(auth, (user) => {
