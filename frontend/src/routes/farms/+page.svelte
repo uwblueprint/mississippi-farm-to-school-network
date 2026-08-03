@@ -6,6 +6,7 @@
 	import FarmMap from '$lib/components/map/FarmMap.svelte';
 	import { requestUserLocation } from '$lib/state/geolocation.svelte';
 	import { farmDtoToMapFarm, type FarmDto } from '$lib/utils/farm-adapter';
+	import { resolveFarmDisplayImages } from '$lib/utils/farm-images';
 	import type { MapFarm } from '$lib/types/farm';
 	import '$lib/styles/map/farm-map.css';
 
@@ -29,7 +30,13 @@
 				return;
 			}
 
-			farms = ((body.farms ?? []) as FarmDto[]).map(farmDtoToMapFarm);
+			const mapped = ((body.farms ?? []) as FarmDto[]).map(farmDtoToMapFarm);
+			farms = await Promise.all(
+				mapped.map(async (farm) => {
+					const images = await resolveFarmDisplayImages(farm);
+					return { ...farm, ...images };
+				})
+			);
 		} catch {
 			loadError = 'Network error. Check your connection and try again.';
 			farms = [];

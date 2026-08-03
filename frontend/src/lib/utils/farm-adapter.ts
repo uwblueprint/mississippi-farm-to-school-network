@@ -6,28 +6,13 @@ export type FarmDto = Omit<MapFarm, 'markerType' | 'imageUrls' | 'thumbnailUrl' 
 	cities_served: string[] | null;
 };
 
-const PLACEHOLDER_IMAGES = [
-	'https://images.unsplash.com/photo-1500595046743-cd271d694d30?w=900&q=80',
-	'https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80',
-	'https://images.unsplash.com/photo-1625246333195-78d9c38ad449?w=900&q=80'
-];
-
-function placeholderImages(id: string): string[] {
-	const index = Number.parseInt(id.replace(/\D/g, '').slice(0, 6), 10) || 0;
-	return [
-		PLACEHOLDER_IMAGES[index % PLACEHOLDER_IMAGES.length],
-		PLACEHOLDER_IMAGES[(index + 1) % PLACEHOLDER_IMAGES.length],
-		PLACEHOLDER_IMAGES[(index + 2) % PLACEHOLDER_IMAGES.length]
-	];
-}
+const FALLBACK_THUMBNAIL = '/images/mfsnLogo.svg';
 
 /**
- * Normalize API FarmDTO JSON into MapFarm (adds marker + display image fields).
- * Image URLs stay placeholders until Part E resolves cover/carousel IDs.
+ * Normalize API FarmDTO JSON into MapFarm (adds marker + empty display images).
+ * Call `resolveFarmDisplayImages` afterward to fill signed URLs.
  */
 export function farmDtoToMapFarm(dto: FarmDto): MapFarm {
-	const imageUrls = placeholderImages(dto.id);
-
 	const farm: MapFarm = {
 		id: dto.id,
 		owner_user_id: dto.owner_user_id,
@@ -61,8 +46,8 @@ export function farmDtoToMapFarm(dto: FarmDto): MapFarm {
 		createdAt: dto.createdAt,
 		updatedAt: dto.updatedAt,
 		markerType: 'farm',
-		imageUrls,
-		thumbnailUrl: imageUrls[0]
+		imageUrls: [],
+		thumbnailUrl: FALLBACK_THUMBNAIL
 	};
 
 	farm.markerType = getMarkerType(farm);
