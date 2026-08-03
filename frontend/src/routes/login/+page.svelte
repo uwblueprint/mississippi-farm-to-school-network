@@ -10,7 +10,8 @@
 		getAuthErrorMessage,
 		getLoginFieldError,
 		getPostAuthDestination,
-		loginWithEmail
+		loginWithEmail,
+		syncAuthTokenCookie
 	} from '$lib/auth';
 
 	let email = $state('');
@@ -41,6 +42,7 @@
 				return;
 			}
 
+			await syncAuthTokenCookie(credential.user);
 			await goto(getPostAuthDestination(trimmedEmail, 'login'));
 		} catch (error) {
 			const fieldError = getLoginFieldError(error);
