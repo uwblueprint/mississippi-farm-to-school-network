@@ -1,6 +1,5 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
-import { dev } from '$app/environment';
 
 const ME_QUERY = `
   query Me {
@@ -16,12 +15,6 @@ const ME_QUERY = `
 `;
 
 export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
-	// Auth cookie + GraphQL `me` are not fully wired from Firebase login yet.
-	// In dev, allow the form to load so onboarding → Add Farm can be tested.
-	if (dev) {
-		return { user: null };
-	}
-
 	const token = cookies.get('token');
 
 	if (!token) {
@@ -41,7 +34,7 @@ export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 
 	const user = json.data?.me;
 
-	if (!user) {
+	if (!user || json.errors) {
 		throw redirect(302, '/login');
 	}
 
