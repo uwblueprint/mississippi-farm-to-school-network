@@ -14,6 +14,17 @@ import {
   FarmRejectionResolutionType,
   FarmSnapshotDTO,
 } from '@/types';
+import {
+  GROWING_PRACTICES,
+  SEASONAL_PRODUCTS,
+  MEAT_PRODUCTS,
+  OTHER_PRODUCTS,
+  FOOD_SAFETY_CERTIFICATIONS,
+  FARM_EXPERIENCES,
+  FARM_CHARACTERISTICS,
+  FARM_TO_SCHOOL_SALES,
+  assertAllowedValues,
+} from '@/constants/farmOptions';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
 import IUserService from '@/services/interfaces/userService';
@@ -58,7 +69,40 @@ const convertFromPostGISPoint = (location: {
 };
 
 class FarmService implements IFarmService {
+  private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
+    if (input.seasonal_products !== undefined) {
+      assertAllowedValues(input.seasonal_products, SEASONAL_PRODUCTS, 'seasonal_products');
+    }
+    if (input.meat_products !== undefined) {
+      assertAllowedValues(input.meat_products, MEAT_PRODUCTS, 'meat_products');
+    }
+    if (input.other_products !== undefined) {
+      assertAllowedValues(input.other_products, OTHER_PRODUCTS, 'other_products');
+    }
+    if (input.growing_practices !== undefined) {
+      assertAllowedValues(input.growing_practices, GROWING_PRACTICES, 'growing_practices');
+    }
+    if (input.food_safety_certifications !== undefined) {
+      assertAllowedValues(
+        input.food_safety_certifications,
+        FOOD_SAFETY_CERTIFICATIONS,
+        'food_safety_certifications'
+      );
+    }
+    if (input.farm_experiences !== undefined) {
+      assertAllowedValues(input.farm_experiences, FARM_EXPERIENCES, 'farm_experiences');
+    }
+    if (input.farm_characteristics !== undefined) {
+      assertAllowedValues(input.farm_characteristics, FARM_CHARACTERISTICS, 'farm_characteristics');
+    }
+    if (input.farm_to_school_sales !== undefined) {
+      assertAllowedValues(input.farm_to_school_sales, FARM_TO_SCHOOL_SALES, 'farm_to_school_sales');
+    }
+  }
+
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
+    this.validateFarmOptionArrays(input);
+
     let createdFarm: FarmDTO;
 
     try {
@@ -104,6 +148,7 @@ class FarmService implements IFarmService {
       const farms = await Farm.findAll({
         where: {
           status: FarmStatus.APPROVED,
+          is_archived: false,
           location: literal(
             `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
           ),
@@ -137,20 +182,28 @@ class FarmService implements IFarmService {
         where.status = filter.approved ? FarmStatus.APPROVED : { [Op.ne]: FarmStatus.APPROVED };
       }
 
-      if (filter?.home_county) {
-        where.home_county = filter.home_county;
-      }
-
-      if (filter?.counties_served?.length) {
-        where.counties_served = { [Op.overlap]: filter.counties_served };
+      if (filter?.counties?.length) {
+        where.county = { [Op.in]: filter.counties };
       }
 
       if (filter?.cities_served?.length) {
         where.cities_served = { [Op.overlap]: filter.cities_served };
       }
 
-      if (filter?.food_categories?.length) {
-        where.food_categories = { [Op.overlap]: filter.food_categories };
+      if (filter?.seasonal_products?.length) {
+        where.seasonal_products = { [Op.overlap]: filter.seasonal_products };
+      }
+
+      if (filter?.meat_products?.length) {
+        where.meat_products = { [Op.overlap]: filter.meat_products };
+      }
+
+      if (filter?.other_products?.length) {
+        where.other_products = { [Op.overlap]: filter.other_products };
+      }
+
+      if (filter?.is_archived !== undefined) {
+        where.is_archived = filter.is_archived;
       }
 
       const farms = await Farm.findAll({ where });
@@ -163,6 +216,8 @@ class FarmService implements IFarmService {
 
   async updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO> {
     try {
+      this.validateFarmOptionArrays(input);
+
       const farm = farmToUpdate ?? (await Farm.findByPk(id));
       if (!farm) {
         throw new Error(`Farm with id ${id} not found.`);
@@ -326,32 +381,36 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
-      description: data.description,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
-      counties_served: data.counties_served,
-      cities_served: data.cities_served,
-      home_county: data.home_county,
+      county: data.county,
+      cities_served: data.cities_served ?? [],
       location: {
         type: 'Point',
         coordinates: data.location.coordinates,
       },
-      food_categories: data.food_categories,
+      seasonal_products: data.seasonal_products,
+      meat_products: data.meat_products,
+      other_products: data.other_products,
+      seasonal_products_detail: data.seasonal_products_detail ?? null,
+      meat_products_detail: data.meat_products_detail ?? null,
+      other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
-      bipoc_owned: data.bipoc_owned,
-      gap_certified: data.gap_certified,
-      food_safety_plan: data.food_safety_plan,
-      agritourism: data.agritourism,
-      sells_at_markets: data.sells_at_markets,
-      csa_boxes: data.csa_boxes,
-      online_sales: data.online_sales,
-      delivery: data.delivery,
-      f2s_experience: data.f2s_experience,
-      interested_in_f2s: data.interested_in_f2s,
+      growing_practices: data.growing_practices,
+      food_safety_certifications: data.food_safety_certifications,
+      farm_experiences: data.farm_experiences,
+      farm_characteristics: data.farm_characteristics,
+      farm_to_school_sales: data.farm_to_school_sales,
+      f2s_experience: data.f2s_experience ?? null,
+      minimum_order: data.minimum_order ?? null,
+      delivery_details: data.delivery_details ?? null,
+      cover_photo: data.cover_photo ?? null,
+      carousel_photos: data.carousel_photos,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()
@@ -413,29 +472,33 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
-      description: data.description,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
       social_media: data.social_media ?? null,
       farm_address: data.farm_address,
-      counties_served: data.counties_served,
-      cities_served: data.cities_served,
-      home_county: data.home_county,
+      county: data.county,
+      cities_served: data.cities_served ?? [],
       location: convertFromPostGISPoint(data.location),
-      food_categories: data.food_categories,
+      seasonal_products: data.seasonal_products,
+      meat_products: data.meat_products,
+      other_products: data.other_products,
+      seasonal_products_detail: data.seasonal_products_detail ?? null,
+      meat_products_detail: data.meat_products_detail ?? null,
+      other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
-      bipoc_owned: data.bipoc_owned,
-      gap_certified: data.gap_certified,
-      food_safety_plan: data.food_safety_plan,
-      agritourism: data.agritourism,
-      sells_at_markets: data.sells_at_markets,
-      csa_boxes: data.csa_boxes,
-      online_sales: data.online_sales,
-      delivery: data.delivery,
-      f2s_experience: data.f2s_experience,
-      interested_in_f2s: data.interested_in_f2s,
+      growing_practices: data.growing_practices,
+      food_safety_certifications: data.food_safety_certifications,
+      farm_experiences: data.farm_experiences,
+      farm_characteristics: data.farm_characteristics,
+      farm_to_school_sales: data.farm_to_school_sales,
+      f2s_experience: data.f2s_experience ?? null,
+      minimum_order: data.minimum_order ?? null,
+      delivery_details: data.delivery_details ?? null,
+      cover_photo: data.cover_photo ?? null,
+      carousel_photos: data.carousel_photos,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()
@@ -449,7 +512,7 @@ class FarmService implements IFarmService {
 
   async getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]> {
     try {
-      const farms = await Farm.findAll({ where: { status } });
+      const farms = await Farm.findAll({ where: { status, is_archived: false } });
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
@@ -466,6 +529,50 @@ class FarmService implements IFarmService {
       return this.convertToFarmDTO(farm);
     } catch (error: unknown) {
       Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async archiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is already archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = true;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to archive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async unarchiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (!farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is not archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = false;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

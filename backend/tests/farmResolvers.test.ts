@@ -1,10 +1,16 @@
-import { FarmStatus } from '@/types';
+import { FarmStatus, Role } from '@/types';
 import type { AuthContext } from '@/middlewares/auth';
 
 const mockGetFarmsByProximity = jest.fn();
 const mockGetLatestActiveRejection = jest.fn();
+const mockGetFarms = jest.fn();
+const mockArchiveFarm = jest.fn();
+const mockUnarchiveFarm = jest.fn();
+const mockUpdateFarm = jest.fn();
+const mockResubmitFarm = jest.fn();
 const mockRequireEmailVerified = jest.fn();
 const mockRequireOwnerOrAdmin = jest.fn();
+const mockRequireRole = jest.fn();
 const mockFindByPk = jest.fn();
 
 jest.mock('@/services/implementations/farmService', () => ({
@@ -12,6 +18,11 @@ jest.mock('@/services/implementations/farmService', () => ({
   default: jest.fn().mockImplementation(() => ({
     getFarmsByProximity: mockGetFarmsByProximity,
     getLatestActiveRejection: mockGetLatestActiveRejection,
+    getFarms: mockGetFarms,
+    archiveFarm: mockArchiveFarm,
+    unarchiveFarm: mockUnarchiveFarm,
+    updateFarm: mockUpdateFarm,
+    resubmitFarm: mockResubmitFarm,
   })),
 }));
 
@@ -32,6 +43,7 @@ jest.mock('@/utilities/authHelpers', () => ({
   default: {
     requireEmailVerified: mockRequireEmailVerified,
     requireOwnerOrAdmin: mockRequireOwnerOrAdmin,
+    requireRole: mockRequireRole,
   },
 }));
 
@@ -52,6 +64,36 @@ const farmsByProximity = farmResolvers.Query.farmsByProximity as (
 const latestActiveFarmRejection = farmResolvers.Query.latestActiveFarmRejection as (
   parent: unknown,
   args: { farmId: string },
+  context: AuthContext
+) => Promise<unknown>;
+
+const farms = farmResolvers.Query.farms as (
+  parent: undefined,
+  args: { filter?: Record<string, unknown> },
+  context: AuthContext
+) => Promise<unknown>;
+
+const archiveFarm = farmResolvers.Mutation.archiveFarm as (
+  parent: undefined,
+  args: { id: string },
+  context: AuthContext
+) => Promise<unknown>;
+
+const unarchiveFarm = farmResolvers.Mutation.unarchiveFarm as (
+  parent: undefined,
+  args: { id: string },
+  context: AuthContext
+) => Promise<unknown>;
+
+const updateFarm = farmResolvers.Mutation.updateFarm as (
+  parent: undefined,
+  args: { id: string; input: Record<string, unknown> },
+  context: AuthContext
+) => Promise<unknown>;
+
+const resubmitFarm = farmResolvers.Mutation.resubmitFarm as (
+  parent: undefined,
+  args: { id: string; input: Record<string, unknown> },
   context: AuthContext
 ) => Promise<unknown>;
 
@@ -123,6 +165,189 @@ describe('farmResolvers.Query.farmsByProximity', () => {
     const result = await farmsByProximity(null, { lat: 32.3, lng: -90.18, radiusKm: 10 });
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('farmResolvers.Query.farms', () => {
+  beforeEach(() => {
+    mockGetFarms.mockReset();
+    mockRequireRole.mockReset();
+    mockGetFarms.mockResolvedValue([]);
+  });
+
+  test('non-admin: forces status APPROVED and is_archived false', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await farms(undefined, {}, authContext);
+
+    expect(mockGetFarms).toHaveBeenCalledWith({
+      status: FarmStatus.APPROVED,
+      is_archived: false,
+    });
+  });
+
+  test('non-admin: cannot view archived farms even if filter requests them', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await farms(undefined, { filter: { is_archived: true } }, authContext);
+
+    expect(mockGetFarms).toHaveBeenCalledWith({
+      status: FarmStatus.APPROVED,
+      is_archived: false,
+    });
+  });
+
+  test('admin: filter is passed through so archived farms can be listed', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+
+    await farms(undefined, { filter: { is_archived: true } }, authContext);
+
+    expect(mockGetFarms).toHaveBeenCalledWith({ is_archived: true });
+  });
+
+  test('admin: no filter returns all farms (archived and active)', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+
+    await farms(undefined, {}, authContext);
+
+    expect(mockGetFarms).toHaveBeenCalledWith(undefined);
+  });
+});
+
+describe('farmResolvers.Mutation.archiveFarm', () => {
+  const farmId = 'farm-uuid-1';
+
+  beforeEach(() => {
+    mockArchiveFarm.mockReset();
+    mockRequireRole.mockReset();
+  });
+
+  test('rejects non-admin callers and does not archive', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await expect(archiveFarm(undefined, { id: farmId }, authContext)).rejects.toThrow('Forbidden');
+    expect(mockArchiveFarm).not.toHaveBeenCalled();
+  });
+
+  test('admin archives the farm', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+    mockArchiveFarm.mockResolvedValue({ id: farmId, is_archived: true });
+
+    const result = await archiveFarm(undefined, { id: farmId }, authContext);
+
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.ADMIN]);
+    expect(mockArchiveFarm).toHaveBeenCalledWith(farmId);
+    expect(result).toEqual({ id: farmId, is_archived: true });
+  });
+});
+
+describe('farmResolvers.Mutation.unarchiveFarm', () => {
+  const farmId = 'farm-uuid-1';
+
+  beforeEach(() => {
+    mockUnarchiveFarm.mockReset();
+    mockRequireRole.mockReset();
+  });
+
+  test('rejects non-admin callers and does not unarchive', async () => {
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await expect(unarchiveFarm(undefined, { id: farmId }, authContext)).rejects.toThrow(
+      'Forbidden'
+    );
+    expect(mockUnarchiveFarm).not.toHaveBeenCalled();
+  });
+
+  test('admin unarchives the farm', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+    mockUnarchiveFarm.mockResolvedValue({ id: farmId, is_archived: false });
+
+    const result = await unarchiveFarm(undefined, { id: farmId }, authContext);
+
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.ADMIN]);
+    expect(mockUnarchiveFarm).toHaveBeenCalledWith(farmId);
+    expect(result).toEqual({ id: farmId, is_archived: false });
+  });
+});
+
+describe('farmResolvers.Mutation.updateFarm (archived guard)', () => {
+  const farmId = 'farm-uuid-1';
+  const ownerUserId = 'owner-uuid-1';
+
+  beforeEach(() => {
+    mockUpdateFarm.mockReset();
+    mockRequireEmailVerified.mockReset();
+    mockRequireOwnerOrAdmin.mockReset();
+    mockRequireRole.mockReset();
+    mockFindByPk.mockReset();
+
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
+    mockUpdateFarm.mockResolvedValue({ id: farmId });
+  });
+
+  test('owner (non-admin) cannot edit an archived farm', async () => {
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId, is_archived: true });
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await expect(
+      updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext)
+    ).rejects.toThrow('archived');
+    expect(mockUpdateFarm).not.toHaveBeenCalled();
+  });
+
+  test('admin can edit an archived farm', async () => {
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId, is_archived: true });
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+
+    await updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
+
+    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' }, expect.anything());
+  });
+
+  test('owner can edit a non-archived farm without an admin check', async () => {
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId, is_archived: false });
+
+    await updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
+
+    expect(mockRequireRole).not.toHaveBeenCalled();
+    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' }, expect.anything());
+  });
+});
+
+describe('farmResolvers.Mutation.resubmitFarm (archived guard)', () => {
+  const farmId = 'farm-uuid-1';
+  const ownerUserId = 'owner-uuid-1';
+
+  beforeEach(() => {
+    mockResubmitFarm.mockReset();
+    mockRequireEmailVerified.mockReset();
+    mockRequireOwnerOrAdmin.mockReset();
+    mockRequireRole.mockReset();
+    mockFindByPk.mockReset();
+
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
+    mockResubmitFarm.mockResolvedValue({ id: farmId });
+  });
+
+  test('owner (non-admin) cannot resubmit an archived farm', async () => {
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId, is_archived: true });
+    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
+
+    await expect(
+      resubmitFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext)
+    ).rejects.toThrow('archived');
+    expect(mockResubmitFarm).not.toHaveBeenCalled();
+  });
+
+  test('owner can resubmit a non-archived farm', async () => {
+    mockFindByPk.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId, is_archived: false });
+
+    await resubmitFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
+
+    expect(mockRequireRole).not.toHaveBeenCalled();
+    expect(mockResubmitFarm).toHaveBeenCalledWith(farmId, ownerUserId, { farm_name: 'X' });
   });
 });
 

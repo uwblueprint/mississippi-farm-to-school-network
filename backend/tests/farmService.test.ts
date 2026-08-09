@@ -17,30 +17,33 @@ const MockFarm = Farm as jest.Mocked<typeof Farm>;
 const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: 'uuid-1',
   owner_user_id: 'owner-1',
-  usda_farm_id: 1001,
+  usda_farm_id: '1001',
   farm_name: 'Test Farm',
-  description: 'A test farm',
   primary_phone: '555-0100',
   primary_email: 'farm@test.com',
   website: null,
   social_media: null,
   farm_address: '123 Farm Rd',
-  counties_served: ['Hinds', 'Madison'],
+  county: 'Hinds',
   cities_served: ['Jackson', 'Ridgeland'],
-  home_county: 'Hinds',
   location: { type: 'Point', coordinates: [-90.18, 32.3] },
-  food_categories: ['Vegetables', 'Fruits'],
+  seasonal_products: ['Fruits and Vegetables', 'Herbs'],
+  meat_products: [],
+  other_products: [],
+  seasonal_products_detail: 'A test farm',
+  meat_products_detail: null,
+  other_products_detail: null,
   market_sales_data: null,
-  bipoc_owned: false,
-  gap_certified: false,
-  food_safety_plan: false,
-  agritourism: false,
-  sells_at_markets: false,
-  csa_boxes: false,
-  online_sales: false,
-  delivery: false,
-  f2s_experience: false,
-  interested_in_f2s: false,
+  growing_practices: [],
+  food_safety_certifications: [],
+  farm_experiences: [],
+  farm_characteristics: [],
+  farm_to_school_sales: [],
+  f2s_experience: null,
+  minimum_order: null,
+  delivery_details: null,
+  cover_photo: null,
+  carousel_photos: [],
   status: FarmStatus.APPROVED,
   createdAt: new Date('2025-01-01'),
   updatedAt: new Date('2025-06-01'),
@@ -143,23 +146,13 @@ describe('FarmService.getFarms', () => {
 
   // ── array filters ─────────────────────────────────────────────────────────
 
-  test('filter by home_county: passes exact match to where clause', async () => {
+  test('filter by counties: uses Op.in', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ home_county: 'Hinds' });
+    await service.getFarms({ counties: ['Hinds'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { home_county: 'Hinds' },
-    });
-  });
-
-  test('filter by counties_served: uses Op.overlap', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms({ counties_served: ['Hinds'] });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { counties_served: { [Op.overlap]: ['Hinds'] } },
+      where: { county: { [Op.in]: ['Hinds'] } },
     });
   });
 
@@ -173,20 +166,20 @@ describe('FarmService.getFarms', () => {
     });
   });
 
-  test('filter by food_categories: uses Op.overlap', async () => {
+  test('filter by seasonal_products: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ food_categories: ['Vegetables'] });
+    await service.getFarms({ seasonal_products: ['Fruits and Vegetables'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { food_categories: { [Op.overlap]: ['Vegetables'] } },
+      where: { seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] } },
     });
   });
 
   test('empty array filter: ignores empty array, returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties_served: [], food_categories: [] });
+    await service.getFarms({ counties: [], seasonal_products: [] });
 
     // Empty arrays should not add where conditions
     expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
@@ -194,22 +187,49 @@ describe('FarmService.getFarms', () => {
 
   // ── combined filters ──────────────────────────────────────────────────────
 
-  test('combining status + counties_served + food_categories', async () => {
+  test('combining status + counties + seasonal_products', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
     await service.getFarms({
       status: FarmStatus.APPROVED,
-      counties_served: ['Hinds'],
-      food_categories: ['Vegetables'],
+      counties: ['Hinds'],
+      seasonal_products: ['Fruits and Vegetables'],
     });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: {
         status: FarmStatus.APPROVED,
-        counties_served: { [Op.overlap]: ['Hinds'] },
-        food_categories: { [Op.overlap]: ['Vegetables'] },
+        county: { [Op.in]: ['Hinds'] },
+        seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] },
       },
     });
+  });
+
+  // ── archived filter ─────────────────────────────────────────────────────────
+
+  test('default (no is_archived): returns all farms with no archived constraint', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms({ status: FarmStatus.APPROVED });
+
+    const call = MockFarm.findAll.mock.calls[0][0] as any;
+    expect(call.where.is_archived).toBeUndefined();
+  });
+
+  test('is_archived=true: returns only archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow({ is_archived: true })] as any);
+
+    await service.getFarms({ is_archived: true });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: true } });
+  });
+
+  test('is_archived=false explicitly: excludes archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms({ is_archived: false });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
   });
 
   // ── filters matching no farms ─────────────────────────────────────────────
@@ -218,7 +238,7 @@ describe('FarmService.getFarms', () => {
     MockFarm.findAll.mockResolvedValue([]);
 
     const result = await service.getFarms({
-      counties_served: ['NonExistentCounty'],
+      counties: ['NonExistentCounty'],
     });
 
     expect(result).toEqual([]);
@@ -235,10 +255,10 @@ describe('FarmService.getFarms', () => {
     expect(dto).toMatchObject({
       id: 'uuid-1',
       owner_user_id: 'owner-1',
-      usda_farm_id: 1001,
+      usda_farm_id: '1001',
       farm_name: 'Test Farm',
-      counties_served: ['Hinds', 'Madison'],
-      food_categories: ['Vegetables', 'Fruits'],
+      county: 'Hinds',
+      seasonal_products: ['Fruits and Vegetables', 'Herbs'],
       status: FarmStatus.APPROVED,
     });
     expect(dto.createdAt).toBe(new Date('2025-01-01').toISOString());
@@ -304,6 +324,14 @@ describe('FarmService.getFarmsByProximity', () => {
     expect(dWithinSql).toContain(`${radiusKm * 1000}`);
   });
 
+  test('excludes archived farms from proximity search', async () => {
+    MockFarm.findAll.mockResolvedValue([]);
+
+    await service.getFarmsByProximity(lat, lng, radiusKm);
+
+    expect(getProximitySql().where).toMatchObject({ is_archived: false });
+  });
+
   test('sorts results by ST_Distance ascending', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
@@ -366,6 +394,124 @@ describe('FarmService.getFarmsByProximity', () => {
   });
 });
 
+// ─── FarmService.getFarmsByStatus ────────────────────────────────────────────
+
+describe('FarmService.getFarmsByStatus', () => {
+  let service: FarmService;
+
+  beforeEach(() => {
+    service = new FarmService();
+    MockFarm.findAll.mockReset();
+  });
+
+  test('excludes archived farms', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarmsByStatus(FarmStatus.PENDING_APPROVAL);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { status: FarmStatus.PENDING_APPROVAL, is_archived: false },
+    });
+  });
+});
+
+// ─── FarmService.archiveFarm / unarchiveFarm ─────────────────────────────────
+
+describe('FarmService.archiveFarm / unarchiveFarm', () => {
+  let service: FarmService;
+
+  const makeInstance = (overrides: Partial<Record<string, unknown>> = {}) => {
+    const data = { ...makeFarmRow(), ...overrides };
+    return {
+      ...data,
+      save: jest.fn().mockResolvedValue(undefined),
+      reload: jest.fn().mockResolvedValue(undefined),
+      toJSON() {
+        return { ...this };
+      },
+    };
+  };
+
+  beforeEach(() => {
+    service = new FarmService();
+    MockFarm.findByPk.mockReset();
+  });
+
+  test('archiveFarm sets is_archived to true and persists', async () => {
+    const instance = makeInstance({ is_archived: false });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect((instance as any).is_archived).toBe(true);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(result.is_archived).toBe(true);
+  });
+
+  test('archiveFarm does not change the farm status', async () => {
+    const instance = makeInstance({ is_archived: false, status: FarmStatus.APPROVED });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect(result.status).toBe(FarmStatus.APPROVED);
+  });
+
+  test('archiveFarm is a no-op when already archived', async () => {
+    const instance = makeInstance({ is_archived: true });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.archiveFarm('uuid-1');
+
+    expect(instance.save).not.toHaveBeenCalled();
+    expect(result.is_archived).toBe(true);
+  });
+
+  test('archiveFarm throws when the farm does not exist', async () => {
+    MockFarm.findByPk.mockResolvedValue(null);
+
+    await expect(service.archiveFarm('missing')).rejects.toThrow('Farm with id missing not found.');
+  });
+
+  test('unarchiveFarm sets is_archived to false and persists', async () => {
+    const instance = makeInstance({ is_archived: true });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect((instance as any).is_archived).toBe(false);
+    expect(instance.save).toHaveBeenCalledTimes(1);
+    expect(result.is_archived).toBe(false);
+  });
+
+  test('unarchiveFarm preserves the farm status (restores prior state)', async () => {
+    const instance = makeInstance({ is_archived: true, status: FarmStatus.REJECTED });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect(result.status).toBe(FarmStatus.REJECTED);
+  });
+
+  test('unarchiveFarm is a no-op when not archived', async () => {
+    const instance = makeInstance({ is_archived: false });
+    MockFarm.findByPk.mockResolvedValue(instance as any);
+
+    const result = await service.unarchiveFarm('uuid-1');
+
+    expect(instance.save).not.toHaveBeenCalled();
+    expect(result.is_archived).toBe(false);
+  });
+
+  test('unarchiveFarm throws when the farm does not exist', async () => {
+    MockFarm.findByPk.mockResolvedValue(null);
+
+    await expect(service.unarchiveFarm('missing')).rejects.toThrow(
+      'Farm with id missing not found.'
+    );
+  });
+});
+
 // ─── FarmService.updateFarm ──────────────────────────────────────────────────
 
 describe('FarmService.updateFarm', () => {
@@ -376,30 +522,33 @@ describe('FarmService.updateFarm', () => {
     const data: Record<string, unknown> = {
       id: 'uuid-1',
       owner_user_id: 'owner-1',
-      usda_farm_id: 1001,
+      usda_farm_id: '1001',
       farm_name: 'Original Name',
-      description: 'Original description',
       primary_phone: '555-0100',
       primary_email: 'farm@test.com',
       website: null,
       social_media: null,
       farm_address: '123 Farm Rd',
-      counties_served: ['Hinds'],
+      county: 'Hinds',
       cities_served: ['Jackson'],
-      home_county: 'Hinds',
       location: { type: 'Point', coordinates: [-90.18, 32.3] },
-      food_categories: ['Vegetables'],
+      seasonal_products: ['Fruits and Vegetables'],
+      meat_products: [],
+      other_products: [],
+      seasonal_products_detail: 'Original description',
+      meat_products_detail: null,
+      other_products_detail: null,
       market_sales_data: null,
-      bipoc_owned: false,
-      gap_certified: false,
-      food_safety_plan: false,
-      agritourism: false,
-      sells_at_markets: false,
-      csa_boxes: false,
-      online_sales: false,
-      delivery: false,
-      f2s_experience: false,
-      interested_in_f2s: false,
+      growing_practices: [],
+      food_safety_certifications: [],
+      farm_experiences: [],
+      farm_characteristics: [],
+      farm_to_school_sales: [],
+      f2s_experience: null,
+      minimum_order: null,
+      delivery_details: null,
+      cover_photo: null,
+      carousel_photos: [],
       status: FarmStatus.PENDING_APPROVAL,
       createdAt: new Date('2025-01-01'),
       updatedAt: new Date('2025-06-01'),
@@ -438,7 +587,7 @@ describe('FarmService.updateFarm', () => {
     expect(instance.save).toHaveBeenCalledTimes(1);
     expect(result.farm_name).toBe('New Name');
     // Other fields unchanged
-    expect(result.description).toBe('Original description');
+    expect(result.seasonal_products_detail).toBe('Original description');
     expect(result.primary_phone).toBe('555-0100');
   });
 
@@ -448,12 +597,12 @@ describe('FarmService.updateFarm', () => {
 
     const result = await service.updateFarm('uuid-1', {
       farm_name: 'Updated Farm',
-      description: 'New description',
+      seasonal_products_detail: 'New description',
       primary_phone: '555-9999',
     });
 
     expect(result.farm_name).toBe('Updated Farm');
-    expect(result.description).toBe('New description');
+    expect(result.seasonal_products_detail).toBe('New description');
     expect(result.primary_phone).toBe('555-9999');
   });
 
@@ -494,7 +643,7 @@ describe('FarmService.updateFarm', () => {
 
     expect(instance.save).toHaveBeenCalledTimes(1);
     expect(result.farm_name).toBe('Original Name');
-    expect(result.description).toBe('Original description');
+    expect(result.seasonal_products_detail).toBe('Original description');
   });
 
   // ── invalid farm id ───────────────────────────────────────────────────────
@@ -513,18 +662,16 @@ describe('FarmService.updateFarm', () => {
     const instance = makeFarmInstance();
     MockFarm.findByPk.mockResolvedValue(instance as any);
 
-    const updateInput = {
+    const dto = await service.updateFarm('uuid-1', {
       farm_name: 'Freshly Updated',
-      description: 'New desc',
-      bipoc_owned: true,
-    };
-
-    const dto = await service.updateFarm('uuid-1', updateInput);
+      seasonal_products_detail: 'New desc',
+      farm_characteristics: ['BIPOC-Owned Farm'],
+    });
 
     expect(dto.id).toBe('uuid-1');
     expect(dto.farm_name).toBe('Freshly Updated');
-    expect(dto.description).toBe('New desc');
-    expect(dto.bipoc_owned).toBe(true);
+    expect(dto.seasonal_products_detail).toBe('New desc');
+    expect(dto.farm_characteristics).toEqual(['BIPOC-Owned Farm']);
     expect(dto.updatedAt).toBe(new Date('2025-06-02T12:00:00.000Z').toISOString());
   });
 
@@ -553,7 +700,7 @@ describe('FarmService.updateFarm', () => {
 
     const result = await service.updateFarm('uuid-1', {
       farm_name: 'Resubmitted Farm Name',
-      description: 'Updated farm description',
+      seasonal_products_detail: 'Updated farm description',
     });
 
     expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
@@ -566,7 +713,7 @@ describe('FarmService.updateFarm', () => {
     expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
     expect(htmlBody).toContain('Missing GAP documentation');
     expect(htmlBody).toContain('Farm Name');
-    expect(htmlBody).toContain('Description');
+    expect(htmlBody).toContain('Seasonal Products Detail');
     expect(htmlBody).toContain('Original Name');
     expect(htmlBody).toContain('Resubmitted Farm Name');
   });

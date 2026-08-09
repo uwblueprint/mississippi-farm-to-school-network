@@ -23,60 +23,67 @@ const farmType = gql`
     id: ID!
     owner_user_id: ID!
     owner: UserDTO
-    usda_farm_id: Int
+    usda_farm_id: String
     farm_name: String!
-    description: String!
     primary_phone: String!
     primary_email: String!
     website: String
     social_media: JSON
     farm_address: String!
-    counties_served: [String!]!
-    cities_served: [String!]!
-    home_county: String!
+    county: String!
+    cities_served: [String!]
     location: Location!
-    food_categories: [String!]!
+    seasonal_products: [String!]!
+    meat_products: [String!]!
+    other_products: [String!]!
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
+    growing_practices: [String!]!
+    food_safety_certifications: [String!]!
+    farm_experiences: [String!]!
+    farm_characteristics: [String!]!
+    farm_to_school_sales: [String!]!
     market_sales_data: [MarketSalesData!]
-    bipoc_owned: Boolean!
-    gap_certified: Boolean!
-    food_safety_plan: Boolean!
-    agritourism: Boolean!
-    sells_at_markets: Boolean!
-    csa_boxes: Boolean!
-    online_sales: Boolean!
-    delivery: Boolean!
-    f2s_experience: Boolean!
-    interested_in_f2s: Boolean!
+    f2s_experience: String
+    minimum_order: String
+    delivery_details: String
+    cover_photo: String
+    carousel_photos: [String!]!
     status: FarmStatus!
+    is_archived: Boolean!
     createdAt: String!
     updatedAt: String!
   }
 
   input CreateFarmInput {
-    usda_farm_id: Int!
+    usda_farm_id: String!
     farm_name: String!
-    description: String!
     primary_phone: String!
     primary_email: String!
     website: String
     social_media: JSON
     farm_address: String!
-    counties_served: [String!]!
-    cities_served: [String!]!
-    home_county: String!
+    county: String!
+    cities_served: [String!]
     location: LocationInput!
-    food_categories: [String!]!
+    seasonal_products: [String!]!
+    meat_products: [String!]!
+    other_products: [String!]!
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
+    growing_practices: [String!]!
+    food_safety_certifications: [String!]!
+    farm_experiences: [String!]
+    farm_characteristics: [String!]
+    farm_to_school_sales: [String!]
     market_sales_data: [MarketSalesDataInput!]
-    bipoc_owned: Boolean
-    gap_certified: Boolean
-    food_safety_plan: Boolean
-    agritourism: Boolean
-    sells_at_markets: Boolean
-    csa_boxes: Boolean
-    online_sales: Boolean
-    delivery: Boolean
-    f2s_experience: Boolean
-    interested_in_f2s: Boolean
+    f2s_experience: String
+    minimum_order: Int
+    delivery_details: String
+    cover_photo: String
+    carousel_photos: [String!]
   }
 
   input LocationInput {
@@ -91,38 +98,43 @@ const farmType = gql`
 
   input FarmFilter {
     status: FarmStatus
-    home_county: String
-    counties_served: [String!]
+    counties: [String!]
     cities_served: [String!]
-    food_categories: [String!]
+    seasonal_products: [String!]
+    meat_products: [String!]
+    other_products: [String!]
     approved: Boolean
+    is_archived: Boolean
   }
 
   input UpdateFarmInput {
-    usda_farm_id: Int
+    usda_farm_id: String
     farm_name: String
-    description: String
     primary_phone: String
     primary_email: String
     website: String
     social_media: JSON
     farm_address: String
-    counties_served: [String!]
+    county: String
     cities_served: [String!]
-    home_county: String
     location: LocationInput
-    food_categories: [String!]
+    seasonal_products: [String!]
+    meat_products: [String!]
+    other_products: [String!]
+    seasonal_products_detail: String
+    meat_products_detail: String
+    other_products_detail: String
+    growing_practices: [String!]
+    food_safety_certifications: [String!]
+    farm_experiences: [String!]
+    farm_characteristics: [String!]
+    farm_to_school_sales: [String!]
     market_sales_data: [MarketSalesDataInput!]
-    bipoc_owned: Boolean
-    gap_certified: Boolean
-    food_safety_plan: Boolean
-    agritourism: Boolean
-    sells_at_markets: Boolean
-    csa_boxes: Boolean
-    online_sales: Boolean
-    delivery: Boolean
-    f2s_experience: Boolean
-    interested_in_f2s: Boolean
+    f2s_experience: String
+    minimum_order: Int
+    delivery_details: String
+    cover_photo: String
+    carousel_photos: [String!]
   }
 
   type Query {
@@ -138,6 +150,8 @@ const farmType = gql`
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+    archiveFarm(id: ID!): FarmDTO!
+    unarchiveFarm(id: ID!): FarmDTO!
   }
 
   type ActiveFarmRejectionDTO {
