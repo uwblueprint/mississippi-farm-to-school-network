@@ -34,6 +34,7 @@ export const EmailLayout = (props: EmailLayoutProps) => {
     ctaUrl,
     actionButton,
     isFarmerEmail = true,
+    changes,
   } = props;
 
   const resolvedCtaText = ctaText ?? actionButton?.label;
@@ -63,6 +64,16 @@ export const EmailLayout = (props: EmailLayoutProps) => {
             {title && <Heading style={heading}>{title}</Heading>}
             {body && <Text style={bodyText}>{body}</Text>}
             {previewText && <Text style={previewStyle}>{previewText}</Text>}
+
+            {changes && changes.length > 0 && (
+              <Section style={changesList}>
+                {changes.map((change) => (
+                  <Text key={change.field} style={changeRow}>
+                    <strong>{change.field}</strong>: {change.previous} &rarr; {change.current}
+                  </Text>
+                ))}
+              </Section>
+            )}
 
             {reasonText && <Section style={reasonBox}>{reasonText}</Section>}
 
@@ -227,6 +238,18 @@ const previewStyle = {
   margin: '0 0 16px 0',
   fontSize: '13px',
   color: '#4b5563',
+};
+
+const changesList = {
+  margin: '0 0 24px 0',
+};
+
+const changeRow = {
+  fontFamily: '"DM Sans", sans-serif',
+  fontSize: '14px',
+  lineHeight: '20px',
+  color: '#000000',
+  margin: '0 0 8px 0',
 };
 
 const reasonBox = {

@@ -13,6 +13,7 @@ import {
   ActiveFarmRejectionDTO,
   FarmRejectionResolutionType,
   FarmSnapshotDTO,
+  EmailChangeEntry,
 } from '@/types';
 import {
   GROWING_PRACTICES,
@@ -626,19 +627,16 @@ class FarmService implements IFarmService {
     return JSON.stringify(value);
   }
 
-  private formatDiffSummary(diff: FarmFieldDiff[]): string {
+  private buildDiffEntries(diff: FarmFieldDiff[]): EmailChangeEntry[] {
     if (diff.length === 0) {
-      return '<li>No field-level changes detected.</li>';
+      return [{ field: 'Changes', previous: '', current: 'No field-level changes detected.' }];
     }
 
-    return diff
-      .map((change) => {
-        const fieldLabel = this.formatFieldLabel(change.field);
-        return `<li><strong>${fieldLabel}</strong>: ${this.formatDiffValue(
-          change.previous
-        )} &rarr; ${this.formatDiffValue(change.current)}</li>`;
-      })
-      .join('');
+    return diff.map((change) => ({
+      field: this.formatFieldLabel(change.field),
+      previous: this.formatDiffValue(change.previous),
+      current: this.formatDiffValue(change.current),
+    }));
   }
 
   private formatFieldLabel(field: string): string {
@@ -650,14 +648,14 @@ class FarmService implements IFarmService {
 
   private formatDiffValue(value: unknown): string {
     if (value === null || value === undefined) {
-      return '<em>null</em>';
+      return 'null';
     }
 
     if (typeof value === 'string') {
-      return value.length > 0 ? value : '<em>empty string</em>';
+      return value.length > 0 ? value : '(empty string)';
     }
 
-    return `<code>${this.stableSerialize(value)}</code>`;
+    return this.stableSerialize(value);
   }
 
   private async notifyAdminsAboutResubmission(
@@ -669,7 +667,8 @@ class FarmService implements IFarmService {
     const emailBody = {
       title: 'Farm Resubmitted for Review',
       previewText: 'A farm has been resubmitted with updates for admin review.',
-      body: `Farm: ${farm.farm_name}\nFarm ID: ${farm.id}\nPrevious rejection reason: ${rejectionReason}\nFarmer changes:\n${this.formatDiffSummary(diff)}`,
+      body: `Farm: ${farm.farm_name}\nFarm ID: ${farm.id}\nPrevious rejection reason: ${rejectionReason}\n\nFarmer changes:`,
+      changes: this.buildDiffEntries(diff),
       reasonText: `A farmer has updated the farm application after a rejection. Review the changes below.`,
       ctaText: 'Review application',
       ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,

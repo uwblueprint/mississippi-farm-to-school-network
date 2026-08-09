@@ -443,14 +443,24 @@ describe('FarmService.updateFarm', () => {
     expect(instance.reload).toHaveBeenCalledTimes(2);
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
 
-    const [to, subject, htmlBody] = mockSendEmail.mock.calls[0];
+    const [to, subject, emailBody] = mockSendEmail.mock.calls[0] as [
+      string,
+      string,
+      { body: string; changes: { field: string; previous: string; current: string }[] },
+    ];
     expect(to).toBe('mfsn@uwblueprint.org');
     expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
-    expect(htmlBody).toContain('Missing GAP documentation');
-    expect(htmlBody).toContain('Farm Name');
-    expect(htmlBody).toContain('Seasonal Products Detail');
-    expect(htmlBody).toContain('Original Name');
-    expect(htmlBody).toContain('Resubmitted Farm Name');
+    expect(emailBody.body).toContain('Missing GAP documentation');
+    expect(emailBody.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'Farm Name',
+          previous: 'Original Name',
+          current: 'Resubmitted Farm Name',
+        }),
+        expect.objectContaining({ field: 'Seasonal Products Detail' }),
+      ])
+    );
   });
 
   test('rejected farm update with no actual field change does not email admins', async () => {

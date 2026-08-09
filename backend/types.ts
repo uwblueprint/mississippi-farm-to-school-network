@@ -25,6 +25,12 @@ export type EmailActionButton = {
   href: string;
 };
 
+export type EmailChangeEntry = {
+  field: string;
+  previous: string;
+  current: string;
+};
+
 export type EmailTemplateData = {
   title?: string;
   body?: string;
@@ -37,6 +43,8 @@ export type EmailTemplateData = {
   ctaText?: string;
   ctaUrl?: string;
   isFarmerEmail?: boolean;
+  /** Rendered as a real list in EmailLayout, not embedded as HTML in `body`. */
+  changes?: EmailChangeEntry[];
 };
 
 export type EmailServiceOptions = {
