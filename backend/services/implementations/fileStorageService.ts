@@ -38,6 +38,37 @@ class FileStorageService implements IFileStorageService {
     }
   }
 
+  async getUploadUrl(
+    fileName: string,
+    contentType: string,
+    expirationTimeMinutes = 15
+  ): Promise<string> {
+    const bucket = storage().bucket(this.bucketName);
+    const expirationDate = new Date();
+    expirationDate.setMinutes(expirationDate.getMinutes() + expirationTimeMinutes);
+
+    try {
+      const currentBlob = bucket.file(fileName);
+      const [signedUrl] = await currentBlob.getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: expirationDate,
+        contentType,
+      });
+
+      return signedUrl;
+    } catch (error: unknown) {
+      Logger.error(`Failed to generate upload URL. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async fileExists(fileName: string): Promise<boolean> {
+    const bucket = storage().bucket(this.bucketName);
+    const [exists] = await bucket.file(fileName).exists();
+    return exists;
+  }
+
   async createFile(
     fileName: string,
     filePath: string,
