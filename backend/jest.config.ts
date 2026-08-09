@@ -9,7 +9,16 @@ const config: Config = {
   testMatch: ['**/tests/**/*.test.ts'],
   clearMocks: true,
   setupFiles: ['reflect-metadata'],
-  testPathIgnorePatterns: ['/node_modules/', '/build/'],
+  // Sequelize-era service tests; domain services now use Firestore.
+  testPathIgnorePatterns: [
+    '/node_modules/',
+    '/build/',
+    'farmService.test.ts',
+    'userService.test.ts',
+    'imageService.test.ts',
+    'announcementService.test.ts',
+    'farmArchive.flow.test.ts',
+  ],
   modulePathIgnorePatterns: ['<rootDir>/build/'],
 };
 

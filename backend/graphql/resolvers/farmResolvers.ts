@@ -3,7 +3,6 @@ import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
-import Farm from '@/models/farm.model';
 import {
   CreateFarmInput,
   FarmDTO,
@@ -91,14 +90,11 @@ const farmResolvers = {
       { id }: { id: string },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      const farm = await Farm.findByPk(id);
-      if (!farm) {
-        throw new Error(`Farm with id ${id} not found.`);
-      }
+      const farm = await farmService.getFarmById(id);
       // Owner may read their own farm (any status) to populate the edit form;
       // admins may read any farm. Mirrors latestActiveFarmRejection's auth.
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
-      return farmService.getFarmById(id);
+      return farm;
     },
     farmsByStatus: async (
       _parent: undefined,
@@ -114,10 +110,7 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<ActiveFarmRejectionDTO | null> => {
       await authHelper.requireEmailVerified(context);
-      const farm = await Farm.findByPk(farmId);
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
+      const farm = await farmService.getFarmById(farmId);
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
       return farmService.getLatestActiveRejection(farmId);
     },
@@ -156,11 +149,7 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       await authHelper.requireEmailVerified(context);
-      const farm = await Farm.findByPk(id);
-
-      if (!farm) {
-        throw new Error(`Farm with id ${id} not found.`);
-      }
+      const farm = await farmService.getFarmById(id);
 
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
@@ -176,7 +165,7 @@ const farmResolvers = {
         }
       }
 
-      return farmService.updateFarm(id, input, farm);
+      return farmService.updateFarm(id, input);
     },
 
     approveFarm: async (
@@ -194,10 +183,7 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       const currentUser = await authHelper.requireEmailVerified(context);
-      const farm = await Farm.findByPk(id);
-      if (!farm) {
-        throw new Error(`Farm with id ${id} not found.`);
-      }
+      const farm = await farmService.getFarmById(id);
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
       if (farm.is_archived) {

@@ -1,15 +1,23 @@
-import { Op } from 'sequelize';
-import Image from '@/models/image.model';
 import IImageService from '@/services/interfaces/imageService';
 import { ImageDTO, ImageDimensionsDTO } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
+import { Collections, getFirestore } from '@/utilities/firestore';
 
 const Logger = logger(__filename);
 
-function toDTO(row: Image): ImageDTO {
+type ImageDoc = {
+  farm_id: string;
+  storage_key: string;
+  content_type: string;
+  size: number;
+  dimensions: ImageDimensionsDTO;
+  index: number;
+};
+
+function toDTO(id: string, row: ImageDoc): ImageDTO {
   return {
-    id: row.id,
+    id,
     farm_id: row.farm_id,
     storage_key: row.storage_key,
     content_type: row.content_type,
@@ -20,6 +28,10 @@ function toDTO(row: Image): ImageDTO {
 }
 
 class ImageService implements IImageService {
+  private images() {
+    return getFirestore().collection(Collections.images);
+  }
+
   async createImageRecord(
     id: string,
     farmId: string,
@@ -30,30 +42,29 @@ class ImageService implements IImageService {
     index: number
   ): Promise<ImageDTO> {
     try {
-      const row = await Image.create({
-        id,
+      const data: ImageDoc = {
         farm_id: farmId,
         storage_key: storageKey,
         content_type: contentType,
         size,
         dimensions,
         index,
-      });
-      return toDTO(row);
+      };
+      await this.images().doc(id).set(data);
+      return toDTO(id, data);
     } catch (error: unknown) {
       Logger.error(`Failed to create image record. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  // index 0 is the farm's thumbnail; the gallery is index >= 1 (see PR description).
   async getImagesByFarm(farmId: string): Promise<ImageDTO[]> {
     try {
-      const rows = await Image.findAll({
-        where: { farm_id: farmId, index: { [Op.gte]: 1 } },
-        order: [['index', 'ASC']],
-      });
-      return rows.map(toDTO);
+      const snap = await this.images().where('farm_id', '==', farmId).get();
+      return snap.docs
+        .map((doc) => toDTO(doc.id, doc.data() as ImageDoc))
+        .filter((img) => img.index >= 1)
+        .sort((a, b) => a.index - b.index);
     } catch (error: unknown) {
       Logger.error(`Failed to get images for farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -62,11 +73,11 @@ class ImageService implements IImageService {
 
   async getImageById(imageId: string): Promise<ImageDTO> {
     try {
-      const row = await Image.findByPk(imageId);
-      if (!row) {
+      const doc = await this.images().doc(imageId).get();
+      if (!doc.exists) {
         throw new Error(`Image with id ${imageId} not found.`);
       }
-      return toDTO(row);
+      return toDTO(doc.id, doc.data() as ImageDoc);
     } catch (error: unknown) {
       Logger.error(`Failed to get image record. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -78,19 +89,20 @@ class ImageService implements IImageService {
     updates: { index?: number; contentType?: string }
   ): Promise<ImageDTO> {
     try {
-      const row = await Image.findByPk(imageId);
-      if (!row) {
+      const ref = this.images().doc(imageId);
+      const doc = await ref.get();
+      if (!doc.exists) {
         throw new Error(`Image with id ${imageId} not found.`);
       }
+      const data = doc.data() as ImageDoc;
       if (updates.index !== undefined) {
-        row.index = updates.index;
+        data.index = updates.index;
       }
       if (updates.contentType !== undefined) {
-        row.content_type = updates.contentType;
+        data.content_type = updates.contentType;
       }
-      await row.save();
-      await row.reload();
-      return toDTO(row);
+      await ref.set(data);
+      return toDTO(imageId, data);
     } catch (error: unknown) {
       Logger.error(`Failed to update image record. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -99,11 +111,12 @@ class ImageService implements IImageService {
 
   async deleteImageRecord(imageId: string): Promise<void> {
     try {
-      const row = await Image.findByPk(imageId);
-      if (!row) {
+      const ref = this.images().doc(imageId);
+      const doc = await ref.get();
+      if (!doc.exists) {
         throw new Error(`Image with id ${imageId} not found.`);
       }
-      await row.destroy();
+      await ref.delete();
     } catch (error: unknown) {
       Logger.error(`Failed to delete image record. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -112,8 +125,15 @@ class ImageService implements IImageService {
 
   async getNextIndex(farmId: string): Promise<number> {
     try {
-      const max = (await Image.max('index', { where: { farm_id: farmId } })) as number | null;
-      return max === null ? 0 : max + 1;
+      const snap = await this.images().where('farm_id', '==', farmId).get();
+      let max = -1;
+      for (const doc of snap.docs) {
+        const index = (doc.data() as ImageDoc).index;
+        if (typeof index === 'number' && index > max) {
+          max = index;
+        }
+      }
+      return max + 1;
     } catch (error: unknown) {
       Logger.error(`Failed to compute next image index. Reason = ${getErrorMessage(error)}`);
       throw error;

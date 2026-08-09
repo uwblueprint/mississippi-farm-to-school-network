@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getGraphqlUrl } from '$lib/server/graphql-url';
 
 const FARM_FIELDS = `
 	id
@@ -73,7 +74,7 @@ export const GET: RequestHandler = async ({ url, fetch }) => {
 			}
 		: { query: FARMS_QUERY };
 
-	const res = await fetch('http://mfsn-backend:3000/graphql', {
+	const res = await fetch(getGraphqlUrl(), {
 		method: 'POST',
 		headers,
 		body: JSON.stringify(body)

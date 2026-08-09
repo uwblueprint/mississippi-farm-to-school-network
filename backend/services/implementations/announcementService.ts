@@ -1,5 +1,4 @@
 import IAnnouncementService from '@/services/interfaces/announcementService';
-import Announcement from '@/models/announcement.model';
 import {
   AnnouncementDTO,
   CreateAnnouncementDTO,
@@ -9,10 +8,20 @@ import {
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import { DateTime } from 'luxon';
-import { Op } from 'sequelize';
+import { Collections, getFirestore, newId, toDate, toIso } from '@/utilities/firestore';
 
 const Logger = logger(__filename);
 const CST = 'America/Chicago';
+
+type AnnouncementDoc = {
+  message: string;
+  start_date: string;
+  end_date: string | null;
+  created_by: string;
+  deleted_at: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 
 const toStartOfDayCST = (dateStr: string): Date =>
   DateTime.fromISO(dateStr, { zone: CST }).startOf('day').toJSDate();
@@ -21,12 +30,15 @@ const toEndOfDayCST = (dateStr: string): Date =>
   DateTime.fromISO(dateStr, { zone: CST }).endOf('day').toJSDate();
 
 const isPast = (date: Date) => {
-  // compare against midnight CST of today so same-day announcements are allowed
   const todayCST = DateTime.now().setZone(CST).startOf('day').toJSDate();
   return date < todayCST;
 };
 
 class AnnouncementService implements IAnnouncementService {
+  private announcements() {
+    return getFirestore().collection(Collections.announcements);
+  }
+
   async createAnnouncement(
     createdBy: string,
     announcement: CreateAnnouncementDTO
@@ -46,16 +58,20 @@ class AnnouncementService implements IAnnouncementService {
 
     try {
       const overlappingAnnouncements = await this.getOverlappingAnnouncements(startDate, endDate);
-
-      const newAnnouncement = await Announcement.create({
-        ...announcement,
-        start_date: startDate,
-        end_date: endDate,
+      const id = newId();
+      const now = new Date().toISOString();
+      const data: AnnouncementDoc = {
+        message: announcement.message,
+        start_date: startDate.toISOString(),
+        end_date: endDate ? endDate.toISOString() : null,
         created_by: createdBy,
         deleted_at: null,
-      });
+        createdAt: now,
+        updatedAt: now,
+      };
+      await this.announcements().doc(id).set(data);
       return {
-        announcement: this.convertToAnnouncementDTO(newAnnouncement),
+        announcement: this.convertToAnnouncementDTO(id, data),
         overlappingAnnouncements,
       };
     } catch (error: unknown) {
@@ -68,25 +84,25 @@ class AnnouncementService implements IAnnouncementService {
     id: string,
     newAnnouncement: UpdateAnnouncementDTO
   ): Promise<CreateAnnouncementResult> {
-    const announcementToUpdate = await Announcement.findByPk(id);
-
-    if (!announcementToUpdate) {
+    const doc = await this.announcements().doc(id).get();
+    if (!doc.exists) {
       throw new Error('Announcement not found');
     }
+    const existing = doc.data() as AnnouncementDoc;
 
-    if (
-      (announcementToUpdate.end_date && isPast(announcementToUpdate.end_date)) ||
-      announcementToUpdate.deleted_at
-    ) {
+    const existingEnd = existing.end_date ? toDate(existing.end_date) : null;
+    if ((existingEnd && isPast(existingEnd)) || existing.deleted_at) {
       throw new Error('Cannot update announcements that have ended.');
     }
 
     const startDate = newAnnouncement.start_date
       ? toStartOfDayCST(newAnnouncement.start_date)
-      : announcementToUpdate.start_date;
+      : toDate(existing.start_date);
     const endDate = newAnnouncement.end_date
       ? toEndOfDayCST(newAnnouncement.end_date)
-      : announcementToUpdate.end_date;
+      : existing.end_date
+        ? toDate(existing.end_date)
+        : null;
 
     if (newAnnouncement.start_date && isPast(startDate)) {
       throw new Error('Start date cannot be in the past');
@@ -107,14 +123,17 @@ class AnnouncementService implements IAnnouncementService {
         id
       );
 
-      const updatedAnnouncement = await announcementToUpdate.update({
-        ...newAnnouncement,
-        start_date: startDate,
-        end_date: endDate,
-      });
+      const updated: AnnouncementDoc = {
+        ...existing,
+        message: newAnnouncement.message ?? existing.message,
+        start_date: startDate.toISOString(),
+        end_date: endDate ? endDate.toISOString() : null,
+        updatedAt: new Date().toISOString(),
+      };
+      await this.announcements().doc(id).set(updated);
 
       return {
-        announcement: this.convertToAnnouncementDTO(updatedAnnouncement),
+        announcement: this.convertToAnnouncementDTO(id, updated),
         overlappingAnnouncements,
       };
     } catch (error: unknown) {
@@ -124,21 +143,26 @@ class AnnouncementService implements IAnnouncementService {
   }
 
   async deleteAnnouncement(id: string): Promise<AnnouncementDTO> {
-    const announcementToDelete = await Announcement.findByPk(id);
-    if (!announcementToDelete) {
+    const doc = await this.announcements().doc(id).get();
+    if (!doc.exists) {
       throw new Error('Announcement not found');
     }
-    if (announcementToDelete.end_date && isPast(announcementToDelete.end_date)) {
+    const existing = doc.data() as AnnouncementDoc;
+    if (existing.end_date && isPast(toDate(existing.end_date))) {
       throw new Error('Cannot delete announcements that have ended.');
     }
-    // deleting an already deleted announcement is a no-op
-    if (announcementToDelete.deleted_at) {
-      return this.convertToAnnouncementDTO(announcementToDelete);
+    if (existing.deleted_at) {
+      return this.convertToAnnouncementDTO(id, existing);
     }
 
     try {
-      const announcement = await announcementToDelete.update({ deleted_at: new Date() });
-      return this.convertToAnnouncementDTO(announcement);
+      const updated: AnnouncementDoc = {
+        ...existing,
+        deleted_at: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      await this.announcements().doc(id).set(updated);
+      return this.convertToAnnouncementDTO(id, updated);
     } catch (error: unknown) {
       Logger.error(`Failed to delete announcement. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -146,25 +170,31 @@ class AnnouncementService implements IAnnouncementService {
   }
 
   async getLiveAndUpcomingAnnouncements(): Promise<AnnouncementDTO[]> {
-    const announcements = await Announcement.findAll({
-      where: {
-        deleted_at: null,
-        [Op.or]: [{ end_date: null }, { end_date: { [Op.gte]: new Date() } }],
-      },
-      order: [['start_date', 'ASC']],
-    });
-
-    return announcements.map(this.convertToAnnouncementDTO);
+    const snap = await this.announcements().get();
+    const now = new Date();
+    return snap.docs
+      .map((doc) => ({ id: doc.id, data: doc.data() as AnnouncementDoc }))
+      .filter(({ data }) => {
+        if (data.deleted_at) return false;
+        if (!data.end_date) return true;
+        return toDate(data.end_date) >= now;
+      })
+      .sort((a, b) => toDate(a.data.start_date).getTime() - toDate(b.data.start_date).getTime())
+      .map(({ id, data }) => this.convertToAnnouncementDTO(id, data));
   }
 
   async getPastAnnouncements(): Promise<AnnouncementDTO[]> {
-    const announcements = await Announcement.findAll({
-      where: {
-        [Op.or]: [{ [Op.not]: { deleted_at: null } }, { end_date: { [Op.lt]: new Date() } }],
-      },
-      order: [['start_date', 'DESC']],
-    });
-    return announcements.map(this.convertToAnnouncementDTO);
+    const snap = await this.announcements().get();
+    const now = new Date();
+    return snap.docs
+      .map((doc) => ({ id: doc.id, data: doc.data() as AnnouncementDoc }))
+      .filter(({ data }) => {
+        if (data.deleted_at) return true;
+        if (!data.end_date) return false;
+        return toDate(data.end_date) < now;
+      })
+      .sort((a, b) => toDate(b.data.start_date).getTime() - toDate(a.data.start_date).getTime())
+      .map(({ id, data }) => this.convertToAnnouncementDTO(id, data));
   }
 
   async getOverlappingAnnouncements(
@@ -172,52 +202,36 @@ class AnnouncementService implements IAnnouncementService {
     endDate: Date | null,
     excludeId?: string
   ): Promise<AnnouncementDTO[]> {
-    const announcements = await Announcement.findAll({
-      where: {
-        // while Op.and is redundant, it allows for conditional querying
-        [Op.and]: [
-          { deleted_at: null },
-          excludeId ? { id: { [Op.ne]: excludeId } } : {},
+    const snap = await this.announcements().get();
+    return snap.docs
+      .map((doc) => ({ id: doc.id, data: doc.data() as AnnouncementDoc }))
+      .filter(({ id, data }) => {
+        if (data.deleted_at) return false;
+        if (excludeId && id === excludeId) return false;
 
-          {
-            [Op.or]: [
-              // existing event is open-ended:
-              // if an existing event has no end_date && the endDate is not specified, they overlap
-              // if an existing event has no end_date && the start_date <= endDate, they overlap
-              {
-                [Op.and]: [
-                  { end_date: null },
-                  endDate ? { start_date: { [Op.lte]: endDate } } : {},
-                ],
-              },
+        const existingStart = toDate(data.start_date);
+        const existingEnd = data.end_date ? toDate(data.end_date) : null;
 
-              // existing event is bounded:
-              // if an existing event's end_date >= startDate && the endDate is not specified, they overlap
-              // if an existing event's end_date >= startDate && the event's start_date <= endDate, they overlap
-              {
-                [Op.and]: [
-                  { end_date: { [Op.gte]: startDate } },
-                  endDate ? { start_date: { [Op.lte]: endDate } } : {},
-                ],
-              },
-            ],
-          },
-        ],
-      },
-    });
-    return announcements.map(this.convertToAnnouncementDTO);
+        if (existingEnd == null) {
+          return endDate ? existingStart <= endDate : true;
+        }
+
+        if (existingEnd < startDate) return false;
+        return endDate ? existingStart <= endDate : true;
+      })
+      .map(({ id, data }) => this.convertToAnnouncementDTO(id, data));
   }
 
-  private convertToAnnouncementDTO(announcement: Announcement): AnnouncementDTO {
+  private convertToAnnouncementDTO(id: string, announcement: AnnouncementDoc): AnnouncementDTO {
     return {
-      id: announcement.id,
+      id,
       message: announcement.message,
-      start_date: announcement.start_date.toISOString(),
-      end_date: announcement.end_date?.toISOString(),
+      start_date: toIso(announcement.start_date),
+      end_date: announcement.end_date ? toIso(announcement.end_date) : undefined,
       created_by: announcement.created_by,
-      deleted_at: announcement.deleted_at?.toISOString(),
-      createdAt: announcement.createdAt.toISOString(),
-      updatedAt: announcement.updatedAt.toISOString(),
+      deleted_at: announcement.deleted_at ? toIso(announcement.deleted_at) : undefined,
+      createdAt: toIso(announcement.createdAt),
+      updatedAt: toIso(announcement.updatedAt),
     };
   }
 }

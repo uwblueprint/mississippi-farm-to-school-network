@@ -1,6 +1,3 @@
-import { Op, literal, UniqueConstraintError } from 'sequelize';
-import Farm from '@/models/farm.model';
-import FarmRejection from '@/models/farm_rejection.model';
 import IFarmService from '@/services/interfaces/farmService';
 import {
   CreateFarmInput,
@@ -33,6 +30,15 @@ import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
+import {
+  Collections,
+  FirestoreLocation,
+  arraysOverlap,
+  getFirestore,
+  haversineKm,
+  newId,
+  toIso,
+} from '@/utilities/firestore';
 
 const Logger = logger(__filename);
 const userService: IUserService = new UserService();
@@ -44,9 +50,6 @@ const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'status',
-  // Image-bucket assignments are not substantive changes: uploading a photo to
-  // a REJECTED farm must not silently resubmit it (that path never resolves the
-  // farm_rejections row, unlike resubmitFarm).
   'cover_photo',
   'carousel_photos',
 ]);
@@ -57,31 +60,65 @@ type FarmFieldDiff = {
   current: unknown;
 };
 
-const convertToPostGISPoint = (location: LocationDTO) => {
-  return {
-    type: 'Point',
-    coordinates: [location.lng, location.lat],
-  };
+type FarmDoc = {
+  owner_user_id: string;
+  usda_farm_id: string;
+  farm_name: string;
+  primary_phone: string;
+  primary_email: string;
+  website: string | null;
+  social_media: Record<string, unknown> | null;
+  farm_address: string;
+  county: string;
+  cities_served: string[];
+  location: FirestoreLocation;
+  seasonal_products: string[];
+  meat_products: string[];
+  other_products: string[];
+  seasonal_products_detail: string | null;
+  meat_products_detail: string | null;
+  other_products_detail: string | null;
+  market_sales_data: { market: string; times: string }[] | null;
+  growing_practices: string[];
+  food_safety_certifications: string[];
+  farm_experiences: string[];
+  farm_characteristics: string[];
+  farm_to_school_sales: string[];
+  f2s_experience: string | null;
+  minimum_order: number | null;
+  delivery_details: string | null;
+  cover_photo: string | null;
+  carousel_photos: string[];
+  status: FarmStatus;
+  is_archived: boolean;
+  rejection_reason?: string | null;
+  rejection_snapshot?: Partial<FarmDTO> | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
-const convertFromPostGISPoint = (location: {
-  type: string;
-  coordinates: [number, number];
-}): LocationDTO => {
-  return {
-    lat: location.coordinates[1],
-    lng: location.coordinates[0],
-  };
+type FarmRejectionDoc = {
+  farm_id: string;
+  rejected_by_user_id: string;
+  rejection_reason: string;
+  farm_snapshot: FarmSnapshotDTO;
+  farm_snapshot_updated_at: string;
+  created_at: string;
+  resolved_at: string | null;
+  resolution_type: FarmRejectionResolutionType | null;
 };
-
-const FARM_LIST_ORDER: [string, string][] = [
-  ['county', 'ASC'],
-  ['farm_name', 'ASC'],
-];
 
 const MAX_FARMS_PAGE_SIZE = 100;
 
 class FarmService implements IFarmService {
+  private farms() {
+    return getFirestore().collection(Collections.farms);
+  }
+
+  private rejections() {
+    return getFirestore().collection(Collections.farmRejections);
+  }
+
   private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
     if (input.seasonal_products !== undefined) {
       assertAllowedValues(input.seasonal_products, SEASONAL_PRODUCTS, 'seasonal_products');
@@ -113,27 +150,68 @@ class FarmService implements IFarmService {
     }
   }
 
+  private async getFarmDoc(id: string): Promise<{ id: string; data: FarmDoc }> {
+    const doc = await this.farms().doc(id).get();
+    if (!doc.exists) {
+      throw new Error(`Farm with id ${id} not found.`);
+    }
+    return { id: doc.id, data: doc.data() as FarmDoc };
+  }
+
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     this.validateFarmOptionArrays(input);
 
     let createdFarm: FarmDTO;
 
     try {
-      const farm = await Farm.create({
-        owner_user_id: ownerUserId,
-        ...input,
-        location: convertToPostGISPoint(input.location),
-        status: FarmStatus.PENDING_APPROVAL,
-      });
-
-      createdFarm = this.convertToFarmDTO(farm);
-    } catch (error: unknown) {
-      if (error instanceof UniqueConstraintError) {
-        Logger.warn(
-          `Farm creation failed due to a unique constraint. Reason = ${getErrorMessage(error)}`
-        );
+      const existing = await this.farms()
+        .where('usda_farm_id', '==', input.usda_farm_id)
+        .limit(1)
+        .get();
+      if (!existing.empty) {
         throw new Error('Farm with that USDA farm ID already exists.');
       }
+
+      const id = newId();
+      const now = new Date().toISOString();
+      const data: FarmDoc = {
+        owner_user_id: ownerUserId,
+        usda_farm_id: input.usda_farm_id,
+        farm_name: input.farm_name,
+        primary_phone: input.primary_phone,
+        primary_email: input.primary_email,
+        website: input.website ?? null,
+        social_media: input.social_media ?? null,
+        farm_address: input.farm_address,
+        county: input.county,
+        cities_served: input.cities_served ?? [],
+        location: { lat: input.location.lat, lng: input.location.lng },
+        seasonal_products: input.seasonal_products ?? [],
+        meat_products: input.meat_products ?? [],
+        other_products: input.other_products ?? [],
+        seasonal_products_detail: input.seasonal_products_detail ?? null,
+        meat_products_detail: input.meat_products_detail ?? null,
+        other_products_detail: input.other_products_detail ?? null,
+        market_sales_data: input.market_sales_data ?? null,
+        growing_practices: input.growing_practices ?? [],
+        food_safety_certifications: input.food_safety_certifications ?? [],
+        farm_experiences: input.farm_experiences ?? [],
+        farm_characteristics: input.farm_characteristics ?? [],
+        farm_to_school_sales: input.farm_to_school_sales ?? [],
+        f2s_experience: input.f2s_experience ?? null,
+        minimum_order: input.minimum_order ?? null,
+        delivery_details: input.delivery_details ?? null,
+        cover_photo: input.cover_photo ?? null,
+        carousel_photos: input.carousel_photos ?? [],
+        status: FarmStatus.PENDING_APPROVAL,
+        is_archived: false,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      await this.farms().doc(id).set(data);
+      createdFarm = this.convertToFarmDTO(id, data);
+    } catch (error: unknown) {
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
@@ -161,27 +239,20 @@ class FarmService implements IFarmService {
 
   async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
     try {
-      const radiusMeters = radiusKm * 1000;
+      const snap = await this.farms()
+        .where('status', '==', FarmStatus.APPROVED)
+        .where('is_archived', '==', false)
+        .get();
 
-      const farms = await Farm.findAll({
-        where: {
-          status: FarmStatus.APPROVED,
-          is_archived: false,
-          location: literal(
-            `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
-          ),
-        },
-        order: [
-          [
-            literal(
-              `ST_Distance(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography)`
-            ),
-            'ASC',
-          ],
-        ],
-      });
-
-      return this.convertToFarmDTOs(farms);
+      return snap.docs
+        .map((doc) => ({ id: doc.id, data: doc.data() as FarmDoc }))
+        .map(({ id, data }) => ({
+          dto: this.convertToFarmDTO(id, data),
+          distance: haversineKm(lat, lng, data.location.lat, data.location.lng),
+        }))
+        .filter(({ distance }) => distance <= radiusKm)
+        .sort((a, b) => a.distance - b.distance)
+        .map(({ dto }) => dto);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by proximity. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -193,43 +264,7 @@ class FarmService implements IFarmService {
     pageSize?: number,
     filter?: FarmFilter
   ): Promise<Array<FarmDTO>> {
-    const where: Record<string, unknown> = {};
-
     try {
-      if (filter?.status) {
-        where.status = filter.status;
-      }
-
-      if (filter?.approved !== undefined && !filter.status) {
-        where.status = filter.approved ? FarmStatus.APPROVED : { [Op.ne]: FarmStatus.APPROVED };
-      }
-
-      if (filter?.counties?.length) {
-        where.county = { [Op.in]: filter.counties };
-      }
-
-      if (filter?.cities_served?.length) {
-        where.cities_served = { [Op.overlap]: filter.cities_served };
-      }
-
-      if (filter?.seasonal_products?.length) {
-        where.seasonal_products = { [Op.overlap]: filter.seasonal_products };
-      }
-
-      if (filter?.meat_products?.length) {
-        where.meat_products = { [Op.overlap]: filter.meat_products };
-      }
-
-      if (filter?.other_products?.length) {
-        where.other_products = { [Op.overlap]: filter.other_products };
-      }
-
-      if (filter?.is_archived !== undefined) {
-        where.is_archived = filter.is_archived;
-      }
-
-      const options: Record<string, unknown> = { where, order: FARM_LIST_ORDER };
-
       if (pageNumber != null && pageSize != null) {
         if (!Number.isInteger(pageNumber) || pageNumber < 1) {
           throw new Error('pageNumber must be an integer >= 1');
@@ -240,47 +275,86 @@ class FarmService implements IFarmService {
         if (pageSize > MAX_FARMS_PAGE_SIZE) {
           throw new Error(`pageSize must not exceed ${MAX_FARMS_PAGE_SIZE}`);
         }
-
-        options.limit = pageSize;
-        options.offset = (pageNumber - 1) * pageSize;
       }
 
-      const farms = await Farm.findAll(options);
-      return this.convertToFarmDTOs(farms);
+      const snap = await this.farms().get();
+      let farms = snap.docs.map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc));
+
+      if (filter?.status) {
+        farms = farms.filter((f) => f.status === filter.status);
+      } else if (filter?.approved !== undefined) {
+        farms = farms.filter((f) =>
+          filter.approved ? f.status === FarmStatus.APPROVED : f.status !== FarmStatus.APPROVED
+        );
+      }
+
+      if (filter?.counties?.length) {
+        const counties = new Set(filter.counties);
+        farms = farms.filter((f) => counties.has(f.county));
+      }
+
+      if (filter?.cities_served?.length) {
+        farms = farms.filter((f) => arraysOverlap(f.cities_served, filter.cities_served));
+      }
+
+      if (filter?.seasonal_products?.length) {
+        farms = farms.filter((f) => arraysOverlap(f.seasonal_products, filter.seasonal_products));
+      }
+
+      if (filter?.meat_products?.length) {
+        farms = farms.filter((f) => arraysOverlap(f.meat_products, filter.meat_products));
+      }
+
+      if (filter?.other_products?.length) {
+        farms = farms.filter((f) => arraysOverlap(f.other_products, filter.other_products));
+      }
+
+      if (filter?.is_archived !== undefined) {
+        farms = farms.filter((f) => f.is_archived === filter.is_archived);
+      }
+
+      farms.sort((a, b) => {
+        const countyCmp = a.county.localeCompare(b.county);
+        if (countyCmp !== 0) return countyCmp;
+        return a.farm_name.localeCompare(b.farm_name);
+      });
+
+      if (pageNumber != null && pageSize != null) {
+        const offset = (pageNumber - 1) * pageSize;
+        farms = farms.slice(offset, offset + pageSize);
+      }
+
+      return farms;
     } catch (error: unknown) {
       Logger.error(`Failed to get farms. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  async updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO> {
+  async updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO> {
     try {
       this.validateFarmOptionArrays(input);
 
-      const farm = farmToUpdate ?? (await Farm.findByPk(id));
-      if (!farm) {
-        throw new Error(`Farm with id ${id} not found.`);
-      }
-
-      const farmBeforeUpdate = this.convertToFarmDTO(farm);
-      const farmJson = farm.toJSON() as Record<string, unknown>;
-      const rejectionSnapshot = this.getRejectedSnapshot(farmJson, farmBeforeUpdate);
+      const { data: farm } = await this.getFarmDoc(id);
+      const farmBeforeUpdate = this.convertToFarmDTO(id, farm);
+      const rejectionSnapshot = this.getRejectedSnapshot(farm, farmBeforeUpdate);
       const wasRejected = farm.status === FarmStatus.REJECTED;
 
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
 
-      if (updateValues.location) {
-        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
-      }
+      const next: FarmDoc = {
+        ...farm,
+        ...updateValues,
+        location: updateValues.location
+          ? { lat: updateValues.location.lat, lng: updateValues.location.lng }
+          : farm.location,
+        updatedAt: new Date().toISOString(),
+      } as FarmDoc;
 
-      Object.assign(farm, updateValues);
-
-      await farm.save();
-      await farm.reload();
-
-      let updatedFarm = this.convertToFarmDTO(farm);
+      await this.farms().doc(id).set(next);
+      let updatedFarm = this.convertToFarmDTO(id, next);
 
       if (wasRejected) {
         const resubmissionDiff = this.generateFieldLevelDiffAgainstPersisted(
@@ -289,11 +363,11 @@ class FarmService implements IFarmService {
           input
         );
         if (resubmissionDiff.length > 0) {
-          farm.status = FarmStatus.PENDING_APPROVAL;
-          await farm.save();
-          await farm.reload();
-          updatedFarm = this.convertToFarmDTO(farm);
-          const rejectionReason = this.getRejectionReason(farmJson);
+          next.status = FarmStatus.PENDING_APPROVAL;
+          next.updatedAt = new Date().toISOString();
+          await this.farms().doc(id).set(next);
+          updatedFarm = this.convertToFarmDTO(id, next);
+          const rejectionReason = this.getRejectionReason(farm);
           void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
         }
       }
@@ -309,21 +383,20 @@ class FarmService implements IFarmService {
     let updatedFarm: FarmDTO;
 
     try {
-      const currentFarm = await Farm.findByPk(farmId);
+      const { data } = await this.getFarmDoc(farmId);
 
-      if (!currentFarm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
-
-      if (currentFarm.status == FarmStatus.APPROVED) {
+      if (data.status == FarmStatus.APPROVED) {
         Logger.warn(`Farm with id ${farmId} is already approved.`);
-        return this.convertToFarmDTO(currentFarm);
+        return this.convertToFarmDTO(farmId, data);
       }
 
-      currentFarm.status = FarmStatus.APPROVED;
-      await currentFarm.save();
-      await currentFarm.reload();
-      updatedFarm = this.convertToFarmDTO(currentFarm);
+      const next: FarmDoc = {
+        ...data,
+        status: FarmStatus.APPROVED,
+        updatedAt: new Date().toISOString(),
+      };
+      await this.farms().doc(farmId).set(next);
+      updatedFarm = this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to approve farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -361,24 +434,33 @@ class FarmService implements IFarmService {
     rejectionReason: string
   ): Promise<FarmRejectionDTO> {
     try {
-      const farm = await Farm.findByPk(farmId);
+      const { data: farm } = await this.getFarmDoc(farmId);
+      const farmSnapshot = this.convertToFarmSnapshot(farmId, farm);
+      const id = newId();
+      const now = new Date().toISOString();
 
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
-
-      const farmSnapshot = this.convertToFarmSnapshot(farm);
-      const farmSnapshotUpdatedAt = farm.updatedAt;
-
-      const rejectionRecord = await FarmRejection.create({
-        farm_id: farm.id,
+      const rejectionRecord: FarmRejectionDoc = {
+        farm_id: farmId,
         rejected_by_user_id: rejectedByUserId,
         rejection_reason: rejectionReason,
         farm_snapshot: farmSnapshot,
-        farm_snapshot_updated_at: farmSnapshotUpdatedAt,
-      });
+        farm_snapshot_updated_at: farm.updatedAt,
+        created_at: now,
+        resolved_at: null,
+        resolution_type: null,
+      };
 
-      return this.convertToFarmRejectionDTO(rejectionRecord);
+      await this.rejections().doc(id).set(rejectionRecord);
+
+      await this.farms().doc(farmId).set({
+        ...farm,
+        status: FarmStatus.REJECTED,
+        rejection_reason: rejectionReason,
+        rejection_snapshot: this.convertToFarmDTO(farmId, farm),
+        updatedAt: now,
+      } satisfies FarmDoc);
+
+      return this.convertToFarmRejectionDTO(id, rejectionRecord);
     } catch (error: unknown) {
       Logger.error(`Failed to create farm rejection. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -387,42 +469,28 @@ class FarmService implements IFarmService {
 
   async getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null> {
     try {
-      const latestRejection = await FarmRejection.findOne({
-        where: { farm_id: farmId },
-        order: [['created_at', 'DESC']],
-      });
+      const snap = await this.rejections().where('farm_id', '==', farmId).get();
+      if (snap.empty) return null;
 
-      if (!latestRejection) {
-        return null;
-      }
+      const sorted = snap.docs
+        .map((doc) => ({ id: doc.id, data: doc.data() as FarmRejectionDoc }))
+        .sort((a, b) => b.data.created_at.localeCompare(a.data.created_at));
 
-      return this.convertToFarmRejectionDTO(latestRejection);
+      return this.convertToFarmRejectionDTO(sorted[0].id, sorted[0].data);
     } catch (error: unknown) {
       Logger.error(`Failed to get latest farm rejection. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
 
-  private convertToFarmDTOs(farms: Farm[]): FarmDTO[] {
-    return farms.map((farm) => this.convertToFarmDTO(farm));
-  }
-
-  private convertToFarmSnapshot(farm: Farm): FarmSnapshotDTO {
-    const data = farm.toJSON() as Farm & {
-      createdAt: Date | string;
-      updatedAt: Date | string;
-      market_sales_data?: { market: string; times: string }[] | null;
-      social_media?: Record<string, unknown> | null;
-      website?: string | null;
-    };
-
+  private convertToFarmSnapshot(id: string, data: FarmDoc): FarmSnapshotDTO {
     if (!data.location) {
-      Logger.error(`Farm ${data.id} has invalid or missing location`);
-      throw new Error(`Farm ${data.id} is missing a valid location`);
+      Logger.error(`Farm ${id} has invalid or missing location`);
+      throw new Error(`Farm ${id} is missing a valid location`);
     }
 
     return {
-      id: data.id,
+      id,
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
@@ -435,85 +503,57 @@ class FarmService implements IFarmService {
       cities_served: data.cities_served ?? [],
       location: {
         type: 'Point',
-        coordinates: data.location.coordinates,
+        coordinates: [data.location.lng, data.location.lat],
       },
-      seasonal_products: data.seasonal_products,
-      meat_products: data.meat_products,
-      other_products: data.other_products,
+      seasonal_products: data.seasonal_products as FarmSnapshotDTO['seasonal_products'],
+      meat_products: data.meat_products as FarmSnapshotDTO['meat_products'],
+      other_products: data.other_products as FarmSnapshotDTO['other_products'],
       seasonal_products_detail: data.seasonal_products_detail ?? null,
       meat_products_detail: data.meat_products_detail ?? null,
       other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
-      growing_practices: data.growing_practices,
-      food_safety_certifications: data.food_safety_certifications,
-      farm_experiences: data.farm_experiences,
-      farm_characteristics: data.farm_characteristics,
-      farm_to_school_sales: data.farm_to_school_sales,
+      growing_practices: data.growing_practices as FarmSnapshotDTO['growing_practices'],
+      food_safety_certifications:
+        data.food_safety_certifications as FarmSnapshotDTO['food_safety_certifications'],
+      farm_experiences: data.farm_experiences as FarmSnapshotDTO['farm_experiences'],
+      farm_characteristics: data.farm_characteristics as FarmSnapshotDTO['farm_characteristics'],
+      farm_to_school_sales: data.farm_to_school_sales as FarmSnapshotDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
       minimum_order: data.minimum_order ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
-      carousel_photos: data.carousel_photos,
+      carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
-      createdAt:
-        data.createdAt instanceof Date
-          ? data.createdAt.toISOString()
-          : new Date(data.createdAt).toISOString(),
-      updatedAt:
-        data.updatedAt instanceof Date
-          ? data.updatedAt.toISOString()
-          : new Date(data.updatedAt).toISOString(),
+      createdAt: toIso(data.createdAt),
+      updatedAt: toIso(data.updatedAt),
     };
   }
 
-  private convertToFarmRejectionDTO(rejectionRecord: FarmRejection): FarmRejectionDTO {
-    const data = rejectionRecord.toJSON() as FarmRejection & {
-      farm_snapshot_updated_at: Date | string;
-      created_at: Date | string;
-      resolved_at: Date | string | null;
-    };
-
+  private convertToFarmRejectionDTO(id: string, data: FarmRejectionDoc): FarmRejectionDTO {
     return {
-      id: data.id,
+      id,
       farm_id: data.farm_id,
       rejected_by_user_id: data.rejected_by_user_id,
       rejection_reason: data.rejection_reason,
       farm_snapshot: data.farm_snapshot,
-      farm_snapshot_updated_at:
-        data.farm_snapshot_updated_at instanceof Date
-          ? data.farm_snapshot_updated_at.toISOString()
-          : new Date(data.farm_snapshot_updated_at).toISOString(),
-      created_at:
-        data.created_at instanceof Date
-          ? data.created_at.toISOString()
-          : new Date(data.created_at).toISOString(),
-      resolved_at:
-        data.resolved_at == null
-          ? null
-          : data.resolved_at instanceof Date
-            ? data.resolved_at.toISOString()
-            : new Date(data.resolved_at).toISOString(),
+      farm_snapshot_updated_at: toIso(data.farm_snapshot_updated_at),
+      created_at: toIso(data.created_at),
+      resolved_at: data.resolved_at == null ? null : toIso(data.resolved_at),
       resolution_type: data.resolution_type,
     };
   }
 
-  private convertToFarmDTO(farm: Farm): FarmDTO {
-    const data = farm.toJSON() as Farm & {
-      createdAt: Date | string;
-      updatedAt: Date | string;
-      market_sales_data?: { market: string; times: string }[] | null;
-      social_media?: Record<string, unknown> | null;
-      website?: string | null;
-    };
-
+  private convertToFarmDTO(id: string, data: FarmDoc): FarmDTO {
     if (!data.location) {
-      Logger.error(`Farm ${data.id} has invalid or missing location`);
-      throw new Error(`Farm with id ${data.id} is missing a valid location.`);
+      Logger.error(`Farm ${id} has invalid or missing location`);
+      throw new Error(`Farm with id ${id} is missing a valid location.`);
     }
 
+    const location: LocationDTO = { lat: data.location.lat, lng: data.location.lng };
+
     return {
-      id: data.id,
+      id,
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
@@ -524,41 +564,39 @@ class FarmService implements IFarmService {
       farm_address: data.farm_address,
       county: data.county,
       cities_served: data.cities_served ?? [],
-      location: convertFromPostGISPoint(data.location),
-      seasonal_products: data.seasonal_products,
-      meat_products: data.meat_products,
-      other_products: data.other_products,
+      location,
+      seasonal_products: data.seasonal_products as FarmDTO['seasonal_products'],
+      meat_products: data.meat_products as FarmDTO['meat_products'],
+      other_products: data.other_products as FarmDTO['other_products'],
       seasonal_products_detail: data.seasonal_products_detail ?? null,
       meat_products_detail: data.meat_products_detail ?? null,
       other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
-      growing_practices: data.growing_practices,
-      food_safety_certifications: data.food_safety_certifications,
-      farm_experiences: data.farm_experiences,
-      farm_characteristics: data.farm_characteristics,
-      farm_to_school_sales: data.farm_to_school_sales,
+      growing_practices: data.growing_practices as FarmDTO['growing_practices'],
+      food_safety_certifications:
+        data.food_safety_certifications as FarmDTO['food_safety_certifications'],
+      farm_experiences: data.farm_experiences as FarmDTO['farm_experiences'],
+      farm_characteristics: data.farm_characteristics as FarmDTO['farm_characteristics'],
+      farm_to_school_sales: data.farm_to_school_sales as FarmDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
       minimum_order: data.minimum_order ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
-      carousel_photos: data.carousel_photos,
+      carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
-      createdAt:
-        data.createdAt instanceof Date
-          ? data.createdAt.toISOString()
-          : new Date(data.createdAt).toISOString(),
-      updatedAt:
-        data.updatedAt instanceof Date
-          ? data.updatedAt.toISOString()
-          : new Date(data.updatedAt).toISOString(),
+      createdAt: toIso(data.createdAt),
+      updatedAt: toIso(data.updatedAt),
     };
   }
 
   async getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]> {
     try {
-      const farms = await Farm.findAll({ where: { status, is_archived: false } });
-      return this.convertToFarmDTOs(farms);
+      const snap = await this.farms()
+        .where('status', '==', status)
+        .where('is_archived', '==', false)
+        .get();
+      return snap.docs.map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc));
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -567,8 +605,8 @@ class FarmService implements IFarmService {
 
   async getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]> {
     try {
-      const farms = await Farm.findAll({ where: { owner_user_id: ownerUserId } });
-      return this.convertToFarmDTOs(farms);
+      const snap = await this.farms().where('owner_user_id', '==', ownerUserId).get();
+      return snap.docs.map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc));
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by owner. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -577,11 +615,8 @@ class FarmService implements IFarmService {
 
   async getFarmById(farmId: string): Promise<FarmDTO> {
     try {
-      const farm = await Farm.findByPk(farmId);
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
-      return this.convertToFarmDTO(farm);
+      const { id, data } = await this.getFarmDoc(farmId);
+      return this.convertToFarmDTO(id, data);
     } catch (error: unknown) {
       Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -590,20 +625,14 @@ class FarmService implements IFarmService {
 
   async archiveFarm(farmId: string): Promise<FarmDTO> {
     try {
-      const farm = await Farm.findByPk(farmId);
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
-
-      if (farm.is_archived) {
+      const { data } = await this.getFarmDoc(farmId);
+      if (data.is_archived) {
         Logger.warn(`Farm with id ${farmId} is already archived.`);
-        return this.convertToFarmDTO(farm);
+        return this.convertToFarmDTO(farmId, data);
       }
-
-      farm.is_archived = true;
-      await farm.save();
-      await farm.reload();
-      return this.convertToFarmDTO(farm);
+      const next: FarmDoc = { ...data, is_archived: true, updatedAt: new Date().toISOString() };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to archive farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -612,20 +641,14 @@ class FarmService implements IFarmService {
 
   async unarchiveFarm(farmId: string): Promise<FarmDTO> {
     try {
-      const farm = await Farm.findByPk(farmId);
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
-
-      if (!farm.is_archived) {
+      const { data } = await this.getFarmDoc(farmId);
+      if (!data.is_archived) {
         Logger.warn(`Farm with id ${farmId} is not archived.`);
-        return this.convertToFarmDTO(farm);
+        return this.convertToFarmDTO(farmId, data);
       }
-
-      farm.is_archived = false;
-      await farm.save();
-      await farm.reload();
-      return this.convertToFarmDTO(farm);
+      const next: FarmDoc = { ...data, is_archived: false, updatedAt: new Date().toISOString() };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -633,35 +656,23 @@ class FarmService implements IFarmService {
   }
 
   private getRejectedSnapshot(
-    farmJson: Record<string, unknown>,
+    farm: FarmDoc,
     farmBeforeUpdate: FarmDTO
   ): Partial<FarmDTO> {
-    const rejectionSnapshot = farmJson.rejection_snapshot;
     if (
-      rejectionSnapshot &&
-      typeof rejectionSnapshot === 'object' &&
-      !Array.isArray(rejectionSnapshot)
+      farm.rejection_snapshot &&
+      typeof farm.rejection_snapshot === 'object' &&
+      !Array.isArray(farm.rejection_snapshot)
     ) {
-      return rejectionSnapshot as Partial<FarmDTO>;
+      return farm.rejection_snapshot;
     }
-
     return farmBeforeUpdate;
   }
 
-  private getRejectionReason(farmJson: Record<string, unknown>): string {
-    const reasonFields = [
-      'rejection_reason',
-      'rejectionReason',
-      'rejection_notes',
-      'rejectionNotes',
-    ];
-    for (const field of reasonFields) {
-      const value = farmJson[field];
-      if (typeof value === 'string' && value.trim().length > 0) {
-        return value.trim();
-      }
+  private getRejectionReason(farm: FarmDoc): string {
+    if (typeof farm.rejection_reason === 'string' && farm.rejection_reason.trim().length > 0) {
+      return farm.rejection_reason.trim();
     }
-
     return 'Not provided';
   }
 
@@ -780,39 +791,22 @@ class FarmService implements IFarmService {
 
   async getLatestActiveRejection(farmId: string): Promise<ActiveFarmRejectionDTO | null> {
     try {
-      type ActiveRejectionRow = {
-        id: string;
-        farm_id: string;
-        rejection_reason: string;
-        created_at: Date | string;
-      };
+      const snap = await this.rejections().where('farm_id', '==', farmId).get();
+      const active = snap.docs
+        .map((doc) => ({ id: doc.id, data: doc.data() as FarmRejectionDoc }))
+        .filter(({ data }) => data.resolved_at == null)
+        .sort((a, b) => b.data.created_at.localeCompare(a.data.created_at));
 
-      const rows = (await Farm.sequelize!.query(
-        `SELECT id, farm_id, rejection_reason, created_at 
-        FROM farm_rejections 
-        WHERE farm_id = :farmId AND resolved_at IS NULL 
-        ORDER BY created_at DESC 
-        LIMIT 1`,
-        {
-          replacements: { farmId },
-          type: 'SELECT',
-        }
-      )) as ActiveRejectionRow[];
-
-      const rejection = rows[0];
-
-      if (!rejection) {
+      if (!active.length) {
         return null;
       }
 
+      const rejection = active[0];
       return {
         id: rejection.id,
-        farm_id: rejection.farm_id,
-        rejection_reason: rejection.rejection_reason,
-        created_at:
-          rejection.created_at instanceof Date
-            ? rejection.created_at.toISOString()
-            : new Date(rejection.created_at).toISOString(),
+        farm_id: rejection.data.farm_id,
+        rejection_reason: rejection.data.rejection_reason,
+        created_at: toIso(rejection.data.created_at),
       };
     } catch (error: unknown) {
       Logger.error(`Failed to get latest active rejection. Reason = ${getErrorMessage(error)}`);
@@ -822,14 +816,11 @@ class FarmService implements IFarmService {
 
   async resubmitFarm(
     farmId: string,
-    resubmittedByUserId: string,
+    _resubmittedByUserId: string,
     input: UpdateFarmInput
   ): Promise<FarmDTO> {
-    return await Farm.sequelize!.transaction(async (t) => {
-      const farm = await Farm.findByPk(farmId, { transaction: t });
-      if (!farm) {
-        throw new Error(`Farm with id ${farmId} not found.`);
-      }
+    try {
+      const { data: farm } = await this.getFarmDoc(farmId);
 
       if (farm.status !== FarmStatus.REJECTED) {
         throw new Error(
@@ -841,27 +832,38 @@ class FarmService implements IFarmService {
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
 
-      if (updateValues.location) {
-        Object.assign(updateValues, { location: convertToPostGISPoint(updateValues.location) });
+      const next: FarmDoc = {
+        ...farm,
+        ...updateValues,
+        location: updateValues.location
+          ? { lat: updateValues.location.lat, lng: updateValues.location.lng }
+          : farm.location,
+        status: FarmStatus.PENDING_APPROVAL,
+        updatedAt: new Date().toISOString(),
+      } as FarmDoc;
+
+      const db = getFirestore();
+      const batch = db.batch();
+      batch.set(this.farms().doc(farmId), next);
+
+      const activeSnap = await this.rejections().where('farm_id', '==', farmId).get();
+      const now = new Date().toISOString();
+      for (const doc of activeSnap.docs) {
+        const data = doc.data() as FarmRejectionDoc;
+        if (data.resolved_at == null) {
+          batch.update(doc.ref, {
+            resolved_at: now,
+            resolution_type: FarmRejectionResolutionType.RESUBMITTED,
+          });
+        }
       }
 
-      Object.assign(farm, updateValues, { status: FarmStatus.PENDING_APPROVAL });
-      await farm.save({ transaction: t });
-
-      await Farm.sequelize!.query(
-        `UPDATE farm_rejections
-         SET resolved_at = NOW(),
-             resolution_type = :resolutionType
-         WHERE farm_id = :farmId AND resolved_at IS NULL`,
-        {
-          replacements: { farmId, resolutionType: FarmRejectionResolutionType.RESUBMITTED },
-          transaction: t,
-        }
-      );
-
-      await farm.reload({ transaction: t });
-      return this.convertToFarmDTO(farm);
-    });
+      await batch.commit();
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to resubmit farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
   }
 }
 
