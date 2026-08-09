@@ -238,11 +238,6 @@
 			uploading = false;
 		}
 	}
-
-	function deleteFarm() {
-		// TODO(backend): delete deferred out of scope — stub kept as-is.
-		console.log('delete farm', farmId);
-	}
 </script>
 
 <svelte:head>
@@ -445,7 +440,9 @@
 		<ActionButton variant="primary" type="submit" block disabled={saving}
 			>{saving ? 'Saving…' : 'Save'}</ActionButton
 		>
-		<ActionButton variant="danger" onclick={deleteFarm}>Delete Farm</ActionButton>
+		<ActionButton variant="danger" disabled title="Farm deletion is coming soon">
+			Delete Farm (coming soon)
+		</ActionButton>
 	</div>
 
 	{@render actionBar()}
