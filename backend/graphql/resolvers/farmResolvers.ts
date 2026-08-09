@@ -48,7 +48,7 @@ const farmResolvers = {
         .catch(() => false);
 
       if (!isAdmin) {
-        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED });
+        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED, is_archived: false });
       }
 
       return farmService.getFarms(filter);
@@ -120,6 +120,18 @@ const farmResolvers = {
 
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
+      if (farm.is_archived) {
+        const isAdmin = await authHelper
+          .requireRole(context, [Role.ADMIN])
+          .then(() => true)
+          .catch(() => false);
+        if (!isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
+      }
+
       return farmService.updateFarm(id, input, farm);
     },
 
@@ -144,7 +156,37 @@ const farmResolvers = {
       }
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
+      if (farm.is_archived) {
+        const isAdmin = await authHelper
+          .requireRole(context, [Role.ADMIN])
+          .then(() => true)
+          .catch(() => false);
+        if (!isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
+      }
+
       return farmService.resubmitFarm(id, currentUser.id, input);
+    },
+
+    archiveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.archiveFarm(id);
+    },
+
+    unarchiveFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.unarchiveFarm(id);
     },
   },
 
