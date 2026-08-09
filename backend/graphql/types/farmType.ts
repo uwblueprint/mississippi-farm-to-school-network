@@ -51,6 +51,7 @@ const farmType = gql`
     cover_photo: String
     carousel_photos: [String!]!
     status: FarmStatus!
+    is_archived: Boolean!
     createdAt: String!
     updatedAt: String!
     """
@@ -109,6 +110,7 @@ const farmType = gql`
     meat_products: [String!]
     other_products: [String!]
     approved: Boolean
+    is_archived: Boolean
   }
 
   input UpdateFarmInput {
@@ -155,6 +157,8 @@ const farmType = gql`
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
+    archiveFarm(id: ID!): FarmDTO!
+    unarchiveFarm(id: ID!): FarmDTO!
   }
 
   type ActiveFarmRejectionDTO {
