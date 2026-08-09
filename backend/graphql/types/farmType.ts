@@ -54,6 +54,12 @@ const farmType = gql`
     is_archived: Boolean!
     createdAt: String!
     updatedAt: String!
+    """
+    URL of the farm's first uploaded image, or null when it has none.
+    Resolved from stored_files (see fileStorageResolvers) — FarmDTO itself holds
+    no image. Lets list views show a photo without an N+1 of filesByFarm calls.
+    """
+    primary_image_url: String
   }
 
   input CreateFarmInput {
@@ -139,6 +145,7 @@ const farmType = gql`
 
   type Query {
     farms(filter: FarmFilter, pageNumber: Int, pageSize: Int): [FarmDTO!]!
+    myFarms: [FarmDTO!]!
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!

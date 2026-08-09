@@ -1,7 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import PromoBanner from '$lib/components/PromoBanner.svelte';
-	import Button from '$lib/components/Button.svelte';
 	import Card from '$lib/components/Card.svelte';
 	import Badge from '$lib/components/Badge.svelte';
 
@@ -64,16 +63,16 @@
 		{#snippet buttonBody()}
 			<div class="space-y-3">
 				<div class="flex flex-wrap gap-3">
-					<Button class="preset-filled-primary-500">Primary</Button>
-					<Button class="preset-filled-secondary-500">Secondary</Button>
-					<Button class="preset-filled-surface-500">Neutral</Button>
-					<Button class="preset-tonal-primary">Tonal Primary</Button>
-					<Button class="preset-outlined-primary-500">Outlined Primary</Button>
+					<button type="button" class="btn preset-filled-primary-500">Primary</button>
+					<button type="button" class="btn preset-filled-secondary-500">Secondary</button>
+					<button type="button" class="btn preset-filled-surface-500">Neutral</button>
+					<button type="button" class="btn preset-tonal-primary">Tonal Primary</button>
+					<button type="button" class="btn preset-outlined-primary-500">Outlined Primary</button>
 				</div>
 				<div class="flex flex-wrap items-center gap-3">
-					<Button class="preset-filled-primary-500 btn-sm">Small</Button>
-					<Button class="preset-filled-primary-500 btn-base">Base</Button>
-					<Button class="preset-filled-primary-500 btn-lg">Large</Button>
+					<button type="button" class="btn preset-filled-primary-500 btn-sm">Small</button>
+					<button type="button" class="btn preset-filled-primary-500 btn-base">Base</button>
+					<button type="button" class="btn preset-filled-primary-500 btn-lg">Large</button>
 				</div>
 			</div>
 		{/snippet}

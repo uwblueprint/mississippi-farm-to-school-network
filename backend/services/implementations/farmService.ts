@@ -43,6 +43,11 @@ const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
   'createdAt',
   'updatedAt',
   'status',
+  // Image-bucket assignments are not substantive changes: uploading a photo to
+  // a REJECTED farm must not silently resubmit it (that path never resolves the
+  // farm_rejections row, unlike resubmitFarm).
+  'cover_photo',
+  'carousel_photos',
 ]);
 
 type FarmFieldDiff = {
@@ -544,6 +549,16 @@ class FarmService implements IFarmService {
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]> {
+    try {
+      const farms = await Farm.findAll({ where: { owner_user_id: ownerUserId } });
+      return this.convertToFarmDTOs(farms);
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farms by owner. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
