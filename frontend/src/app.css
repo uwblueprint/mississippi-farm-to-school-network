@@ -9,22 +9,22 @@
 	--color-neutral-600: #383b4a; /* Stroke */
 
 	/* Primary — highlight actions & information */
-	--color-primary-100: #e2e8d9; /* Background */
-	--color-primary-200: #bfcaaf; /* Background */
-	--color-primary-300: #93a883; /* Background */
-	--color-primary-400: #587244; /* Background */
-	--color-primary-500: #455d32; /* Default */
-	--color-primary-600: #263d13; /* Default */
-	--color-primary-700: #152608; /* Default */
+	--mfsn-primary-100: #e2e8d9; /* Background */
+	--mfsn-primary-200: #bfcaaf; /* Background */
+	--mfsn-primary-300: #93a883; /* Background */
+	--mfsn-primary-400: #587244; /* Background */
+	--mfsn-primary-500: #455d32; /* Default */
+	--mfsn-primary-600: #263d13; /* Default */
+	--mfsn-primary-700: #152608; /* Default */
 
 	/* Secondary — highlight information */
-	--color-secondary-100: #f7d6d1; /* Background */
-	--color-secondary-200: #f6bbb3; /* Default */
-	--color-secondary-300: #f38474; /* Default */
-	--color-secondary-400: #e05a47; /* Default */
-	--color-secondary-500: #dc422c; /* Default */
-	--color-secondary-600: #c4341f; /* Default */
-	--color-secondary-700: #ad2511; /* Default */
+	--mfsn-secondary-100: #f7d6d1; /* Background */
+	--mfsn-secondary-200: #f6bbb3; /* Default */
+	--mfsn-secondary-300: #f38474; /* Default */
+	--mfsn-secondary-400: #e05a47; /* Default */
+	--mfsn-secondary-500: #dc422c; /* Default */
+	--mfsn-secondary-600: #c4341f; /* Default */
+	--mfsn-secondary-700: #ad2511; /* Default */
 
 	/* Accent — positive feedback / status */
 	--color-accent-50: #fffaed; /* Background */
@@ -33,16 +33,16 @@
 	--color-accent-300: #ffca1a; /* Hover */
 
 	/* Success — positive feedback / status */
-	--color-success-50: #efffea; /* Background */
-	--color-success-100: #b3e3a2; /* Background */
-	--color-success-200: #4eb41b; /* Default */
-	--color-success-300: #38830d; /* Hover */
+	--mfsn-success-50: #efffea; /* Background */
+	--mfsn-success-100: #b3e3a2; /* Background */
+	--mfsn-success-200: #4eb41b; /* Default */
+	--mfsn-success-300: #38830d; /* Hover */
 
 	/* Warning — warning feedback / status */
-	--color-warning-50: #fffaed; /* Background */
-	--color-warning-100: #ffefa8; /* Background */
-	--color-warning-200: #ffdb65; /* Default */
-	--color-warning-300: #ffca1a; /* Hover */
+	--mfsn-warning-50: #fffaed; /* Background */
+	--mfsn-warning-100: #ffefa8; /* Background */
+	--mfsn-warning-200: #ffdb65; /* Default */
+	--mfsn-warning-300: #ffca1a; /* Hover */
 
 	/* Danger — negative feedback / dangerous actions */
 	--color-danger-50: #fef1f2; /* Background */
