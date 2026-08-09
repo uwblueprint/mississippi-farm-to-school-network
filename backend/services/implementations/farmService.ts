@@ -73,6 +73,8 @@ const FARM_LIST_ORDER: [string, string][] = [
   ['farm_name', 'ASC'],
 ];
 
+const MAX_FARMS_PAGE_SIZE = 100;
+
 class FarmService implements IFarmService {
   private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
     if (input.seasonal_products !== undefined) {
@@ -218,6 +220,9 @@ class FarmService implements IFarmService {
         }
         if (!Number.isInteger(pageSize) || pageSize < 1) {
           throw new Error('pageSize must be an integer >= 1');
+        }
+        if (pageSize > MAX_FARMS_PAGE_SIZE) {
+          throw new Error(`pageSize must not exceed ${MAX_FARMS_PAGE_SIZE}`);
         }
 
         options.limit = pageSize;

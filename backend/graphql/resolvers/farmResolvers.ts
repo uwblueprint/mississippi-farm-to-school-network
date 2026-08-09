@@ -23,6 +23,8 @@ const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
+const MAX_FARMS_PAGE_SIZE = 100;
+
 const farmResolvers = {
   Query: {
     farmsByProximity: async (
@@ -54,6 +56,9 @@ const farmResolvers = {
       }
       if (!Number.isInteger(pageSize) || pageSize < 1) {
         throw new Error('pageSize must be an integer >= 1');
+      }
+      if (pageSize > MAX_FARMS_PAGE_SIZE) {
+        throw new Error(`pageSize must not exceed ${MAX_FARMS_PAGE_SIZE}`);
       }
 
       const isAdmin = await authHelper

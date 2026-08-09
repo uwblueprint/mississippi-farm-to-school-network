@@ -258,6 +258,24 @@ describe('FarmService.getFarms', () => {
     expect(call.offset).toBeUndefined();
   });
 
+  test('pageSize at the max cap is allowed', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(1, 100);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: {},
+      order: FARM_LIST_ORDER,
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  test('pageSize above the max cap: throws', async () => {
+    await expect(service.getFarms(1, 101)).rejects.toThrow('pageSize must not exceed 100');
+    expect(MockFarm.findAll).not.toHaveBeenCalled();
+  });
+
   // ── filters matching no farms ─────────────────────────────────────────────
 
   test('filters matching no farms: returns empty array', async () => {
