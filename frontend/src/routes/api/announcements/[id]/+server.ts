@@ -6,6 +6,7 @@ import {
 	toAnnouncement,
 	type AnnouncementDTO
 } from '$lib/server/announcements';
+import { sanitizeAnnouncementMessage } from '$lib/server/sanitize';
 
 const UPDATE_MUTATION = `
 	mutation UpdateAnnouncement($id: ID!, $input: UpdateAnnouncementInput!) {
@@ -32,7 +33,11 @@ export const PATCH: RequestHandler = async ({ request, params, fetch, cookies })
 		};
 	}>(fetch, cookies, UPDATE_MUTATION, {
 		id: params.id,
-		input: { message, start_date: startDate, end_date: endDate }
+		input: {
+			message: sanitizeAnnouncementMessage(message),
+			start_date: startDate,
+			end_date: endDate
+		}
 	});
 
 	if (body.errors || !body.data) {

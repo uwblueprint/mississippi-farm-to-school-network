@@ -6,6 +6,7 @@ import {
 	toAnnouncement,
 	type AnnouncementDTO
 } from '$lib/server/announcements';
+import { sanitizeAnnouncementMessage } from '$lib/server/sanitize';
 
 const CREATE_MUTATION = `
 	mutation CreateAnnouncement($input: CreateAnnouncementInput!) {
@@ -25,7 +26,11 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 			overlappingAnnouncements: AnnouncementDTO[];
 		};
 	}>(fetch, cookies, CREATE_MUTATION, {
-		input: { message, start_date: startDate, end_date: endDate }
+		input: {
+			message: sanitizeAnnouncementMessage(message),
+			start_date: startDate,
+			end_date: endDate
+		}
 	});
 
 	if (body.errors || !body.data) {
