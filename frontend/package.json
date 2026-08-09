@@ -45,6 +45,6 @@
 		"@mapbox/mapbox-gl-geocoder": "^5.1.2",
 		"firebase": "^12.14.0",
 		"mapbox-gl": "^3.25.0",
-		"sanitize-html": "^2.17.6"
+		"sanitize-html": "^2.17.5"
 	}
 }
