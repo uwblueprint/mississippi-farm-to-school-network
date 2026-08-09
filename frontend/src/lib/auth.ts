@@ -93,12 +93,13 @@ export function isAdminEmail(email: string): boolean {
 	return email.toLowerCase().endsWith(ADMIN_EMAIL_DOMAIN);
 }
 
-export function getPostAuthDestination(email: string, context: 'login' | 'verified'): string {
+export function getPostAuthDestination(email: string, _context: 'login' | 'verified'): string {
 	if (isAdminEmail(email)) {
 		return '/admin';
 	}
 
-	return context === 'login' ? '/farmer' : '/onboarding';
+	// Farmers see helper pop-ups on /onboarding first, then continue to /farmer.
+	return '/onboarding';
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<UserCredential> {
