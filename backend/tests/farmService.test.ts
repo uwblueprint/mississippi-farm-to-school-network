@@ -58,8 +58,15 @@ const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
 describe('FarmService.getFarms', () => {
   let service: FarmService;
 
+  // Ordering applied to every farm list query (mirrors FARM_LIST_ORDER in the implementation).
+  const FARM_LIST_ORDER: [string, string][] = [
+    ['county', 'ASC'],
+    ['farm_name', 'ASC'],
+  ];
+
   beforeEach(() => {
     service = new FarmService();
+    MockFarm.findAll.mockReset();
   });
 
   // ── no filter ──────────────────────────────────────────────────────────────
@@ -70,16 +77,16 @@ describe('FarmService.getFarms', () => {
 
     const result = await service.getFarms();
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
     expect(result).toHaveLength(2);
   });
 
   test('filter with all fields undefined: returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({});
+    await service.getFarms(undefined, undefined, {});
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
   });
 
   test('no farms in database: returns empty array', async () => {
@@ -95,20 +102,22 @@ describe('FarmService.getFarms', () => {
   test('filter by status: passes status to where clause', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ status: FarmStatus.APPROVED });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.APPROVED },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by status PENDING_APPROVAL', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ status: FarmStatus.PENDING_APPROVAL });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.PENDING_APPROVAL });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.PENDING_APPROVAL },
+      order: FARM_LIST_ORDER,
     });
   });
 
@@ -117,20 +126,22 @@ describe('FarmService.getFarms', () => {
   test('filter approved=true: sets status to APPROVED', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ approved: true });
+    await service.getFarms(undefined, undefined, { approved: true });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: FarmStatus.APPROVED },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter approved=false: excludes APPROVED farms', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ approved: false });
+    await service.getFarms(undefined, undefined, { approved: false });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { status: { [Op.ne]: FarmStatus.APPROVED } },
+      order: FARM_LIST_ORDER,
     });
   });
 
@@ -138,7 +149,7 @@ describe('FarmService.getFarms', () => {
     // When both status and approved provided, status wins
     MockFarm.findAll.mockResolvedValue([]);
 
-    await service.getFarms({ status: FarmStatus.REJECTED, approved: true });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.REJECTED, approved: true });
 
     const call = MockFarm.findAll.mock.calls[0][0] as any;
     expect(call.where.status).toBe(FarmStatus.REJECTED);
@@ -149,40 +160,43 @@ describe('FarmService.getFarms', () => {
   test('filter by counties: uses Op.in', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties: ['Hinds'] });
+    await service.getFarms(undefined, undefined, { counties: ['Hinds'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { county: { [Op.in]: ['Hinds'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by cities_served: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ cities_served: ['Jackson'] });
+    await service.getFarms(undefined, undefined, { cities_served: ['Jackson'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { cities_served: { [Op.overlap]: ['Jackson'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('filter by seasonal_products: uses Op.overlap', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ seasonal_products: ['Fruits and Vegetables'] });
+    await service.getFarms(undefined, undefined, { seasonal_products: ['Fruits and Vegetables'] });
 
     expect(MockFarm.findAll).toHaveBeenCalledWith({
       where: { seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] } },
+      order: FARM_LIST_ORDER,
     });
   });
 
   test('empty array filter: ignores empty array, returns all farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ counties: [], seasonal_products: [] });
+    await service.getFarms(undefined, undefined, { counties: [], seasonal_products: [] });
 
     // Empty arrays should not add where conditions
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {} });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
   });
 
   // ── combined filters ──────────────────────────────────────────────────────
@@ -190,7 +204,7 @@ describe('FarmService.getFarms', () => {
   test('combining status + counties + seasonal_products', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({
+    await service.getFarms(undefined, undefined, {
       status: FarmStatus.APPROVED,
       counties: ['Hinds'],
       seasonal_products: ['Fruits and Vegetables'],
@@ -202,7 +216,64 @@ describe('FarmService.getFarms', () => {
         county: { [Op.in]: ['Hinds'] },
         seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] },
       },
+      order: FARM_LIST_ORDER,
     });
+  });
+
+  // ── pagination ────────────────────────────────────────────────────────────
+
+  test('paginates with limit and offset when both page args provided', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(2, 10);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: {},
+      order: FARM_LIST_ORDER,
+      limit: 10,
+      offset: 10,
+    });
+  });
+
+  test('first page uses offset 0', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(1, 25, { counties: ['Hinds'] });
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { county: { [Op.in]: ['Hinds'] } },
+      order: FARM_LIST_ORDER,
+      limit: 25,
+      offset: 0,
+    });
+  });
+
+  test('does not paginate when only pageNumber is provided', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(3);
+
+    const call = MockFarm.findAll.mock.calls[0][0] as any;
+    expect(call.limit).toBeUndefined();
+    expect(call.offset).toBeUndefined();
+  });
+
+  test('pageSize at the max cap is allowed', async () => {
+    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
+
+    await service.getFarms(1, 100);
+
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: {},
+      order: FARM_LIST_ORDER,
+      limit: 100,
+      offset: 0,
+    });
+  });
+
+  test('pageSize above the max cap: throws', async () => {
+    await expect(service.getFarms(1, 101)).rejects.toThrow('pageSize must not exceed 100');
+    expect(MockFarm.findAll).not.toHaveBeenCalled();
   });
 
   // ── archived filter ─────────────────────────────────────────────────────────
@@ -210,7 +281,7 @@ describe('FarmService.getFarms', () => {
   test('default (no is_archived): returns all farms with no archived constraint', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ status: FarmStatus.APPROVED });
+    await service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED });
 
     const call = MockFarm.findAll.mock.calls[0][0] as any;
     expect(call.where.is_archived).toBeUndefined();
@@ -219,17 +290,23 @@ describe('FarmService.getFarms', () => {
   test('is_archived=true: returns only archived farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow({ is_archived: true })] as any);
 
-    await service.getFarms({ is_archived: true });
+    await service.getFarms(undefined, undefined, { is_archived: true });
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: true } });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { is_archived: true },
+      order: FARM_LIST_ORDER,
+    });
   });
 
   test('is_archived=false explicitly: excludes archived farms', async () => {
     MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
 
-    await service.getFarms({ is_archived: false });
+    await service.getFarms(undefined, undefined, { is_archived: false });
 
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: { is_archived: false } });
+    expect(MockFarm.findAll).toHaveBeenCalledWith({
+      where: { is_archived: false },
+      order: FARM_LIST_ORDER,
+    });
   });
 
   // ── filters matching no farms ─────────────────────────────────────────────
@@ -237,7 +314,7 @@ describe('FarmService.getFarms', () => {
   test('filters matching no farms: returns empty array', async () => {
     MockFarm.findAll.mockResolvedValue([]);
 
-    const result = await service.getFarms({
+    const result = await service.getFarms(undefined, undefined, {
       counties: ['NonExistentCounty'],
     });
 
@@ -708,14 +785,24 @@ describe('FarmService.updateFarm', () => {
     expect(instance.reload).toHaveBeenCalledTimes(2);
     expect(mockSendEmail).toHaveBeenCalledTimes(1);
 
-    const [to, subject, htmlBody] = mockSendEmail.mock.calls[0];
+    const [to, subject, emailBody] = mockSendEmail.mock.calls[0] as [
+      string,
+      string,
+      { body: string; changes: { field: string; previous: string; current: string }[] },
+    ];
     expect(to).toBe('mfsn@uwblueprint.org');
     expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
-    expect(htmlBody).toContain('Missing GAP documentation');
-    expect(htmlBody).toContain('Farm Name');
-    expect(htmlBody).toContain('Seasonal Products Detail');
-    expect(htmlBody).toContain('Original Name');
-    expect(htmlBody).toContain('Resubmitted Farm Name');
+    expect(emailBody.body).toContain('Missing GAP documentation');
+    expect(emailBody.changes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          field: 'Farm Name',
+          previous: 'Original Name',
+          current: 'Resubmitted Farm Name',
+        }),
+        expect.objectContaining({ field: 'Seasonal Products Detail' }),
+      ])
+    );
   });
 
   test('rejected farm update with no actual field change does not email admins', async () => {

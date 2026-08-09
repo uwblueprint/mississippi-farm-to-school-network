@@ -1,4 +1,5 @@
 import type { LayoutServerLoad } from './$types';
+import { gqlRequest } from '$lib/server/graphql';
 
 const ME_QUERY = `
   query Me {
@@ -13,6 +14,17 @@ const ME_QUERY = `
   }
 `;
 
+interface MeResponse {
+	me: {
+		id: string;
+		email: string;
+		firstName: string;
+		lastName: string;
+		phone: string;
+		role: string;
+	} | null;
+}
+
 export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token');
 
@@ -20,29 +32,11 @@ export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 		return { user: null };
 	}
 
-	const res = await fetch('http://mfsn-backend:3000/graphql', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ query: ME_QUERY })
-	});
-
-	const json = await res.json();
-
-	if (json.errors || !json.data?.me) {
+	// Any failure (network, GraphQL error, expired token) degrades to signed-out.
+	try {
+		const { me } = await gqlRequest<MeResponse>({ query: ME_QUERY, token, fetch });
+		return { user: me ?? null };
+	} catch {
 		return { user: null };
 	}
-
-	return {
-		user: {
-			id: json.data.me.id,
-			email: json.data.me.email,
-			firstName: json.data.me.firstName,
-			lastName: json.data.me.lastName,
-			phone: json.data.me.phone,
-			role: json.data.me.role
-		}
-	};
 };

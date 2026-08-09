@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import Image from '@/models/image.model';
 import IImageService from '@/services/interfaces/imageService';
 import { ImageDTO, ImageDimensionsDTO } from '@/types';
@@ -45,10 +46,11 @@ class ImageService implements IImageService {
     }
   }
 
+  // index 0 is the farm's thumbnail; the gallery is index >= 1 (see PR description).
   async getImagesByFarm(farmId: string): Promise<ImageDTO[]> {
     try {
       const rows = await Image.findAll({
-        where: { farm_id: farmId },
+        where: { farm_id: farmId, index: { [Op.gte]: 1 } },
         order: [['index', 'ASC']],
       });
       return rows.map(toDTO);

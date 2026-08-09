@@ -5,6 +5,18 @@
 	import leftArrow from '$lib/assets/left-arrow.svg';
 	import { getFirebaseAuth } from '$lib/firebase';
 	import { attachFarmPhotos } from '$lib/utils/farm-image-upload';
+	import { COUNTIES } from '$lib/data/msCounties';
+	import {
+		NONE_OF_THE_ABOVE,
+		GROWING_PRACTICES,
+		SEASONAL_PRODUCTS,
+		MEAT_PRODUCTS,
+		OTHER_PRODUCTS,
+		FOOD_SAFETY_CERTIFICATIONS,
+		FARM_EXPERIENCES,
+		FARM_CHARACTERISTICS,
+		FARM_TO_SCHOOL_SALES
+	} from '$lib/constants/farmOptions';
 
 	let { data } = $props();
 
@@ -69,140 +81,9 @@
 		}
 	});
 
-	const NONE = 'None of the above';
+	const NONE = NONE_OF_THE_ABOVE;
 	const DELIVERY_AVAILABLE = 'Delivery Available';
-
-	const GROWING_PRACTICES = [
-		'Organic Practices',
-		'Conventional',
-		'Regenerative',
-		'Hydroponic',
-		'Aquaponic',
-		'Biodynamic'
-	];
-	const SEASONAL_PRODUCTS = ['Fruits and Vegetables', 'Dairy and Eggs', 'Herbs'];
-	const MEAT_PRODUCTS = ['Beef', 'Poultry', 'Fish', 'Other'];
-	const OTHER_PRODUCTS = [
-		'Honey',
-		'Mushrooms',
-		'Flowers',
-		'Seedlings & Plants',
-		'Grains',
-		'Value-Added Products',
-		'Other'
-	];
-	const FOOD_SAFETY_CERTIFICATIONS = [
-		'Food Safety Plan in Place',
-		'GAP Certified',
-		'Certified Organic',
-		'Certified Naturally Grown'
-	];
-	const FARM_EXPERIENCES = [
-		'CSA (Community Supported Agriculture) Available',
-		'U-Pick Available',
-		'Farm Stand On-Site',
-		'Farm Tours/Field Trips Welcome',
-		'Equipment Rental Available'
-	];
-	const FARM_CHARACTERISTICS = [
-		'BIPOC-Owned Farm',
-		'Veteran-Owned Farm',
-		'Woman-Owned Farm',
-		'Multi-Generational Farm',
-		'Beginning Farmer (10 years or less in farming)',
-		'Young Farmer (Age 40 or Under)'
-	];
-	const FARM_TO_SCHOOL_SALES = [
-		'Interested in Selling to K-12 Schools',
-		'Interested in Selling to Early Care and Education Programs',
-		'Online Ordering Available',
-		'Delivery Available'
-	];
-
-	const MS_COUNTIES = [
-		'Adams',
-		'Alcorn',
-		'Amite',
-		'Attala',
-		'Benton',
-		'Bolivar',
-		'Calhoun',
-		'Carroll',
-		'Chickasaw',
-		'Choctaw',
-		'Claiborne',
-		'Clarke',
-		'Clay',
-		'Coahoma',
-		'Copiah',
-		'Covington',
-		'DeSoto',
-		'Forrest',
-		'Franklin',
-		'George',
-		'Greene',
-		'Grenada',
-		'Hancock',
-		'Harrison',
-		'Hinds',
-		'Holmes',
-		'Humphreys',
-		'Issaquena',
-		'Itawamba',
-		'Jackson',
-		'Jasper',
-		'Jefferson',
-		'Jefferson Davis',
-		'Jones',
-		'Kemper',
-		'Lafayette',
-		'Lamar',
-		'Lauderdale',
-		'Lawrence',
-		'Leake',
-		'Lee',
-		'Leflore',
-		'Lincoln',
-		'Lowndes',
-		'Madison',
-		'Marion',
-		'Marshall',
-		'Monroe',
-		'Montgomery',
-		'Neshoba',
-		'Newton',
-		'Noxubee',
-		'Oktibbeha',
-		'Panola',
-		'Pearl River',
-		'Perry',
-		'Pike',
-		'Pontotoc',
-		'Prentiss',
-		'Quitman',
-		'Rankin',
-		'Scott',
-		'Sharkey',
-		'Simpson',
-		'Smith',
-		'Stone',
-		'Sunflower',
-		'Tallahatchie',
-		'Tate',
-		'Tippah',
-		'Tishomingo',
-		'Tunica',
-		'Union',
-		'Walthall',
-		'Warren',
-		'Washington',
-		'Wayne',
-		'Webster',
-		'Wilkinson',
-		'Winston',
-		'Yalobusha',
-		'Yazoo'
-	];
+	const MS_COUNTIES = COUNTIES;
 
 	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 	const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;

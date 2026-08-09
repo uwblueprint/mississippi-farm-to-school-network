@@ -2,7 +2,7 @@
 	import '$lib/styles/auth/auth-form.css';
 	import BrandHeader from '$lib/components/BrandHeader.svelte';
 	import AuthStatusMessage from '$lib/components/auth/AuthStatusMessage.svelte';
-	import Button from '$lib/components/Button.svelte';
+	import ActionButton from '$lib/components/ActionButton.svelte';
 	import Link from '$lib/components/Link.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
 	import { goto } from '$app/navigation';
@@ -123,7 +123,9 @@
 							{/if}
 
 							<div class="auth-form-actions">
-								<Button
+								<ActionButton
+									variant="primary"
+									block
 									type="submit"
 									disabled={!canSubmit}
 									label={isSubmitting ? 'Continuing…' : 'Continue'}

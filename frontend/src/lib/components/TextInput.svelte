@@ -14,6 +14,14 @@
 		error?: string;
 		errorCTA?: Snippet;
 		showPasswordToggle?: boolean;
+		/** Render a textarea instead of an input. */
+		multiline?: boolean;
+		rows?: number;
+		/** Render the value as plain text (no control), e.g. the Farm ID#. */
+		readonly?: boolean;
+		/** 'md' is the auth-form spec; 'lg' is the farm edit form's Figma spec
+		 *  (larger light labels, Nunito input text, rounder corners). */
+		size?: 'md' | 'lg';
 		[name: string]: unknown;
 	}
 
@@ -30,6 +38,10 @@
 		error,
 		errorCTA,
 		showPasswordToggle = false,
+		multiline = false,
+		rows = 4,
+		readonly = false,
+		size = 'md',
 		...rest
 	}: Props = $props();
 
@@ -42,12 +54,64 @@
 	);
 </script>
 
-<label class="field">
-	<span class="label">{label}</span>
-	{#if showPasswordToggle && isPasswordField}
-		<div class="input-wrapper">
+{#if readonly}
+	<div class="field field--readonly" class:field--lg={size === 'lg'}>
+		<span class="label">{label}</span>
+		<span class="readonly-value">{value}</span>
+	</div>
+{:else}
+	<label class="field" class:field--lg={size === 'lg'}>
+		<span class="label">{label}</span>
+		{#if multiline}
+			<textarea
+				class="input textarea"
+				class:input--error={!!error}
+				{name}
+				id={inputId}
+				{placeholder}
+				{required}
+				{disabled}
+				{rows}
+				bind:value
+				aria-invalid={error ? 'true' : undefined}
+				aria-describedby={error && errorId ? errorId : undefined}
+			></textarea>
+		{:else if showPasswordToggle && isPasswordField}
+			<div class="input-wrapper">
+				<input
+					class="input--with-toggle input"
+					class:input--error={!!error}
+					type={inputType}
+					{name}
+					id={inputId}
+					{autocomplete}
+					{placeholder}
+					{required}
+					{disabled}
+					bind:value
+					aria-invalid={error ? 'true' : undefined}
+					aria-describedby={error && errorId ? errorId : undefined}
+					{...rest}
+				/>
+				<button
+					type="button"
+					class="toggle-button"
+					aria-label={showPassword ? 'Hide password' : 'Show password'}
+					aria-pressed={showPassword}
+					onclick={() => (showPassword = !showPassword)}
+				>
+					<img
+						class="toggle-icon"
+						src={showPassword ? '/images/auth/eye-off.svg' : '/images/auth/eye.svg'}
+						alt=""
+						width="21"
+						height="21"
+					/>
+				</button>
+			</div>
+		{:else}
 			<input
-				class="input--with-toggle input"
+				class="input"
 				class:input--error={!!error}
 				type={inputType}
 				{name}
@@ -61,53 +125,22 @@
 				aria-describedby={error && errorId ? errorId : undefined}
 				{...rest}
 			/>
-			<button
-				type="button"
-				class="toggle-button"
-				aria-label={showPassword ? 'Hide password' : 'Show password'}
-				aria-pressed={showPassword}
-				onclick={() => (showPassword = !showPassword)}
-			>
-				<img
-					class="toggle-icon"
-					src={showPassword ? '/images/auth/eye-off.svg' : '/images/auth/eye.svg'}
-					alt=""
-					width="21"
-					height="21"
-				/>
-			</button>
-		</div>
-	{:else}
-		<input
-			class="input"
-			class:input--error={!!error}
-			type={inputType}
-			{name}
-			id={inputId}
-			{autocomplete}
-			{placeholder}
-			{required}
-			{disabled}
-			bind:value
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={error && errorId ? errorId : undefined}
-			{...rest}
-		/>
-	{/if}
-	{#if error}
-		<p class="error" id={errorId} role="alert">
-			<img class="error-icon" src="/images/auth/error.svg" alt="" width="15" height="15" />
-			<span class="error-content">
-				<span>{error}</span>
-				{#if errorCTA}
-					<span class="error-cta">
-						{@render errorCTA()}
-					</span>
-				{/if}
-			</span>
-		</p>
-	{/if}
-</label>
+		{/if}
+		{#if error}
+			<p class="error" id={errorId} role="alert">
+				<img class="error-icon" src="/images/auth/error.svg" alt="" width="15" height="15" />
+				<span class="error-content">
+					<span>{error}</span>
+					{#if errorCTA}
+						<span class="error-cta">
+							{@render errorCTA()}
+						</span>
+					{/if}
+				</span>
+			</p>
+		{/if}
+	</label>
+{/if}
 
 <style>
 	.field {
@@ -134,6 +167,45 @@
 		font-family: 'DM Sans', sans-serif;
 		font-size: 1.019375rem; /* ~16.31px */
 		line-height: 1.165rem; /* ~18.64px */
+	}
+
+	.textarea {
+		resize: vertical;
+	}
+
+	/* --- size="lg": the farm edit form's Figma spec (ex-TextField) --- */
+	.field--lg .label {
+		font-size: 21px;
+		font-weight: 300;
+		color: #131927;
+	}
+
+	/* Readonly label (Farm ID#) — heavier than the light field labels */
+	.field--lg.field--readonly .label {
+		font-weight: 400;
+	}
+
+	.field--lg .input {
+		padding: 16.8px 22.4px;
+		border-width: 1.82px;
+		border-radius: 11.2px;
+		font-family: 'Nunito Variable', 'Nunito', 'DM Sans Variable', sans-serif;
+		font-size: 17.343px;
+		font-weight: 400;
+		line-height: normal;
+		color: #383b4a;
+	}
+
+	.field--lg .readonly-value {
+		font-family: 'Nunito Variable', 'Nunito', sans-serif;
+		font-size: 17.343px;
+	}
+
+	.readonly-value {
+		color: #383b4a;
+		font-family: 'DM Sans', sans-serif;
+		font-size: 1.019375rem;
+		line-height: normal;
 	}
 
 	.input::placeholder {
