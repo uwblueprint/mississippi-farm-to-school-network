@@ -20,6 +20,39 @@ export type NodemailerConfig = {
   };
 };
 
+export type EmailActionButton = {
+  label: string;
+  href: string;
+};
+
+export type EmailChangeEntry = {
+  field: string;
+  previous: string;
+  current: string;
+};
+
+export type EmailTemplateData = {
+  title?: string;
+  body?: string;
+  actionButton?: EmailActionButton;
+  previewText?: string;
+  footerText?: string;
+  brandName?: string;
+  recipientName?: string;
+  reasonText?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+  isFarmerEmail?: boolean;
+  /** Rendered as a real list in EmailLayout, not embedded as HTML in `body`. */
+  changes?: EmailChangeEntry[];
+};
+
+export type EmailServiceOptions = {
+  brandName?: string;
+  brandUrl?: string;
+  supportEmail?: string;
+};
+
 export enum FarmStatus {
   PENDING_APPROVAL = 'PENDING_APPROVAL',
   APPROVED = 'APPROVED',
