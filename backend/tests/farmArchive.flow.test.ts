@@ -164,7 +164,7 @@ describe('Farm archive flow (manual checklist)', () => {
   // ── Step 1: baseline ───────────────────────────────────────────────────────
 
   test('1. baseline: approved farm starts with is_archived false', async () => {
-    const farms = await service.getFarms({ is_archived: false });
+    const farms = await service.getFarms(undefined, undefined, { is_archived: false });
 
     expect(farms.every((farm) => farm.is_archived === false)).toBe(true);
     const target = farms.find((farm) => farm.id === FARM_ID);
@@ -194,7 +194,7 @@ describe('Farm archive flow (manual checklist)', () => {
   test('3a. public/active list (is_archived=false) hides archived farm', async () => {
     await service.archiveFarm(FARM_ID);
 
-    const active = await service.getFarms({ is_archived: false });
+    const active = await service.getFarms(undefined, undefined, { is_archived: false });
 
     expect(active.map((farm) => farm.id)).toEqual([OTHER_FARM_ID]);
     expect(active.find((farm) => farm.id === FARM_ID)).toBeUndefined();
@@ -216,7 +216,7 @@ describe('Farm archive flow (manual checklist)', () => {
   test('3c. admin archived-only filter returns only archived farms', async () => {
     await service.archiveFarm(FARM_ID);
 
-    const archived = await service.getFarms({ is_archived: true });
+    const archived = await service.getFarms(undefined, undefined, { is_archived: true });
 
     expect(archived).toHaveLength(1);
     expect(archived[0]).toMatchObject({ id: FARM_ID, is_archived: true });
@@ -286,7 +286,7 @@ describe('Farm archive flow (manual checklist)', () => {
       is_archived: false,
     });
 
-    const active = await service.getFarms({ is_archived: false });
+    const active = await service.getFarms(undefined, undefined, { is_archived: false });
     expect(active.map((farm) => farm.id).sort()).toEqual([FARM_ID, OTHER_FARM_ID].sort());
   });
 });

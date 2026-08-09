@@ -73,6 +73,13 @@ const convertFromPostGISPoint = (location: {
   };
 };
 
+const FARM_LIST_ORDER: [string, string][] = [
+  ['county', 'ASC'],
+  ['farm_name', 'ASC'],
+];
+
+const MAX_FARMS_PAGE_SIZE = 100;
+
 class FarmService implements IFarmService {
   private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
     if (input.seasonal_products !== undefined) {
@@ -175,7 +182,11 @@ class FarmService implements IFarmService {
     }
   }
 
-  async getFarms(filter?: FarmFilter): Promise<Array<FarmDTO>> {
+  async getFarms(
+    pageNumber?: number,
+    pageSize?: number,
+    filter?: FarmFilter
+  ): Promise<Array<FarmDTO>> {
     const where: Record<string, unknown> = {};
 
     try {
@@ -211,7 +222,24 @@ class FarmService implements IFarmService {
         where.is_archived = filter.is_archived;
       }
 
-      const farms = await Farm.findAll({ where });
+      const options: Record<string, unknown> = { where, order: FARM_LIST_ORDER };
+
+      if (pageNumber != null && pageSize != null) {
+        if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+          throw new Error('pageNumber must be an integer >= 1');
+        }
+        if (!Number.isInteger(pageSize) || pageSize < 1) {
+          throw new Error('pageSize must be an integer >= 1');
+        }
+        if (pageSize > MAX_FARMS_PAGE_SIZE) {
+          throw new Error(`pageSize must not exceed ${MAX_FARMS_PAGE_SIZE}`);
+        }
+
+        options.limit = pageSize;
+        options.offset = (pageNumber - 1) * pageSize;
+      }
+
+      const farms = await Farm.findAll(options);
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms. Reason = ${getErrorMessage(error)}`);

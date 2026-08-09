@@ -59,6 +59,25 @@ class LocalFileStorageService implements IFileStorageService {
     return target;
   }
 
+  async fileExists(fileName: string): Promise<boolean> {
+    try {
+      await fs.access(this.resolveKey(fileName));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Signed upload URLs are a cloud-storage concept; this local fallback has no
+   * equivalent, so callers should use uploadBytes/createFile directly instead.
+   */
+  async getUploadUrl(): Promise<string> {
+    throw new Error(
+      'LocalFileStorageService does not support signed upload URLs; use uploadBytes/createFile instead.'
+    );
+  }
+
   async getFile(fileName: string): Promise<string> {
     try {
       const buffer = await fs.readFile(this.resolveKey(fileName));
