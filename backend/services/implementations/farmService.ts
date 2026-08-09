@@ -153,6 +153,7 @@ class FarmService implements IFarmService {
       const farms = await Farm.findAll({
         where: {
           status: FarmStatus.APPROVED,
+          is_archived: false,
           location: literal(
             `ST_DWithin(location, ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326)::geography, ${radiusMeters})`
           ),
@@ -204,6 +205,10 @@ class FarmService implements IFarmService {
 
       if (filter?.other_products?.length) {
         where.other_products = { [Op.overlap]: filter.other_products };
+      }
+
+      if (filter?.is_archived !== undefined) {
+        where.is_archived = filter.is_archived;
       }
 
       const farms = await Farm.findAll({ where });
@@ -410,6 +415,7 @@ class FarmService implements IFarmService {
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()
@@ -497,6 +503,7 @@ class FarmService implements IFarmService {
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos,
       status: data.status,
+      is_archived: data.is_archived,
       createdAt:
         data.createdAt instanceof Date
           ? data.createdAt.toISOString()
@@ -510,7 +517,7 @@ class FarmService implements IFarmService {
 
   async getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]> {
     try {
-      const farms = await Farm.findAll({ where: { status } });
+      const farms = await Farm.findAll({ where: { status, is_archived: false } });
       return this.convertToFarmDTOs(farms);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by status. Reason = ${getErrorMessage(error)}`);
@@ -537,6 +544,50 @@ class FarmService implements IFarmService {
       return this.convertToFarmDTO(farm);
     } catch (error: unknown) {
       Logger.error(`Failed to get farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async archiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is already archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = true;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to archive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async unarchiveFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const farm = await Farm.findByPk(farmId);
+      if (!farm) {
+        throw new Error(`Farm with id ${farmId} not found.`);
+      }
+
+      if (!farm.is_archived) {
+        Logger.warn(`Farm with id ${farmId} is not archived.`);
+        return this.convertToFarmDTO(farm);
+      }
+
+      farm.is_archived = false;
+      await farm.save();
+      await farm.reload();
+      return this.convertToFarmDTO(farm);
+    } catch (error: unknown) {
+      Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
