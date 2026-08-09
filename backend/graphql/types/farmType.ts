@@ -138,7 +138,7 @@ const farmType = gql`
   }
 
   type Query {
-    farms(filter: FarmFilter): [FarmDTO!]!
+    farms(filter: FarmFilter, pageNumber: Int, pageSize: Int): [FarmDTO!]!
     farmsByProximity(lat: Float!, lng: Float!, radiusKm: Float!): [FarmDTO!]!
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
