@@ -17,6 +17,7 @@ function hasOption(list: string[] | null | undefined, value: string): boolean {
 }
 
 const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
+	'Mississippi Farm': () => true,
 	Processing: (farm) =>
 		hasOption(farm.food_safety_certifications, 'GAP Certified') ||
 		hasOption(farm.food_safety_certifications, 'Food Safety Plan in Place'),
@@ -39,7 +40,9 @@ const TAG_ORDER: FarmTag[] = [
 ];
 
 export function getFarmTags(farm: MapFarm): FarmTag[] {
-	return TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm) ?? true);
+	// Every listed tag has an explicit predicate; default to excluding any tag
+	// that doesn't (safer than silently showing an unimplemented tag on every farm).
+	return TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm) ?? false);
 }
 
 /** Derive map marker type from FarmDTO option arrays. */
