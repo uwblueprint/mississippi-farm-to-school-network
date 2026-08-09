@@ -18,6 +18,17 @@ interface CreateFarmResponse {
 
 export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 	const token = cookies.get('token');
+
+	if (!token) {
+		return json(
+			{
+				ok: false,
+				errors: [{ message: 'You must be logged in to create a farm.' }]
+			},
+			{ status: 401 }
+		);
+	}
+
 	const input = await request.json();
 
 	try {

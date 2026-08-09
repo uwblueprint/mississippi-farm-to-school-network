@@ -4,6 +4,7 @@
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
 	import { getFirebaseAuth } from '$lib/firebase';
+	import { attachFarmPhotos } from '$lib/utils/farm-image-upload';
 	import { COUNTIES } from '$lib/data/msCounties';
 	import {
 		NONE_OF_THE_ABOVE,
@@ -66,6 +67,8 @@
 	let coverIndex = $state(0);
 
 	let submitted = $state(false);
+	let submitting = $state(false);
+	let submitError = $state<string | null>(null);
 	let showLeaveModal = $state(false);
 	let allowLeave = $state(false);
 	let pendingUrl = $state<URL | null>(null);
@@ -311,17 +314,12 @@
 		for (const key of Object.keys(errors)) {
 			touched[key] = true;
 		}
-		if (!isValid) return;
+		if (!isValid || submitting) return;
 
-		submitted = true;
-		alert('Successfully submitted!');
+		submitting = true;
+		submitError = null;
 
 		const payload = buildFarmPayload();
-		console.log('createFarm payload', payload);
-		console.log('pending photos (upload not wired yet)', {
-			cover: farmPhotos[coverIndex]?.name ?? null,
-			carousel: farmPhotos.filter((_, index) => index !== coverIndex).map((file) => file.name)
-		});
 
 		try {
 			const res = await fetch('/api/create-farm', {
@@ -330,9 +328,37 @@
 				body: JSON.stringify(payload)
 			});
 			const result = await res.json();
-			console.log('createFarm response', result);
-		} catch (error) {
-			console.error('createFarm request failed', error);
+
+			if (!result.ok) {
+				submitError = result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
+				return;
+			}
+
+			const farmId = result.farm?.id as string | undefined;
+			if (!farmId) {
+				submitError = 'Farm was created but no id was returned.';
+				return;
+			}
+
+			if (farmPhotos.length > 0) {
+				try {
+					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
+				} catch (photoError) {
+					submitted = true;
+					submitError =
+						photoError instanceof Error
+							? `${photoError.message} Your farm was created; you can add photos later.`
+							: 'Farm created, but photo upload failed. You can add photos later.';
+					return;
+				}
+			}
+
+			submitted = true;
+			await goto('/farmer');
+		} catch {
+			submitError = 'Network error. Check your connection and try again.';
+		} finally {
+			submitting = false;
 		}
 	}
 
@@ -921,7 +947,12 @@
 	</div>
 
 	<div class="submit-section">
-		<button class="submit" type="button" onclick={handleSubmit}>Submit Farm Information</button>
+		{#if submitError}
+			<p class="submit-error" role="alert">{submitError}</p>
+		{/if}
+		<button class="submit" type="button" onclick={handleSubmit} disabled={submitting}>
+			{submitting ? 'Submitting…' : 'Submit Farm Information'}
+		</button>
 	</div>
 </div>
 
@@ -1370,6 +1401,14 @@
 		margin-top: 40px;
 	}
 
+	.submit-error {
+		margin: 0;
+		max-width: 100%;
+		color: #b42318;
+		font-size: 14px;
+		text-align: center;
+	}
+
 	.submit {
 		width: 100%;
 		padding: 14px 24px;
@@ -1383,8 +1422,13 @@
 		cursor: pointer;
 	}
 
-	.submit:hover {
+	.submit:hover:not(:disabled) {
 		background: var(--mfsn-primary-hover);
+	}
+
+	.submit:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
 	}
 
 	.leave-overlay {
