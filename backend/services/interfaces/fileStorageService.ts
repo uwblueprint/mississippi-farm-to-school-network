@@ -13,6 +13,27 @@ export interface IFileStorageService {
   getFile(fileName: string, expirationTimeMinutes?: number): Promise<string>;
 
   /**
+   * Generates a signed URL that allows a client to upload (PUT) a file directly to storage
+   * @param fileName name of file in storage
+   * @param contentType MIME type the client must use for the upload
+   * @param expirationTimeMinutes expiration time in minutes for generated URL (default: 15)
+   * @returns Signed URL the client can PUT the file bytes to
+   * @throws Error if URL generation fails
+   */
+  getUploadUrl(
+    fileName: string,
+    contentType: string,
+    expirationTimeMinutes?: number
+  ): Promise<string>;
+
+  /**
+   * Checks whether a file exists in storage
+   * @param fileName name of file in storage
+   * @returns true if the file exists, false otherwise
+   */
+  fileExists(fileName: string): Promise<boolean>;
+
+  /**
    * Creates a new file in storage
    * @param fileName name of file in storage
    * @param filePath local path to file to upload
@@ -20,6 +41,15 @@ export interface IFileStorageService {
    * @throws Error if file name already exists or upload fails
    */
   createFile(fileName: string, filePath: string, contentType?: string | null): Promise<void>;
+
+  /**
+   * Uploads raw file bytes to storage (browser-friendly; no server-local file needed)
+   * @param fileName name of file in storage (storage key)
+   * @param buffer file contents to upload
+   * @param contentType MIME type of file (optional)
+   * @throws Error if file name already exists or upload fails
+   */
+  uploadBytes(fileName: string, buffer: Buffer, contentType?: string | null): Promise<void>;
 
   /**
    * Updates an existing file in storage

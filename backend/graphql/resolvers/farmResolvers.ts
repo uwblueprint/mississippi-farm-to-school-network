@@ -23,6 +23,8 @@ const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
+const MAX_FARMS_PAGE_SIZE = 100;
+
 const farmResolvers = {
   Query: {
     farmsByProximity: async (
@@ -39,26 +41,63 @@ const farmResolvers = {
     },
     farms: async (
       _parent: undefined,
-      { filter }: { filter?: FarmFilter },
+      {
+        filter,
+        pageNumber: rawPageNumber,
+        pageSize: rawPageSize,
+      }: { filter?: FarmFilter; pageNumber?: number | null; pageSize?: number | null },
       context: AuthContext
     ) => {
+      const pageNumber = rawPageNumber ?? 1;
+      const pageSize = rawPageSize ?? 50;
+
+      if (!Number.isInteger(pageNumber) || pageNumber < 1) {
+        throw new Error('pageNumber must be an integer >= 1');
+      }
+      if (!Number.isInteger(pageSize) || pageSize < 1) {
+        throw new Error('pageSize must be an integer >= 1');
+      }
+      if (pageSize > MAX_FARMS_PAGE_SIZE) {
+        throw new Error(`pageSize must not exceed ${MAX_FARMS_PAGE_SIZE}`);
+      }
+
       const isAdmin = await authHelper
         .requireRole(context, [Role.ADMIN])
         .then(() => true)
         .catch(() => false);
 
       if (!isAdmin) {
-        return farmService.getFarms({ ...filter, status: FarmStatus.APPROVED, is_archived: false });
+        return farmService.getFarms(pageNumber, pageSize, {
+          ...filter,
+          status: FarmStatus.APPROVED,
+          is_archived: false,
+        });
       }
 
-      return farmService.getFarms(filter);
+      return farmService.getFarms(pageNumber, pageSize, filter);
+    },
+    // The authenticated user's own farms across ALL statuses (the public `farms`
+    // query clamps non-admins to APPROVED, so it can't back a farmer dashboard).
+    myFarms: async (
+      _parent: undefined,
+      _args: undefined,
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      const user = await authHelper.requireAuth(context);
+      return farmService.getFarmsByOwner(user.id);
     },
     farmById: async (
       _parent: undefined,
       { id }: { id: string },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      await authHelper.requireRole(context, [Role.ADMIN]);
+      const farm = await Farm.findByPk(id);
+      if (!farm) {
+        throw new Error(`Farm with id ${id} not found.`);
+      }
+      // Owner may read their own farm (any status) to populate the edit form;
+      // admins may read any farm. Mirrors latestActiveFarmRejection's auth.
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
       return farmService.getFarmById(id);
     },
     farmsByStatus: async (

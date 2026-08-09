@@ -38,6 +38,37 @@ class FileStorageService implements IFileStorageService {
     }
   }
 
+  async getUploadUrl(
+    fileName: string,
+    contentType: string,
+    expirationTimeMinutes = 15
+  ): Promise<string> {
+    const bucket = storage().bucket(this.bucketName);
+    const expirationDate = new Date();
+    expirationDate.setMinutes(expirationDate.getMinutes() + expirationTimeMinutes);
+
+    try {
+      const currentBlob = bucket.file(fileName);
+      const [signedUrl] = await currentBlob.getSignedUrl({
+        version: 'v4',
+        action: 'write',
+        expires: expirationDate,
+        contentType,
+      });
+
+      return signedUrl;
+    } catch (error: unknown) {
+      Logger.error(`Failed to generate upload URL. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async fileExists(fileName: string): Promise<boolean> {
+    const bucket = storage().bucket(this.bucketName);
+    const [exists] = await bucket.file(fileName).exists();
+    return exists;
+  }
+
   async createFile(
     fileName: string,
     filePath: string,
@@ -58,6 +89,29 @@ class FileStorageService implements IFileStorageService {
       });
     } catch (error: unknown) {
       Logger.error(`Failed to upload file. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async uploadBytes(
+    fileName: string,
+    buffer: Buffer,
+    contentType: string | null = null
+  ): Promise<void> {
+    try {
+      const bucket = storage().bucket(this.bucketName);
+      const currentBlob = bucket.file(fileName);
+      const [exists] = await currentBlob.exists();
+
+      if (exists) {
+        throw new Error(`File with name ${fileName} already exists.`);
+      }
+
+      await currentBlob.save(buffer, {
+        contentType: contentType || undefined,
+      });
+    } catch (error: unknown) {
+      Logger.error(`Failed to upload file bytes. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

@@ -2,7 +2,7 @@
 	import '$lib/styles/auth/auth-form.css';
 	import AuthPageLayout from '$lib/components/auth/AuthPageLayout.svelte';
 	import AuthStatusMessage from '$lib/components/auth/AuthStatusMessage.svelte';
-	import Button from '$lib/components/Button.svelte';
+	import ActionButton from '$lib/components/ActionButton.svelte';
 	import PasswordRequirements from '$lib/components/auth/PasswordRequirements.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
 	import { isPasswordValid } from '$lib/auth';
@@ -83,7 +83,9 @@
 	</div>
 
 	{#snippet actions()}
-		<Button
+		<ActionButton
+			variant="primary"
+			block
 			type="submit"
 			form="reset-password-form"
 			disabled={!canSubmit}

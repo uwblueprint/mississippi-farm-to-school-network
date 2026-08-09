@@ -57,3 +57,6 @@ docker-compose.override.yml
 
 # Design reference
 /design
+
+# Local-only farm image uploads (USE_LOCAL_FILE_STORAGE demo path)
+backend/uploads/

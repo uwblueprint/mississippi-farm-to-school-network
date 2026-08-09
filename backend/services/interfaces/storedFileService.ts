@@ -11,6 +11,8 @@ interface IStoredFileService {
 
   getFileRecordById(fileId: string): Promise<StoredFileDTO>;
 
+  getRecordsByFarm(farmId: string): Promise<StoredFileDTO[]>;
+
   updateFileRecordById(fileId: string, contentType?: string | null): Promise<StoredFileDTO>;
 
   deleteFileRecordById(fileId: string): Promise<void>;

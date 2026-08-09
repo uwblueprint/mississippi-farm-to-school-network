@@ -1,6 +1,7 @@
 import type { LayoutServerLoad } from './$types';
 import { redirect } from '@sveltejs/kit';
 import { dev } from '$app/environment';
+import { gqlRequest } from '$lib/server/graphql';
 
 const ME_QUERY = `
   query Me {
@@ -15,6 +16,17 @@ const ME_QUERY = `
   }
 `;
 
+interface MeResponse {
+	me: {
+		id: string;
+		email: string;
+		firstName: string;
+		lastName: string;
+		phone: string;
+		role: string;
+	} | null;
+}
+
 export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 	// Auth cookie + GraphQL `me` are not fully wired from Firebase login yet.
 	// In dev, allow the form to load so onboarding → Add Farm can be tested.
@@ -28,28 +40,16 @@ export const load: LayoutServerLoad = async ({ fetch, cookies }) => {
 		throw redirect(302, '/login');
 	}
 
-	const res = await fetch('http://mfsn-backend:3000/graphql', {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ query: ME_QUERY })
-	});
+	let user: MeResponse['me'];
+	try {
+		({ me: user } = await gqlRequest<MeResponse>({ query: ME_QUERY, token, fetch }));
+	} catch {
+		user = null;
+	}
 
-	const json = await res.json();
-
-	const user = json.data?.me;
-
-	if (!user) {
+	if (!user || user.role !== 'FARMER') {
 		throw redirect(302, '/login');
 	}
 
-	if (user.role !== 'FARMER') {
-		throw redirect(302, '/login');
-	}
-
-	return {
-		user
-	};
+	return { user };
 };

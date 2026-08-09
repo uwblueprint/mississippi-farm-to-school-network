@@ -180,7 +180,7 @@ describe('farmResolvers.Query.farms', () => {
 
     await farms(undefined, {}, authContext);
 
-    expect(mockGetFarms).toHaveBeenCalledWith({
+    expect(mockGetFarms).toHaveBeenCalledWith(1, 50, {
       status: FarmStatus.APPROVED,
       is_archived: false,
     });
@@ -191,7 +191,7 @@ describe('farmResolvers.Query.farms', () => {
 
     await farms(undefined, { filter: { is_archived: true } }, authContext);
 
-    expect(mockGetFarms).toHaveBeenCalledWith({
+    expect(mockGetFarms).toHaveBeenCalledWith(1, 50, {
       status: FarmStatus.APPROVED,
       is_archived: false,
     });
@@ -202,7 +202,7 @@ describe('farmResolvers.Query.farms', () => {
 
     await farms(undefined, { filter: { is_archived: true } }, authContext);
 
-    expect(mockGetFarms).toHaveBeenCalledWith({ is_archived: true });
+    expect(mockGetFarms).toHaveBeenCalledWith(1, 50, { is_archived: true });
   });
 
   test('admin: no filter returns all farms (archived and active)', async () => {
@@ -210,7 +210,7 @@ describe('farmResolvers.Query.farms', () => {
 
     await farms(undefined, {}, authContext);
 
-    expect(mockGetFarms).toHaveBeenCalledWith(undefined);
+    expect(mockGetFarms).toHaveBeenCalledWith(1, 50, undefined);
   });
 });
 
