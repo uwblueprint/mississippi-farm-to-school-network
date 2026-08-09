@@ -1,4 +1,9 @@
 {
+	"auth": {
+		"providers": {
+			"emailPassword": true
+		}
+	},
 	"hosting": {
 		"public": ".svelte-kit/output/client",
 		"ignore": ["firebase.json", "**/.*", "**/node_modules/**"],

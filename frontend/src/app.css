@@ -1,0 +1,153 @@
+:root {
+	/* Neutral — backgrounds, surfaces, borders, outlines */
+	--color-neutral-0: #ffffff; /* Primary Background */
+	--color-neutral-100: #fafafa; /* Hover State */
+	--color-neutral-200: #f5f6f8; /* Text Box */
+	--color-neutral-300: #d3d5de; /* Stroke */
+	--color-neutral-400: #9ea0ad; /* Stroke */
+	--color-neutral-500: #696c78; /* Stroke */
+	--color-neutral-600: #383b4a; /* Stroke */
+
+	/* Primary — highlight actions & information */
+	--color-primary-100: #e2e8d9; /* Background */
+	--color-primary-200: #bfcaaf; /* Background */
+	--color-primary-300: #93a883; /* Background */
+	--color-primary-400: #587244; /* Background */
+	--color-primary-500: #455d32; /* Default */
+	--color-primary-600: #263d13; /* Default */
+	--color-primary-700: #152608; /* Default */
+
+	/* Secondary — highlight information */
+	--color-secondary-100: #f7d6d1; /* Background */
+	--color-secondary-200: #f6bbb3; /* Default */
+	--color-secondary-300: #f38474; /* Default */
+	--color-secondary-400: #e05a47; /* Default */
+	--color-secondary-500: #dc422c; /* Default */
+	--color-secondary-600: #c4341f; /* Default */
+	--color-secondary-700: #ad2511; /* Default */
+
+	/* Accent — positive feedback / status */
+	--color-accent-50: #fffaed; /* Background */
+	--color-accent-100: #ffefa8; /* Background */
+	--color-accent-200: #ffdb65; /* Default */
+	--color-accent-300: #ffca1a; /* Hover */
+
+	/* Success — positive feedback / status */
+	--color-success-50: #efffea; /* Background */
+	--color-success-100: #b3e3a2; /* Background */
+	--color-success-200: #4eb41b; /* Default */
+	--color-success-300: #38830d; /* Hover */
+
+	/* Warning — warning feedback / status */
+	--color-warning-50: #fffaed; /* Background */
+	--color-warning-100: #ffefa8; /* Background */
+	--color-warning-200: #ffdb65; /* Default */
+	--color-warning-300: #ffca1a; /* Hover */
+
+	/* Danger — negative feedback / dangerous actions */
+	--color-danger-50: #fef1f2; /* Background */
+	--color-danger-100: #f0a5ae; /* Default */
+	--color-danger-200: #d34c4e; /* Hover */
+	--color-danger-300: #9b1500; /* Pressed */
+
+	/* Text + Icon */
+	--color-text-primary: #131927; /* Primary text */
+	--color-text-secondary: #4f545e; /* Secondary text */
+	--color-text-disabled: #9a9fa9; /* Disabled text */
+
+	/* Brand */
+	--color-brand-primary: #d94e4e;
+	--color-brand-secondary: #56743e;
+
+	/* Font families */
+	--font-figtree: 'Figtree', sans-serif;
+	--font-dm-sans: 'DM Sans', sans-serif;
+	--font-landrina: 'Landrina Solid', sans-serif;
+
+	/* Font weights */
+	--font-weight-light: 300;
+	--font-weight-regular: 400;
+	--font-weight-medium: 500;
+	--font-weight-bold: 700;
+
+	/* Type scale (named per the typography system; px in comments) */
+	--text-h1: 2rem; /* 32px */
+	--text-h2: 1.5rem; /* 24px */
+	--text-h3: 1rem; /* 16px */
+	--text-s1: 1.25rem; /* 20px */
+	--text-s2: 1.25rem; /* 20px */
+	--text-b1: 1.25rem; /* 20px */
+	--text-b2: 1.25rem; /* 20px */
+	--text-b3: 1rem; /* 16px */
+	--text-c1: 0.875rem; /* 14px */
+	--text-button: 1rem; /* 16px — Button (Main) & Button Bold (Nav) */
+	--text-button-tabs: 1.25rem; /* 20px — Button Bold (Tabs) */
+
+	/* H1. Headline — colour: Primary text */
+	--type-h1-font: var(--font-figtree);
+	--type-h1-weight: var(--font-weight-medium);
+	--type-h1-size: var(--text-h1);
+
+	/* H2. Headline — colour: Primary text */
+	--type-h2-font: var(--font-dm-sans);
+	--type-h2-weight: var(--font-weight-regular);
+	--type-h2-size: var(--text-h2);
+
+	/* H3. Sidebar — colour: Primary text */
+	--type-h3-font: var(--font-figtree);
+	--type-h3-weight: var(--font-weight-regular);
+	--type-h3-size: var(--text-h3);
+
+	/* S1. Subtitle — colour: Neutral 400 */
+	--type-s1-font: var(--font-dm-sans);
+	--type-s1-weight: var(--font-weight-medium);
+	--type-s1-size: var(--text-s1);
+
+	/* S2. Subtitle Regular — colour: Neutral 400 */
+	--type-s2-font: var(--font-dm-sans);
+	--type-s2-weight: var(--font-weight-regular);
+	--type-s2-size: var(--text-s2);
+
+	/* B1. Body — colour: Secondary text */
+	--type-b1-font: var(--font-dm-sans);
+	--type-b1-weight: var(--font-weight-regular);
+	--type-b1-size: var(--text-b1);
+
+	/* B2. Body Bold — colour: Secondary text */
+	--type-b2-font: var(--font-dm-sans);
+	--type-b2-weight: var(--font-weight-bold);
+	--type-b2-size: var(--text-b2);
+
+	/* Body Small — colour: Secondary text */
+	--type-b3-font: var(--font-dm-sans);
+	--type-b3-weight: var(--font-weight-regular);
+	--type-b3-size: var(--text-b3);
+
+	/* C1. Caption — colour: Neutral 400 */
+	--type-c1-font: var(--font-dm-sans);
+	--type-c1-weight: var(--font-weight-regular);
+	--type-c1-size: var(--text-c1);
+
+	/* Button (Main) */
+	--type-button-font: var(--font-dm-sans);
+	--type-button-weight: var(--font-weight-medium);
+	--type-button-size: var(--text-button);
+
+	/* Button Bold (Nav) */
+	--type-button-nav-font: var(--font-dm-sans);
+	--type-button-nav-weight: var(--font-weight-bold);
+	--type-button-nav-size: var(--text-button);
+
+	/* Button Bold (Tabs) */
+	--type-button-tabs-font: var(--font-dm-sans);
+	--type-button-tabs-weight: var(--font-weight-bold);
+	--type-button-tabs-size: var(--text-button-tabs);
+
+	/* B1. Brand */
+	--type-brand-1-font: var(--font-landrina);
+	--type-brand-1-weight: var(--font-weight-light);
+
+	/* B2. Brand */
+	--type-brand-2-font: var(--font-dm-sans);
+	--type-brand-2-weight: var(--font-weight-regular);
+}
