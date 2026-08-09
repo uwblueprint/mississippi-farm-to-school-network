@@ -151,6 +151,7 @@ export type FarmDTO = {
   cover_photo: string | null;
   carousel_photos: string[];
   status: FarmStatus;
+  is_archived: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -252,6 +253,7 @@ export interface FarmFilter {
   meat_products?: string[];
   other_products?: string[];
   approved?: boolean;
+  is_archived?: boolean;
 }
 
 export type ActiveFarmRejectionDTO = Pick<

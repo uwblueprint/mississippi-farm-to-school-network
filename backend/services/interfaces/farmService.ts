@@ -65,6 +65,23 @@ interface IFarmService {
   getFarmById(farmId: string): Promise<FarmDTO>;
 
   /**
+   * Archive a farm so it is hidden from public and default listings.
+   * Leaves the farm's status untouched so it can be restored later.
+   * @param farmId farm's id
+   * @returns the updated FarmDTO with is_archived set to true
+   * @throws Error if the farm does not exist or the update fails
+   */
+  archiveFarm(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Unarchive a previously archived farm, restoring it to listings.
+   * @param farmId farm's id
+   * @returns the updated FarmDTO with is_archived set to false
+   * @throws Error if the farm does not exist or the update fails
+   */
+  unarchiveFarm(farmId: string): Promise<FarmDTO>;
+
+  /**
    * Get the latest unresolved rejection for a farm
    * @param farmId farm's id
    * @returns the latest active FarmRejectionDTO or null if no active rejection exists
