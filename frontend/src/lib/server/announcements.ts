@@ -1,8 +1,7 @@
 import { error, type Cookies } from '@sveltejs/kit';
 import type { Announcement } from '$lib/types/announcement';
+import { getGraphqlUrl } from '$lib/server/graphql-url';
 import { devAdminToken } from './dev-auth';
-
-const GRAPHQL_URL = 'http://mfsn-backend:3000/graphql';
 
 export const ANNOUNCEMENT_FIELDS = `
 	id
@@ -31,7 +30,7 @@ async function post<T>(
 	query: string,
 	variables?: Record<string, unknown>
 ): Promise<GraphQLResponse<T>> {
-	const res = await fetchFn(GRAPHQL_URL, {
+	const res = await fetchFn(getGraphqlUrl(), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

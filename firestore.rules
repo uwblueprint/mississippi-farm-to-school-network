@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // All app writes go through the Express GraphQL backend (Firebase Admin SDK),
+    // which bypasses these rules. Clients must not write domain data directly.
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    match /farms/{farmId} {
+      // Public map: approved, non-archived farms only.
+      allow read: if resource.data.status == 'APPROVED'
+        && resource.data.is_archived == false;
+      allow write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && (
+        request.auth.uid == resource.data.firebase_uid
+      );
+      allow write: if false;
+    }
+
+    match /announcements/{announcementId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /farm_rejections/{rejectionId} {
+      allow read, write: if false;
+    }
+
+    match /images/{imageId} {
+      allow read, write: if false;
+    }
+
+    match /stored_files/{fileId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

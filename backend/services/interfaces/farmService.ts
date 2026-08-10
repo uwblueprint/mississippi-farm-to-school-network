@@ -7,7 +7,6 @@ import {
   FarmStatus,
   UpdateFarmInput,
 } from '@/types';
-import Farm from '@/models/farm.model';
 
 interface IFarmService {
   /**
@@ -48,7 +47,7 @@ interface IFarmService {
    * @returns a FarmDTO with the updated farm's information
    * @throws Error if farm update fails
    */
-  updateFarm(id: string, input: UpdateFarmInput, farmToUpdate?: Farm): Promise<FarmDTO>;
+  updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO>;
 
   /**
    * Get farms by their FarmStatus

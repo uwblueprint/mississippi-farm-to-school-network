@@ -1,32 +1,19 @@
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
-import { Role, UserDTO } from '@/types';
+import { Role } from '@/types';
 
-const mockGetCurrentUser = jest.fn();
+const mockGetUser = jest.fn();
 
-jest.mock('@/services/implementations/userService', () => ({
-  __esModule: true,
-  default: jest.fn().mockImplementation(() => ({
-    getCurrentUser: mockGetCurrentUser,
+jest.mock('firebase-admin', () => ({
+  auth: jest.fn(() => ({
+    getUser: mockGetUser,
   })),
 }));
 
 import authHelper from '@/utilities/authHelpers';
 
-const makeUser = (overrides: Partial<UserDTO> = {}): UserDTO => ({
-  id: 'user-1',
-  firebase_uid: 'firebase-1',
-  email: 'user@example.com',
-  role: Role.FARMER,
-  is_verified: true,
-  firstName: null,
-  lastName: null,
-  phone: null,
-  ...overrides,
-});
-
-describe('authHelper', () => {
+describe('authHelper (Firebase Auth)', () => {
   beforeEach(() => {
-    mockGetCurrentUser.mockReset();
+    mockGetUser.mockReset();
   });
 
   test('requireAuth throws AuthenticationError when firebaseUid is missing', async () => {
@@ -36,8 +23,8 @@ describe('authHelper', () => {
     );
   });
 
-  test('requireAuth throws AuthenticationError when the user is missing from the database', async () => {
-    mockGetCurrentUser.mockRejectedValue(new Error('user with firebase_uid firebase-1 not found.'));
+  test('requireAuth throws AuthenticationError when Firebase Auth has no user', async () => {
+    mockGetUser.mockRejectedValue({ code: 'auth/user-not-found' });
 
     await expect(authHelper.requireAuth({ firebaseUid: 'firebase-1' })).rejects.toBeInstanceOf(
       AuthenticationError
@@ -47,8 +34,35 @@ describe('authHelper', () => {
     );
   });
 
+  test('requireAuth returns a UserDTO built from Firebase Auth', async () => {
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-1',
+      email: 'farmer@example.com',
+      emailVerified: true,
+      displayName: 'Rohan Saha',
+      phoneNumber: null,
+      customClaims: {},
+    });
+
+    await expect(authHelper.requireAuth({ firebaseUid: 'firebase-1' })).resolves.toEqual({
+      id: 'firebase-1',
+      firebase_uid: 'firebase-1',
+      email: 'farmer@example.com',
+      role: Role.FARMER,
+      is_verified: true,
+      firstName: 'Rohan',
+      lastName: 'Saha',
+      phone: null,
+    });
+  });
+
   test('requireEmailVerified throws AuthenticationError when the email is not verified', async () => {
-    mockGetCurrentUser.mockResolvedValue(makeUser({ is_verified: false }));
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-1',
+      email: 'farmer@example.com',
+      emailVerified: false,
+      customClaims: {},
+    });
 
     await expect(
       authHelper.requireEmailVerified({ firebaseUid: 'firebase-1' })
@@ -58,16 +72,13 @@ describe('authHelper', () => {
     );
   });
 
-  test('requireRole throws AuthenticationError when the email is not verified', async () => {
-    mockGetCurrentUser.mockResolvedValue(makeUser({ is_verified: false, role: Role.ADMIN }));
-
-    await expect(
-      authHelper.requireRole({ firebaseUid: 'firebase-1' }, [Role.ADMIN])
-    ).rejects.toBeInstanceOf(AuthenticationError);
-  });
-
   test('requireRole throws ForbiddenError when the user lacks the required role', async () => {
-    mockGetCurrentUser.mockResolvedValue(makeUser({ role: Role.FARMER }));
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-1',
+      email: 'farmer@example.com',
+      emailVerified: true,
+      customClaims: {},
+    });
 
     await expect(
       authHelper.requireRole({ firebaseUid: 'firebase-1' }, [Role.ADMIN])
@@ -77,23 +88,50 @@ describe('authHelper', () => {
     ).rejects.toThrow('You do not have permission to access this resource.');
   });
 
-  test('requireOwnerOrAdmin throws ForbiddenError when the user is neither the owner nor an admin', async () => {
-    mockGetCurrentUser.mockResolvedValue(makeUser({ id: 'user-1', role: Role.FARMER }));
+  test('requireRole treats mississippifarmtoschool.org emails as ADMIN', async () => {
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-admin',
+      email: 'staff@mississippifarmtoschool.org',
+      emailVerified: true,
+      customClaims: {},
+    });
 
     await expect(
-      authHelper.requireOwnerOrAdmin({ firebaseUid: 'firebase-1' }, 'user-2')
-    ).rejects.toBeInstanceOf(ForbiddenError);
+      authHelper.requireRole({ firebaseUid: 'firebase-admin' }, [Role.ADMIN])
+    ).resolves.toMatchObject({
+      id: 'firebase-admin',
+      role: Role.ADMIN,
+      is_verified: true,
+    });
+  });
+
+  test('requireOwnerOrAdmin throws ForbiddenError when the user is neither the owner nor an admin', async () => {
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-1',
+      email: 'farmer@example.com',
+      emailVerified: true,
+      customClaims: {},
+    });
+
     await expect(
-      authHelper.requireOwnerOrAdmin({ firebaseUid: 'firebase-1' }, 'user-2')
-    ).rejects.toThrow('You do not have permission to access or modify this resource.');
+      authHelper.requireOwnerOrAdmin({ firebaseUid: 'firebase-1' }, 'someone-else')
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   test('requireRole returns the user when all checks pass', async () => {
-    const user = makeUser({ role: Role.ADMIN, is_verified: true });
-    mockGetCurrentUser.mockResolvedValue(user);
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-1',
+      email: 'admin@mississippifarmtoschool.org',
+      emailVerified: true,
+      customClaims: { role: Role.ADMIN },
+    });
 
-    await expect(authHelper.requireRole({ firebaseUid: 'firebase-1' }, [Role.ADMIN])).resolves.toBe(
-      user
-    );
+    await expect(
+      authHelper.requireRole({ firebaseUid: 'firebase-1' }, [Role.ADMIN])
+    ).resolves.toMatchObject({
+      id: 'firebase-1',
+      role: Role.ADMIN,
+      is_verified: true,
+    });
   });
 });

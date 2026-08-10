@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getGraphqlUrl } from '$lib/server/graphql-url';
 
 const GET_IMAGES_QUERY = `
 	query GetImages($farmId: String!) {
@@ -34,7 +35,7 @@ export const GET: RequestHandler = async ({ url, fetch, cookies }) => {
 		headers.Authorization = `Bearer ${token}`;
 	}
 
-	const res = await fetch('http://mfsn-backend:3000/graphql', {
+	const res = await fetch(getGraphqlUrl(), {
 		method: 'POST',
 		headers,
 		body: JSON.stringify({

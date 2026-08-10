@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { getGraphqlUrl } from '$lib/server/graphql-url';
 
 const REQUEST_UPLOAD_MUTATION = `
 	mutation RequestImageUploadUrl($farmId: String!, $contentType: String!) {
@@ -36,7 +37,7 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 		);
 	}
 
-	const res = await fetch('http://mfsn-backend:3000/graphql', {
+	const res = await fetch(getGraphqlUrl(), {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',

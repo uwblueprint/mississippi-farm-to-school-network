@@ -8,10 +8,12 @@ import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
 import { AuthContext } from '@/middlewares/auth';
 import { CompleteUserProfileInput, CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
-import Farm from '@/models/farm.model';
+import FarmService from '@/services/implementations/farmService';
+import IFarmService from '@/services/interfaces/farmService';
 import authHelper from '@/utilities/authHelpers';
 
 const userService: IUserService = new UserService();
+const farmService: IFarmService = new FarmService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 const authService: IAuthService = new AuthService(userService, emailService);
 
@@ -105,7 +107,7 @@ const userResolvers = {
   },
   UserDTO: {
     farms: async (user: UserDTO) => {
-      return Farm.findAll({ where: { owner_user_id: user.id } });
+      return farmService.getFarmsByOwner(user.id);
     },
   },
 };

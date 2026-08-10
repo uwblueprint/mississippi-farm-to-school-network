@@ -6,10 +6,10 @@
  * same `Authorization: Bearer <token>` header sourced from the `token` cookie.
  *
  * SERVER ONLY — safe to import from +page.server.ts / +layout.server.ts / actions.
- * Do NOT import from client components (it hits the internal docker host).
+ * Do NOT import from client components.
  */
 
-const GRAPHQL_ENDPOINT = 'http://mfsn-backend:3000/graphql';
+import { getGraphqlUrl } from '$lib/server/graphql-url';
 
 interface GraphQLError {
 	message: string;
@@ -57,7 +57,7 @@ export async function gqlRequest<T>(opts: GqlRequestOptions): Promise<T> {
 		headers.Authorization = `Bearer ${token}`;
 	}
 
-	const res = await fetchFn(GRAPHQL_ENDPOINT, {
+	const res = await fetchFn(getGraphqlUrl(), {
 		method: 'POST',
 		headers,
 		body: JSON.stringify({ query, variables })

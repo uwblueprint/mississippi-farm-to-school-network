@@ -11,28 +11,63 @@ import {
 } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
-import User from '@/models/user.model';
+import { Collections, getFirestore, newId, toIso } from '@/utilities/firestore';
 
 const Logger = logger(__filename);
 
+type UserDoc = {
+  firebase_uid: string;
+  email: string;
+  role: Role;
+  is_verified: boolean;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+function toUserDTO(id: string, data: UserDoc): UserDTO {
+  return {
+    id,
+    firebase_uid: data.firebase_uid,
+    email: data.email,
+    role: data.role,
+    is_verified: data.is_verified,
+    firstName: data.firstName,
+    lastName: data.lastName,
+    phone: data.phone,
+  };
+}
+
 class UserService implements IUserService {
+  private users() {
+    return getFirestore().collection(Collections.users);
+  }
+
+  private async findByFirebaseUid(
+    firebaseUid: string
+  ): Promise<{ id: string; data: UserDoc } | null> {
+    const snap = await this.users().where('firebase_uid', '==', firebaseUid).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return { id: doc.id, data: doc.data() as UserDoc };
+  }
+
+  private async findByEmail(email: string): Promise<{ id: string; data: UserDoc } | null> {
+    const snap = await this.users().where('email', '==', email).limit(1).get();
+    if (snap.empty) return null;
+    const doc = snap.docs[0];
+    return { id: doc.id, data: doc.data() as UserDoc };
+  }
+
   async getUserById(userId: string): Promise<UserDTO> {
     try {
-      const user = await User.findByPk(userId);
-      if (!user) {
+      const doc = await this.users().doc(userId).get();
+      if (!doc.exists) {
         throw new Error(`User with id ${userId} not found.`);
       }
-
-      return {
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      };
+      return toUserDTO(doc.id, doc.data() as UserDoc);
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -41,24 +76,11 @@ class UserService implements IUserService {
 
   async getUserByEmail(email: string): Promise<UserDTO> {
     try {
-      const user = await User.findOne({
-        where: { email },
-      });
-
-      if (!user) {
+      const found = await this.findByEmail(email);
+      if (!found) {
         throw new Error(`User with email ${email} not found.`);
       }
-
-      return {
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      };
+      return toUserDTO(found.id, found.data);
     } catch (error: unknown) {
       Logger.error(`Failed to get user. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -67,34 +89,22 @@ class UserService implements IUserService {
 
   async verifyUserEmail(email: string): Promise<UserDTO> {
     try {
-      const user = await User.findOne({
-        where: { email },
-      });
-
-      if (!user) {
+      const found = await this.findByEmail(email);
+      if (!found) {
         throw new Error(`User with email ${email} not found.`);
       }
-      if (user.is_verified) {
+      if (found.data.is_verified) {
         throw new Error(`User with email ${email} is already verified.`);
       }
 
-      const firebaseUser = await firebaseAdmin.auth().getUser(user.firebase_uid);
+      const firebaseUser = await firebaseAdmin.auth().getUser(found.data.firebase_uid);
       if (!firebaseUser.emailVerified) {
         throw new AuthenticationError('You must verify your email to access this resource.');
       }
 
-      await user.update({ is_verified: true });
-
-      return {
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: true,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      };
+      const updatedAt = new Date().toISOString();
+      await this.users().doc(found.id).update({ is_verified: true, updatedAt });
+      return toUserDTO(found.id, { ...found.data, is_verified: true, updatedAt });
     } catch (error: unknown) {
       Logger.error(`Failed to verify user. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -103,13 +113,11 @@ class UserService implements IUserService {
 
   async getUserRoleByAuthId(firebaseUid: string): Promise<Role> {
     try {
-      const user = await User.findOne({
-        where: { firebase_uid: firebaseUid },
-      });
-      if (!user) {
+      const found = await this.findByFirebaseUid(firebaseUid);
+      if (!found) {
         throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
-      return user.role;
+      return found.data.role;
     } catch (error: unknown) {
       Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -118,13 +126,11 @@ class UserService implements IUserService {
 
   async getUserIdByAuthId(firebaseUid: string): Promise<string> {
     try {
-      const user = await User.findOne({
-        where: { firebase_uid: firebaseUid },
-      });
-      if (!user) {
+      const found = await this.findByFirebaseUid(firebaseUid);
+      if (!found) {
         throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
-      return user.id;
+      return found.id;
     } catch (error: unknown) {
       Logger.error(`Failed to get user id. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -133,11 +139,11 @@ class UserService implements IUserService {
 
   async getAuthIdById(userId: string): Promise<string> {
     try {
-      const user = await User.findByPk(userId);
-      if (!user) {
+      const doc = await this.users().doc(userId).get();
+      if (!doc.exists) {
         throw new Error(`User with id ${userId} not found.`);
       }
-      return user.firebase_uid;
+      return (doc.data() as UserDoc).firebase_uid;
     } catch (error: unknown) {
       Logger.error(`Failed to get firebase_uid. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -146,22 +152,11 @@ class UserService implements IUserService {
 
   async getCurrentUser(firebaseUid: string): Promise<UserDTO> {
     try {
-      const user = await User.findOne({
-        where: { firebase_uid: firebaseUid },
-      });
-      if (!user) {
+      const found = await this.findByFirebaseUid(firebaseUid);
+      if (!found) {
         throw new Error(`User with firebase_uid ${firebaseUid} not found.`);
       }
-      return {
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      };
+      return toUserDTO(found.id, found.data);
     } catch (error: unknown) {
       Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -170,17 +165,8 @@ class UserService implements IUserService {
 
   async getUsers(): Promise<Array<UserDTO>> {
     try {
-      const users = await User.findAll();
-      return users.map((user) => ({
-        id: user.id,
-        firebase_uid: user.firebase_uid,
-        email: user.email,
-        role: user.role,
-        is_verified: user.is_verified,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        phone: user.phone,
-      }));
+      const snap = await this.users().get();
+      return snap.docs.map((doc) => toUserDTO(doc.id, doc.data() as UserDoc));
     } catch (error: unknown) {
       Logger.error(`Failed to get users. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -192,12 +178,10 @@ class UserService implements IUserService {
     firebaseUid?: string,
     signUpMethod: SignUpMethod = SignUpMethod.PASSWORD
   ): Promise<UserDTO> {
-    let newUser: User;
     let resolvedFirebaseUid: string;
 
     try {
       if (!firebaseUid) {
-        // Create Firebase user
         if (signUpMethod === SignUpMethod.PASSWORD) {
           if (!user.password) {
             throw new Error('Password is required for password signup.');
@@ -211,92 +195,74 @@ class UserService implements IUserService {
           throw new Error(`Unsupported signup method: ${signUpMethod}.`);
         }
       } else {
-        // Verify Firebase user exists
         await firebaseAdmin.auth().getUser(firebaseUid);
         resolvedFirebaseUid = firebaseUid;
       }
 
+      const id = newId();
+      const now = new Date().toISOString();
+      const data: UserDoc = {
+        firebase_uid: resolvedFirebaseUid,
+        email: user.email,
+        role: user.role,
+        is_verified: false,
+        firstName: user.firstName ?? null,
+        lastName: user.lastName ?? null,
+        phone: user.phone ?? null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
       try {
-        newUser = await User.create({
-          firebase_uid: resolvedFirebaseUid,
-          email: user.email,
-          role: user.role,
-          is_verified: false,
-          firstName: user.firstName ?? null,
-          lastName: user.lastName ?? null,
-          phone: user.phone ?? null,
-        });
-      } catch (postgresError) {
-        // Rollback Firebase user creation if Postgres fails
+        await this.users().doc(id).set(data);
+      } catch (firestoreError) {
         if (!firebaseUid) {
           try {
             await firebaseAdmin.auth().deleteUser(resolvedFirebaseUid);
           } catch (firebaseError: unknown) {
-            const errorMessage = [
-              'Failed to rollback Firebase user creation after Postgres user creation failure. Reason =',
-              getErrorMessage(firebaseError),
-              'Orphaned firebase_uid =',
-              resolvedFirebaseUid,
-            ];
-            Logger.error(errorMessage.join(' '));
+            Logger.error(
+              `Failed to rollback Firebase user after Firestore create failure. Reason = ${getErrorMessage(firebaseError)} Orphaned firebase_uid = ${resolvedFirebaseUid}`
+            );
           }
         }
-
-        throw postgresError;
+        throw firestoreError;
       }
+
+      return toUserDTO(id, data);
     } catch (error: unknown) {
       Logger.error(`Failed to create user. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
-
-    return {
-      id: newUser.id,
-      firebase_uid: newUser.firebase_uid,
-      email: newUser.email,
-      role: newUser.role,
-      is_verified: newUser.is_verified,
-      firstName: newUser.firstName,
-      lastName: newUser.lastName,
-      phone: newUser.phone,
-    };
   }
 
   async updateUserById(userId: string, user: UpdateUserDTO): Promise<UserDTO> {
     try {
-      const existingUser = await User.findByPk(userId);
-      if (!existingUser) {
+      const doc = await this.users().doc(userId).get();
+      if (!doc.exists) {
         throw new Error(`User with id ${userId} not found.`);
       }
+      const existing = doc.data() as UserDoc;
 
-      // Update email in Firebase if it changed
-      if (user.email !== existingUser.email) {
+      if (user.email !== existing.email) {
         try {
-          await firebaseAdmin.auth().updateUser(existingUser.firebase_uid, { email: user.email });
+          await firebaseAdmin.auth().updateUser(existing.firebase_uid, { email: user.email });
         } catch (error) {
           Logger.error(`Failed to update Firebase user. Reason = ${getErrorMessage(error)}`);
           throw error;
         }
       }
 
-      // Update in Postgres
-      await existingUser.update({
+      const updated: UserDoc = {
+        ...existing,
         email: user.email,
         role: user.role,
-        firstName: user.firstName ?? existingUser.firstName,
-        lastName: user.lastName ?? existingUser.lastName,
-        phone: user.phone ?? existingUser.phone,
-      });
-
-      return {
-        id: existingUser.id,
-        firebase_uid: existingUser.firebase_uid,
-        email: existingUser.email,
-        role: existingUser.role,
-        is_verified: existingUser.is_verified,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName,
-        phone: existingUser.phone,
+        firstName: user.firstName ?? existing.firstName,
+        lastName: user.lastName ?? existing.lastName,
+        phone: user.phone ?? existing.phone,
+        updatedAt: new Date().toISOString(),
       };
+      await this.users().doc(userId).set(updated);
+      return toUserDTO(userId, updated);
     } catch (error: unknown) {
       Logger.error(`Failed to update user. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -331,31 +297,23 @@ class UserService implements IUserService {
         throw new Error('Phone number must contain exactly 10 digits.');
       }
 
-      const existingUser = await User.findOne({ where: { firebase_uid: input.firebase_uid } });
-      if (!existingUser) {
+      const found = await this.findByFirebaseUid(input.firebase_uid);
+      if (!found) {
         throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
       const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
-
-      await existingUser.update({
+      const updated: UserDoc = {
+        ...found.data,
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: digits,
         role,
-      });
-
-      return {
-        id: existingUser.id,
-        firebase_uid: existingUser.firebase_uid,
-        email: existingUser.email,
-        role: existingUser.role,
-        is_verified: existingUser.is_verified,
-        firstName: existingUser.firstName,
-        lastName: existingUser.lastName,
-        phone: existingUser.phone,
+        updatedAt: new Date().toISOString(),
       };
+      await this.users().doc(found.id).set(updated);
+      return toUserDTO(found.id, updated);
     } catch (error: unknown) {
       Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -364,43 +322,30 @@ class UserService implements IUserService {
 
   async deleteUserById(userId: string): Promise<void> {
     try {
-      const deletedUser = await User.findByPk(userId);
-
-      if (!deletedUser) {
+      const doc = await this.users().doc(userId).get();
+      if (!doc.exists) {
         throw new Error(`User with id ${userId} not found.`);
       }
+      const deletedUser = doc.data() as UserDoc;
 
-      // Delete from Postgres first
-      await User.destroy({
-        where: { id: userId },
-      });
+      await this.users().doc(userId).delete();
 
-      // Then delete from Firebase
       try {
         await firebaseAdmin.auth().deleteUser(deletedUser.firebase_uid);
       } catch (error) {
-        // Rollback: recreate the user in Postgres
         try {
-          await User.create({
-            id: deletedUser.id,
-            firebase_uid: deletedUser.firebase_uid,
-            email: deletedUser.email,
-            role: deletedUser.role,
-            is_verified: deletedUser.is_verified,
-            firstName: deletedUser.firstName,
-            lastName: deletedUser.lastName,
-            phone: deletedUser.phone,
-          });
-        } catch (postgresError: unknown) {
-          const errorMessage = [
-            'Failed to rollback Postgres user deletion after Firebase user deletion failure. Reason =',
-            getErrorMessage(postgresError),
-            'Firebase uid with non-existent Postgres record =',
-            deletedUser.firebase_uid,
-          ];
-          Logger.error(errorMessage.join(' '));
+          await this.users()
+            .doc(userId)
+            .set({
+              ...deletedUser,
+              createdAt: toIso(deletedUser.createdAt),
+              updatedAt: new Date().toISOString(),
+            });
+        } catch (firestoreError: unknown) {
+          Logger.error(
+            `Failed to rollback Firestore user deletion after Firebase delete failure. Reason = ${getErrorMessage(firestoreError)} firebase_uid = ${deletedUser.firebase_uid}`
+          );
         }
-
         throw error;
       }
     } catch (error: unknown) {
@@ -411,47 +356,11 @@ class UserService implements IUserService {
 
   async deleteUserByEmail(email: string): Promise<void> {
     try {
-      const deletedUser = await User.findOne({
-        where: { email },
-      });
-
-      if (!deletedUser) {
+      const found = await this.findByEmail(email);
+      if (!found) {
         throw new Error(`User with email ${email} not found.`);
       }
-
-      // Delete from Postgres first
-      await User.destroy({
-        where: { email },
-      });
-
-      // Then delete from Firebase
-      try {
-        await firebaseAdmin.auth().deleteUser(deletedUser.firebase_uid);
-      } catch (error) {
-        // Rollback: recreate the user in Postgres
-        try {
-          await User.create({
-            id: deletedUser.id,
-            firebase_uid: deletedUser.firebase_uid,
-            email: deletedUser.email,
-            role: deletedUser.role,
-            is_verified: deletedUser.is_verified,
-            firstName: deletedUser.firstName,
-            lastName: deletedUser.lastName,
-            phone: deletedUser.phone,
-          });
-        } catch (postgresError: unknown) {
-          const errorMessage = [
-            'Failed to rollback Postgres user deletion after Firebase user deletion failure. Reason =',
-            getErrorMessage(postgresError),
-            'Firebase uid with non-existent Postgres record =',
-            deletedUser.firebase_uid,
-          ];
-          Logger.error(errorMessage.join(' '));
-        }
-
-        throw error;
-      }
+      await this.deleteUserById(found.id);
     } catch (error: unknown) {
       Logger.error(`Failed to delete user. Reason = ${getErrorMessage(error)}`);
       throw error;
