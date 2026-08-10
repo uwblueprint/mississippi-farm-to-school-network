@@ -12,7 +12,10 @@ const OWNERSHIP_REQUIRED_MESSAGE = 'You do not have permission to access or modi
 
 const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
 
-function resolveRole(email: string | undefined, customClaims?: Record<string, unknown> | null): Role {
+function resolveRole(
+  email: string | undefined,
+  customClaims?: Record<string, unknown> | null
+): Role {
   const claimRole = customClaims?.role;
   if (claimRole === Role.ADMIN || claimRole === Role.FARMER) {
     return claimRole;
@@ -23,7 +26,10 @@ function resolveRole(email: string | undefined, customClaims?: Record<string, un
   return Role.FARMER;
 }
 
-function splitDisplayName(displayName?: string): { firstName: string | null; lastName: string | null } {
+function splitDisplayName(displayName?: string): {
+  firstName: string | null;
+  lastName: string | null;
+} {
   if (!displayName?.trim()) {
     return { firstName: null, lastName: null };
   }
@@ -65,7 +71,9 @@ async function userFromFirebaseAuth(firebaseUid: string): Promise<UserDTO> {
     if (code === 'auth/user-not-found') {
       throw new AuthenticationError(USER_NOT_FOUND_MESSAGE);
     }
-    throw new Error(`Failed to load authenticated user from Firebase Auth: ${getErrorMessage(error)}`);
+    throw new Error(
+      `Failed to load authenticated user from Firebase Auth: ${getErrorMessage(error)}`
+    );
   }
 }
 

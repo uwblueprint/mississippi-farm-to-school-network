@@ -45,7 +45,9 @@ class UserService implements IUserService {
     return getFirestore().collection(Collections.users);
   }
 
-  private async findByFirebaseUid(firebaseUid: string): Promise<{ id: string; data: UserDoc } | null> {
+  private async findByFirebaseUid(
+    firebaseUid: string
+  ): Promise<{ id: string; data: UserDoc } | null> {
     const snap = await this.users().where('firebase_uid', '==', firebaseUid).limit(1).get();
     if (snap.empty) return null;
     const doc = snap.docs[0];
@@ -332,11 +334,13 @@ class UserService implements IUserService {
         await firebaseAdmin.auth().deleteUser(deletedUser.firebase_uid);
       } catch (error) {
         try {
-          await this.users().doc(userId).set({
-            ...deletedUser,
-            createdAt: toIso(deletedUser.createdAt),
-            updatedAt: new Date().toISOString(),
-          });
+          await this.users()
+            .doc(userId)
+            .set({
+              ...deletedUser,
+              createdAt: toIso(deletedUser.createdAt),
+              updatedAt: new Date().toISOString(),
+            });
         } catch (firestoreError: unknown) {
           Logger.error(
             `Failed to rollback Firestore user deletion after Firebase delete failure. Reason = ${getErrorMessage(firestoreError)} firebase_uid = ${deletedUser.firebase_uid}`

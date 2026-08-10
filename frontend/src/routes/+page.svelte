@@ -8,23 +8,12 @@
 
 <main class="home">
 	<div class="home__media" aria-hidden="true">
-		<img
-			class="home__image"
-			src="/images/farm-landscape.png"
-			alt=""
-			fetchpriority="high"
-		/>
+		<img class="home__image" src="/images/farm-landscape.png" alt="" fetchpriority="high" />
 		<div class="home__veil"></div>
 	</div>
 
 	<div class="home__content">
-		<img
-			class="home__logo"
-			src="/images/mfsnLogo.svg"
-			alt=""
-			width="100"
-			height="100"
-		/>
+		<img class="home__logo" src="/images/mfsnLogo.svg" alt="" width="100" height="100" />
 
 		<h1 class="home__brand">Mississippi Farm to School Network</h1>
 
@@ -34,7 +23,12 @@
 
 		<div class="home__actions">
 			<ActionButton variant="primary" href="/farms" label="Farms" class="home__cta" />
-			<ActionButton variant="outline" href="/login" label="Login" class="home__cta home__cta--login" />
+			<ActionButton
+				variant="outline"
+				href="/login"
+				label="Login"
+				class="home__cta home__cta--login"
+			/>
 		</div>
 	</div>
 </main>
@@ -71,13 +65,12 @@
 	.home__veil {
 		position: absolute;
 		inset: 0;
-		background:
-			linear-gradient(
-				160deg,
-				rgba(21, 38, 8, 0.72) 0%,
-				rgba(38, 61, 19, 0.55) 45%,
-				rgba(21, 38, 8, 0.78) 100%
-			);
+		background: linear-gradient(
+			160deg,
+			rgba(21, 38, 8, 0.72) 0%,
+			rgba(38, 61, 19, 0.55) 45%,
+			rgba(21, 38, 8, 0.78) 100%
+		);
 	}
 
 	.home__content {

@@ -452,13 +452,15 @@ class FarmService implements IFarmService {
 
       await this.rejections().doc(id).set(rejectionRecord);
 
-      await this.farms().doc(farmId).set({
-        ...farm,
-        status: FarmStatus.REJECTED,
-        rejection_reason: rejectionReason,
-        rejection_snapshot: this.convertToFarmDTO(farmId, farm),
-        updatedAt: now,
-      } satisfies FarmDoc);
+      await this.farms()
+        .doc(farmId)
+        .set({
+          ...farm,
+          status: FarmStatus.REJECTED,
+          rejection_reason: rejectionReason,
+          rejection_snapshot: this.convertToFarmDTO(farmId, farm),
+          updatedAt: now,
+        } satisfies FarmDoc);
 
       return this.convertToFarmRejectionDTO(id, rejectionRecord);
     } catch (error: unknown) {
@@ -655,10 +657,7 @@ class FarmService implements IFarmService {
     }
   }
 
-  private getRejectedSnapshot(
-    farm: FarmDoc,
-    farmBeforeUpdate: FarmDTO
-  ): Partial<FarmDTO> {
+  private getRejectedSnapshot(farm: FarmDoc, farmBeforeUpdate: FarmDTO): Partial<FarmDTO> {
     if (
       farm.rejection_snapshot &&
       typeof farm.rejection_snapshot === 'object' &&

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import * as admin from 'firebase-admin';
 import type { Firestore } from 'firebase-admin/firestore';
 
@@ -29,7 +30,7 @@ export function getFirestore(): Firestore {
 }
 
 export function newId(): string {
-  return crypto.randomUUID();
+  return randomUUID();
 }
 
 export function toIso(value: unknown): string {
@@ -62,7 +63,10 @@ export function haversineKm(lat1: number, lng1: number, lat2: number, lng2: numb
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
-export function arraysOverlap(a: string[] | undefined | null, b: string[] | undefined | null): boolean {
+export function arraysOverlap(
+  a: string[] | undefined | null,
+  b: string[] | undefined | null
+): boolean {
   if (!a?.length || !b?.length) return false;
   const set = new Set(a);
   return b.some((item) => set.has(item));
