@@ -28,7 +28,7 @@ const userResolvers = {
       context: AuthContext
     ): Promise<UserDTO> => {
       await authHelper.requireOwnerOrAdmin(context, id);
-      return userService.getUserById(id);
+      return userService.getUserByFirebaseUid(id);
     },
     userByEmail: async (
       _parent: undefined,

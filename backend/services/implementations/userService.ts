@@ -150,7 +150,7 @@ class UserService implements IUserService {
     }
   }
 
-  async getCurrentUser(firebaseUid: string): Promise<UserDTO> {
+  async getUserByFirebaseUid(firebaseUid: string): Promise<UserDTO> {
     try {
       const found = await this.findByFirebaseUid(firebaseUid);
       if (!found) {
@@ -158,7 +158,7 @@ class UserService implements IUserService {
       }
       return toUserDTO(found.id, found.data);
     } catch (error: unknown) {
-      Logger.error(`Failed to get user role. Reason = ${getErrorMessage(error)}`);
+      Logger.error(`Failed to get user by firebase_uid. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

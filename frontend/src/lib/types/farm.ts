@@ -66,6 +66,5 @@ export type FarmTag =
 	| 'Processing'
 	| 'Pickup Location'
 	| 'CSA Farm'
-	| 'Mississippi Farm'
 	| 'Farmers Market'
 	| 'Field Trips';

@@ -56,84 +56,7 @@
 	white-space: nowrap;
 }
 
-/* Sort dropdown */
-.farm-sort {
-	position: relative;
-	flex-shrink: 0;
-}
-
-.farm-sort__trigger {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.25rem;
-	border: none;
-	background: none;
-	padding: 0;
-	font-family: inherit;
-	cursor: pointer;
-}
-
-.farm-sort__label {
-	font-size: 1rem;
-	font-weight: 500;
-	color: #131927;
-	white-space: nowrap;
-}
-
-.farm-sort__trigger--selected .farm-sort__label {
-	color: #587244;
-}
-
-.farm-sort__chevron {
-	display: inline-block;
-	transform: rotate(90deg);
-	font-size: 1rem;
-	color: #131927;
-	line-height: 1;
-	transition: transform 0.15s ease;
-}
-
-.farm-sort__trigger--open .farm-sort__chevron {
-	transform: rotate(-90deg);
-}
-
-.farm-sort__menu {
-	position: absolute;
-	top: calc(100% + 0.5rem);
-	right: 0;
-	z-index: 10;
-	min-width: 160px;
-	margin: 0;
-	padding: 0.35rem 0;
-	list-style: none;
-	background: #fff;
-	border: 1px solid #d3d5de;
-	border-radius: 8px;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.farm-sort__option {
-	display: block;
-	width: 100%;
-	border: none;
-	background: none;
-	padding: 0.5rem 1rem;
-	font-family: inherit;
-	font-size: 0.875rem;
-	color: #131927;
-	text-align: left;
-	cursor: pointer;
-}
-
-.farm-sort__option:hover {
-	background: #f5f5f5;
-}
-
-.farm-sort__option--selected {
-	color: #587244;
-	font-weight: 600;
-	background: #f4f7f1;
-}
+/* Sort dropdown: see the shared SortDropdown component for its own scoped styles */
 
 .farm-map-sidebar__list {
 	flex: 1;
@@ -334,52 +257,6 @@
 	color: #9ea0ad;
 }
 
-/* Filter row */
-.farm-filter-row {
-	display: flex;
-	align-items: center;
-	gap: 0.625rem;
-	flex-wrap: wrap;
-}
-
-.farm-filter-row__label {
-	font-size: 1rem;
-	color: #9ea0ad;
-	white-space: nowrap;
-}
-
-.farm-filter-pills {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 0.5rem;
-}
-
-.farm-filter-pill {
-	display: inline-flex;
-	align-items: center;
-	gap: 0.25rem;
-	border: 1px solid #d3d5de;
-	background: #fff;
-	color: #4f545e;
-	border-radius: 16px;
-	padding: 0.3rem 0.75rem 0.3rem 1rem;
-	font-size: 0.875rem;
-	font-weight: 400;
-	cursor: pointer;
-	transition: background-color 0.15s ease;
-	height: 34px;
-}
-
-.farm-filter-pill__chevron {
-	display: inline-block;
-	transform: rotate(90deg);
-	font-size: 0.85rem;
-	line-height: 1;
-}
-
-.farm-filter-pill:hover {
-	background: #f9fafb;
-}
 
 /* Contains overrides for mapboxgl's search components */
 .farm-search .mapboxgl-ctrl-geocoder--icon-search {

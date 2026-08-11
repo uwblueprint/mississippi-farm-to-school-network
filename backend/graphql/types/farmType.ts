@@ -156,6 +156,7 @@ const farmType = gql`
     createFarm(input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
+    rejectFarm(id: ID!, rejectionReason: String!): ActiveFarmRejectionDTO!
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     archiveFarm(id: ID!): FarmDTO!
     unarchiveFarm(id: ID!): FarmDTO!

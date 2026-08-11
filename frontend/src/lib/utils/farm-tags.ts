@@ -4,7 +4,6 @@ const TAG_COLOR_CLASS: Partial<Record<FarmTag, string>> = {
 	Processing: 'blue',
 	'Pickup Location': 'pink',
 	'CSA Farm': 'purple',
-	'Mississippi Farm': 'green',
 	'Field Trips': 'tan'
 };
 
@@ -17,7 +16,6 @@ function hasOption(list: string[] | null | undefined, value: string): boolean {
 }
 
 const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
-	'Mississippi Farm': () => true,
 	Processing: (farm) =>
 		hasOption(farm.food_safety_certifications, 'GAP Certified') ||
 		hasOption(farm.food_safety_certifications, 'Food Safety Plan in Place'),
@@ -31,7 +29,6 @@ const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
 };
 
 const TAG_ORDER: FarmTag[] = [
-	'Mississippi Farm',
 	'Processing',
 	'Pickup Location',
 	'CSA Farm',
@@ -39,10 +36,15 @@ const TAG_ORDER: FarmTag[] = [
 	'Field Trips'
 ];
 
-export function getFarmTags(farm: MapFarm): FarmTag[] {
+export function getFarmTags(
+	farm: Pick<
+		MapFarm,
+		'food_safety_certifications' | 'farm_to_school_sales' | 'farm_experiences' | 'market_sales_data'
+	>
+): FarmTag[] {
 	// Every listed tag has an explicit predicate; default to excluding any tag
 	// that doesn't (safer than silently showing an unimplemented tag on every farm).
-	return TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm) ?? false);
+	return TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm as MapFarm) ?? false);
 }
 
 /** Derive map marker type from FarmDTO option arrays. */

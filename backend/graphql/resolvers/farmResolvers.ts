@@ -1,4 +1,4 @@
-import { AuthenticationError, ForbiddenError } from 'apollo-server';
+import { AuthenticationError, ForbiddenError, UserInputError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
@@ -177,6 +177,26 @@ const farmResolvers = {
       return farmService.approveFarm(id);
     },
 
+    rejectFarm: async (
+      _parent: undefined,
+      { id, rejectionReason }: { id: string; rejectionReason: string },
+      context: AuthContext
+    ): Promise<ActiveFarmRejectionDTO> => {
+      const admin = await authHelper.requireRole(context, [Role.ADMIN]);
+      const trimmed = rejectionReason.trim();
+      if (!trimmed) {
+        throw new UserInputError('A rejection reason is required.');
+      }
+
+      const rejection = await farmService.createFarmRejection(id, admin.id, trimmed);
+      return {
+        id: rejection.id,
+        farm_id: rejection.farm_id,
+        rejection_reason: rejection.rejection_reason,
+        created_at: rejection.created_at,
+      };
+    },
+
     resubmitFarm: async (
       _parent: undefined,
       { id, input }: { id: string; input: UpdateFarmInput },
@@ -224,7 +244,7 @@ const farmResolvers = {
     owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
       try {
         await authHelper.requireRole(context, [Role.ADMIN]);
-        return userService.getUserById(farm.owner_user_id);
+        return userService.getUserByFirebaseUid(farm.owner_user_id);
       } catch (error: unknown) {
         if (error instanceof AuthenticationError || error instanceof ForbiddenError) {
           return null;

@@ -4,9 +4,20 @@
 	import FarmDetailPanel from '$lib/components/map/FarmDetailPanel.svelte';
 	import FarmListItem from '$lib/components/map/FarmListItem.svelte';
 	import FarmSearch from '$lib/components/map/FarmSearch.svelte';
-	import FarmSortDropdown from '$lib/components/map/FarmSortDropdown.svelte';
-	import FilterPills from '$lib/components/map/FilterPills.svelte';
+	import SortDropdown from '$lib/components/SortDropdown.svelte';
+	import FilterPills from '$lib/components/FilterPills.svelte';
 	import type { MapFarm } from '$lib/types/farm';
+
+	const MAP_FILTER_ITEMS = ['Distance', 'Institution Type', 'Products', 'Tags'].map((label) => ({
+		value: label,
+		label
+	}));
+
+	const MAP_SORT_ITEMS = [
+		{ value: 'distance', label: 'Distance' },
+		{ value: 'name-asc', label: 'Name (A–Z)' },
+		{ value: 'name-desc', label: 'Name (Z–A)' }
+	];
 
 	interface Props {
 		farms: MapFarm[];
@@ -25,6 +36,9 @@
 		loading = false,
 		error = null
 	}: Props = $props();
+
+	/** Local only for now — map sort is not wired to the list yet. */
+	let sortBy = $state<string | null>(null);
 
 	const selectedFarm = $derived(farms.find((farm) => farm.id === selectedFarmId) ?? null);
 	const selectedFarmIndex = $derived(
@@ -75,10 +89,21 @@
 					</span>
 				</div>
 
-				<FarmSortDropdown />
+				<SortDropdown
+					items={MAP_SORT_ITEMS}
+					bind:selected={sortBy}
+					showSelectedLabel
+					ariaLabel="Sort farms by"
+				/>
 			</div>
 
-			<FilterPills />
+			<FilterPills
+				items={MAP_FILTER_ITEMS}
+				selectable={false}
+				showChevron
+				groupLabel="Filters"
+				ariaLabel="Farm filters"
+			/>
 		</div>
 
 		<div class="farm-map-sidebar__list">

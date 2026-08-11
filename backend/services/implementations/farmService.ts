@@ -405,7 +405,7 @@ class FarmService implements IFarmService {
     const subject = 'Your Farm Has Been Approved!';
 
     try {
-      const owner = await userService.getUserById(updatedFarm.owner_user_id);
+      const owner = await userService.getUserByFirebaseUid(updatedFarm.owner_user_id);
       const greeting = owner.firstName
         ? `Congratulations, ${owner.firstName}!`
         : 'Congratulations!';
@@ -433,6 +433,9 @@ class FarmService implements IFarmService {
     rejectedByUserId: string,
     rejectionReason: string
   ): Promise<FarmRejectionDTO> {
+    let rejection: FarmRejectionDTO;
+    let farmDto: FarmDTO;
+
     try {
       const { data: farm } = await this.getFarmDoc(farmId);
       const farmSnapshot = this.convertToFarmSnapshot(farmId, farm);
@@ -462,11 +465,37 @@ class FarmService implements IFarmService {
           updatedAt: now,
         } satisfies FarmDoc);
 
-      return this.convertToFarmRejectionDTO(id, rejectionRecord);
+      rejection = this.convertToFarmRejectionDTO(id, rejectionRecord);
+      farmDto = this.convertToFarmDTO(farmId, {
+        ...farm,
+        status: FarmStatus.REJECTED,
+        rejection_reason: rejectionReason,
+        updatedAt: now,
+      });
     } catch (error: unknown) {
       Logger.error(`Failed to create farm rejection. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+
+    try {
+      const owner = await userService.getUserByFirebaseUid(farmDto.owner_user_id);
+      const greeting = owner.firstName ? `Hi ${owner.firstName},` : 'Hi,';
+      await emailService.sendEmail(owner.email, 'Changes requested for your farm application', {
+        title: 'Changes requested for your farm application',
+        previewText: 'Your farm application needs updates before it can be approved.',
+        recipientName: owner.firstName || undefined,
+        body: `${greeting} Your farm ${farmDto.farm_name} was not approved yet. Please update your application and resubmit.\n\nReason:\n${rejectionReason}`,
+        ctaText: 'Update your farm',
+        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/farmer/farms`,
+        isFarmerEmail: true,
+      });
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm rejected but failed to send rejection email. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return rejection;
   }
 
   async getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null> {
