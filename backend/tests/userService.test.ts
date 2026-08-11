@@ -1,87 +1,117 @@
-import User from '@/models/user.model';
-import UserService from '@/services/implementations/userService';
-import { Role } from '@/types';
+import { Role, SignUpMethod } from '@/types';
+import { FakeFirestore } from './helpers/fakeFirestore';
 
-const mockUpdateFirebaseUser = jest.fn();
+let mockFirestoreInstance: FakeFirestore;
 
-jest.mock('firebase-admin', () => ({
-  auth: jest.fn(() => ({
-    updateUser: mockUpdateFirebaseUser,
-  })),
+jest.mock('@/utilities/firestore', () => ({
+  ...jest.requireActual('@/utilities/firestore'),
+  getFirestore: () => mockFirestoreInstance,
 }));
 
-jest.mock('@/models/user.model');
+const mockFirebaseGetUser = jest.fn();
+const mockFirebaseCreateUser = jest.fn();
+const mockFirebaseUpdateUser = jest.fn();
+const mockFirebaseDeleteUser = jest.fn();
 
-const MockUser = User as jest.Mocked<typeof User>;
-
-const makeUserInstance = (overrides: Partial<Record<string, unknown>> = {}) => ({
-  id: 'user-1',
-  firebase_uid: 'firebase-1',
-  email: 'old@example.com',
-  role: Role.ADMIN,
-  is_verified: true,
-  firstName: null,
-  lastName: null,
-  phone: null,
-  update: jest.fn().mockImplementation(async function (
-    this: Record<string, unknown>,
-    values: Record<string, unknown>
-  ) {
-    Object.assign(this, values);
-    return this;
+jest.mock('firebase-admin', () => ({
+  auth: () => ({
+    getUser: mockFirebaseGetUser,
+    createUser: mockFirebaseCreateUser,
+    updateUser: mockFirebaseUpdateUser,
+    deleteUser: mockFirebaseDeleteUser,
   }),
-  ...overrides,
-});
+}));
 
-describe('UserService.updateUserById', () => {
+import UserService from '@/services/implementations/userService';
+
+describe('UserService (Firestore)', () => {
   let service: UserService;
 
   beforeEach(() => {
+    mockFirestoreInstance = new FakeFirestore();
     service = new UserService();
-    mockUpdateFirebaseUser.mockReset();
-    MockUser.findByPk.mockReset();
+    mockFirebaseGetUser.mockReset();
+    mockFirebaseCreateUser.mockReset();
+    mockFirebaseUpdateUser.mockReset();
+    mockFirebaseDeleteUser.mockReset();
   });
 
-  test('updates email and role', async () => {
-    const existingUser = makeUserInstance();
-    MockUser.findByPk.mockResolvedValue(existingUser as any);
+  test('createUser stores the Firestore doc under the Firebase Auth uid, not a random id', async () => {
+    mockFirebaseCreateUser.mockResolvedValue({ uid: 'firebase-uid-123' });
 
-    const result = await service.updateUserById('user-1', {
-      email: 'new@example.com',
-      role: Role.FARMER,
-    });
+    const created = await service.createUser(
+      {
+        email: 'farmer@example.com',
+        password: 'hunter2',
+        role: Role.FARMER,
+      },
+      undefined,
+      SignUpMethod.PASSWORD
+    );
 
-    expect(mockUpdateFirebaseUser).toHaveBeenCalledWith('firebase-1', {
-      email: 'new@example.com',
-    });
-    expect(existingUser.update).toHaveBeenCalledWith({
-      email: 'new@example.com',
-      role: Role.FARMER,
-      firstName: null,
-      lastName: null,
-      phone: null,
-    });
-    expect(result.email).toBe('new@example.com');
-    expect(result.role).toBe(Role.FARMER);
+    // authHelpers.ts derives UserDTO.id from the Firebase uid directly, so the
+    // Firestore doc id must match it for lookups like getUserById to work.
+    expect(created.id).toBe('firebase-uid-123');
+
+    const fetched = await service.getUserById('firebase-uid-123');
+    expect(fetched.email).toBe('farmer@example.com');
+    expect(fetched.id).toBe('firebase-uid-123');
   });
 
-  test('does not call Firebase when the email address is unchanged', async () => {
-    const existingUser = makeUserInstance();
-    MockUser.findByPk.mockResolvedValue(existingUser as any);
+  test('createUser with a pre-existing Firebase uid (e.g. OAuth) also keys the doc by that uid', async () => {
+    mockFirebaseGetUser.mockResolvedValue({ uid: 'oauth-uid-456' });
 
-    const result = await service.updateUserById('user-1', {
-      email: 'old@example.com',
-      role: Role.FARMER,
-    });
+    const created = await service.createUser(
+      { email: 'oauth@example.com', role: Role.FARMER },
+      'oauth-uid-456',
+      SignUpMethod.GOOGLE
+    );
 
-    expect(mockUpdateFirebaseUser).not.toHaveBeenCalled();
-    expect(existingUser.update).toHaveBeenCalledWith({
-      email: 'old@example.com',
-      role: Role.FARMER,
-      firstName: null,
-      lastName: null,
-      phone: null,
+    expect(created.id).toBe('oauth-uid-456');
+    await expect(service.getUserById('oauth-uid-456')).resolves.toMatchObject({
+      email: 'oauth@example.com',
     });
-    expect(result.role).toBe(Role.FARMER);
+  });
+
+  test('findByFirebaseUid-backed lookups (getUserIdByAuthId, getUserByFirebaseUid) resolve after createUser', async () => {
+    mockFirebaseCreateUser.mockResolvedValue({ uid: 'firebase-uid-789' });
+    await service.createUser(
+      { email: 'me@example.com', password: 'hunter2', role: Role.ADMIN },
+      undefined,
+      SignUpMethod.PASSWORD
+    );
+
+    await expect(service.getUserIdByAuthId('firebase-uid-789')).resolves.toBe('firebase-uid-789');
+    await expect(service.getUserByFirebaseUid('firebase-uid-789')).resolves.toMatchObject({
+      id: 'firebase-uid-789',
+      email: 'me@example.com',
+    });
+    await expect(service.getAuthIdById('firebase-uid-789')).resolves.toBe('firebase-uid-789');
+  });
+
+  test('getUserById throws for an id with no matching Firestore doc', async () => {
+    await expect(service.getUserById('does-not-exist')).rejects.toThrow('not found');
+  });
+
+  test('updateUserById and deleteUserById work when passed the Firebase uid (self-service paths)', async () => {
+    mockFirebaseCreateUser.mockResolvedValue({ uid: 'firebase-uid-self' });
+    await service.createUser(
+      { email: 'self@example.com', password: 'hunter2', role: Role.FARMER },
+      undefined,
+      SignUpMethod.PASSWORD
+    );
+
+    // userResolvers.ts's updateUser/deleteUserById pass the caller's own `id`
+    // (a Firebase uid, from `me.id`/authHelpers) straight through to these methods.
+    const updated = await service.updateUserById('firebase-uid-self', {
+      email: 'self@example.com',
+      role: Role.FARMER,
+      firstName: 'New',
+      lastName: 'Name',
+    });
+    expect(updated.firstName).toBe('New');
+
+    await service.deleteUserById('firebase-uid-self');
+    await expect(service.getUserById('firebase-uid-self')).rejects.toThrow('not found');
   });
 });

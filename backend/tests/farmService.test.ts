@@ -1,841 +1,133 @@
-import { Op } from 'sequelize';
+import { CreateFarmInput, FarmRejectionResolutionType, FarmStatus, Role } from '@/types';
+import { FakeFirestore } from './helpers/fakeFirestore';
+
+let mockFirestoreInstance: FakeFirestore;
+
+jest.mock('@/utilities/firestore', () => ({
+  ...jest.requireActual('@/utilities/firestore'),
+  getFirestore: () => mockFirestoreInstance,
+}));
+
+const mockSendEmail = jest.fn();
+jest.mock('@/services/implementations/emailService', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({ sendEmail: mockSendEmail })),
+}));
+
+const mockGetUserByFirebaseUid = jest.fn();
+jest.mock('@/services/implementations/userService', () => ({
+  __esModule: true,
+  default: jest.fn().mockImplementation(() => ({
+    getUserByFirebaseUid: mockGetUserByFirebaseUid,
+  })),
+}));
+
 import FarmService from '@/services/implementations/farmService';
-import EmailService from '@/services/implementations/emailService';
-import Farm from '@/models/farm.model';
-import { FarmStatus } from '@/types';
 
-const mockSendEmail = jest.spyOn(EmailService.prototype, 'sendEmail').mockResolvedValue(undefined);
-
-// Mock the entire Farm model module
-jest.mock('@/models/farm.model');
-
-const MockFarm = Farm as jest.Mocked<typeof Farm>;
-
-// ─── helpers ────────────────────────────────────────────────────────────────
-
-/** Minimal Farm row returned by findAll */
-const makeFarmRow = (overrides: Partial<Record<string, unknown>> = {}) => ({
-  id: 'uuid-1',
-  owner_user_id: 'owner-1',
-  usda_farm_id: '1001',
+const baseInput: CreateFarmInput = {
   farm_name: 'Test Farm',
-  primary_phone: '555-0100',
-  primary_email: 'farm@test.com',
-  website: null,
-  social_media: null,
+  primary_phone: '555-555-5555',
+  primary_email: 'farm@example.com',
   farm_address: '123 Farm Rd',
+  usda_farm_id: 'usda-1',
   county: 'Hinds',
-  cities_served: ['Jackson', 'Ridgeland'],
-  location: { type: 'Point', coordinates: [-90.18, 32.3] },
-  seasonal_products: ['Fruits and Vegetables', 'Herbs'],
+  location: { lat: 32.3, lng: -90.18 },
+  seasonal_products: [],
   meat_products: [],
   other_products: [],
-  seasonal_products_detail: 'A test farm',
-  meat_products_detail: null,
-  other_products_detail: null,
-  market_sales_data: null,
   growing_practices: [],
   food_safety_certifications: [],
-  farm_experiences: [],
-  farm_characteristics: [],
-  farm_to_school_sales: [],
-  f2s_experience: null,
-  minimum_order: null,
-  delivery_details: null,
-  cover_photo: null,
-  carousel_photos: [],
-  status: FarmStatus.APPROVED,
-  createdAt: new Date('2025-01-01'),
-  updatedAt: new Date('2025-06-01'),
-  toJSON() {
-    return { ...this };
-  },
-  ...overrides,
-});
+};
 
-// ─── tests ──────────────────────────────────────────────────────────────────
-
-describe('FarmService.getFarms', () => {
-  let service: FarmService;
-
-  // Ordering applied to every farm list query (mirrors FARM_LIST_ORDER in the implementation).
-  const FARM_LIST_ORDER: [string, string][] = [
-    ['county', 'ASC'],
-    ['farm_name', 'ASC'],
-  ];
-
-  beforeEach(() => {
-    service = new FarmService();
-    MockFarm.findAll.mockReset();
-  });
-
-  // ── no filter ──────────────────────────────────────────────────────────────
-
-  test('no filter: returns all farms', async () => {
-    const rows = [makeFarmRow(), makeFarmRow({ id: 'uuid-2', farm_name: 'Farm 2' })];
-    MockFarm.findAll.mockResolvedValue(rows as any);
-
-    const result = await service.getFarms();
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
-    expect(result).toHaveLength(2);
-  });
-
-  test('filter with all fields undefined: returns all farms', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, {});
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
-  });
-
-  test('no farms in database: returns empty array', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    const result = await service.getFarms();
-
-    expect(result).toEqual([]);
-  });
-
-  // ── status filter ──────────────────────────────────────────────────────────
-
-  test('filter by status: passes status to where clause', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.APPROVED },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('filter by status PENDING_APPROVAL', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    await service.getFarms(undefined, undefined, { status: FarmStatus.PENDING_APPROVAL });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.PENDING_APPROVAL },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  // ── approved convenience filter ───────────────────────────────────────────
-
-  test('filter approved=true: sets status to APPROVED', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { approved: true });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.APPROVED },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('filter approved=false: excludes APPROVED farms', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    await service.getFarms(undefined, undefined, { approved: false });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: { [Op.ne]: FarmStatus.APPROVED } },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('status filter takes precedence over approved flag', async () => {
-    // When both status and approved provided, status wins
-    MockFarm.findAll.mockResolvedValue([]);
-
-    await service.getFarms(undefined, undefined, { status: FarmStatus.REJECTED, approved: true });
-
-    const call = MockFarm.findAll.mock.calls[0][0] as any;
-    expect(call.where.status).toBe(FarmStatus.REJECTED);
-  });
-
-  // ── array filters ─────────────────────────────────────────────────────────
-
-  test('filter by counties: uses Op.in', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { counties: ['Hinds'] });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { county: { [Op.in]: ['Hinds'] } },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('filter by cities_served: uses Op.overlap', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { cities_served: ['Jackson'] });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { cities_served: { [Op.overlap]: ['Jackson'] } },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('filter by seasonal_products: uses Op.overlap', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { seasonal_products: ['Fruits and Vegetables'] });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] } },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('empty array filter: ignores empty array, returns all farms', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { counties: [], seasonal_products: [] });
-
-    // Empty arrays should not add where conditions
-    expect(MockFarm.findAll).toHaveBeenCalledWith({ where: {}, order: FARM_LIST_ORDER });
-  });
-
-  // ── combined filters ──────────────────────────────────────────────────────
-
-  test('combining status + counties + seasonal_products', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, {
-      status: FarmStatus.APPROVED,
-      counties: ['Hinds'],
-      seasonal_products: ['Fruits and Vegetables'],
-    });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: {
-        status: FarmStatus.APPROVED,
-        county: { [Op.in]: ['Hinds'] },
-        seasonal_products: { [Op.overlap]: ['Fruits and Vegetables'] },
-      },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  // ── pagination ────────────────────────────────────────────────────────────
-
-  test('paginates with limit and offset when both page args provided', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(2, 10);
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: {},
-      order: FARM_LIST_ORDER,
-      limit: 10,
-      offset: 10,
-    });
-  });
-
-  test('first page uses offset 0', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(1, 25, { counties: ['Hinds'] });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { county: { [Op.in]: ['Hinds'] } },
-      order: FARM_LIST_ORDER,
-      limit: 25,
-      offset: 0,
-    });
-  });
-
-  test('does not paginate when only pageNumber is provided', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(3);
-
-    const call = MockFarm.findAll.mock.calls[0][0] as any;
-    expect(call.limit).toBeUndefined();
-    expect(call.offset).toBeUndefined();
-  });
-
-  test('pageSize at the max cap is allowed', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(1, 100);
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: {},
-      order: FARM_LIST_ORDER,
-      limit: 100,
-      offset: 0,
-    });
-  });
-
-  test('pageSize above the max cap: throws', async () => {
-    await expect(service.getFarms(1, 101)).rejects.toThrow('pageSize must not exceed 100');
-    expect(MockFarm.findAll).not.toHaveBeenCalled();
-  });
-
-  // ── archived filter ─────────────────────────────────────────────────────────
-
-  test('default (no is_archived): returns all farms with no archived constraint', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED });
-
-    const call = MockFarm.findAll.mock.calls[0][0] as any;
-    expect(call.where.is_archived).toBeUndefined();
-  });
-
-  test('is_archived=true: returns only archived farms', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow({ is_archived: true })] as any);
-
-    await service.getFarms(undefined, undefined, { is_archived: true });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { is_archived: true },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  test('is_archived=false explicitly: excludes archived farms', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarms(undefined, undefined, { is_archived: false });
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { is_archived: false },
-      order: FARM_LIST_ORDER,
-    });
-  });
-
-  // ── filters matching no farms ─────────────────────────────────────────────
-
-  test('filters matching no farms: returns empty array', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    const result = await service.getFarms(undefined, undefined, {
-      counties: ['NonExistentCounty'],
-    });
-
-    expect(result).toEqual([]);
-  });
-
-  // ── DTO shape ─────────────────────────────────────────────────────────────
-
-  test('returned FarmDTO has correct shape and ISO timestamps', async () => {
-    const row = makeFarmRow();
-    MockFarm.findAll.mockResolvedValue([row] as any);
-
-    const [dto] = await service.getFarms();
-
-    expect(dto).toMatchObject({
-      id: 'uuid-1',
-      owner_user_id: 'owner-1',
-      usda_farm_id: '1001',
-      farm_name: 'Test Farm',
-      county: 'Hinds',
-      seasonal_products: ['Fruits and Vegetables', 'Herbs'],
-      status: FarmStatus.APPROVED,
-    });
-    expect(dto.createdAt).toBe(new Date('2025-01-01').toISOString());
-    expect(dto.updatedAt).toBe(new Date('2025-06-01').toISOString());
-  });
-
-  // ── error propagation ─────────────────────────────────────────────────────
-
-  test('propagates database errors', async () => {
-    MockFarm.findAll.mockRejectedValue(new Error('DB connection failed'));
-
-    await expect(service.getFarms()).rejects.toThrow('DB connection failed');
-  });
-});
-
-// ─── FarmService.getFarmsByProximity ─────────────────────────────────────────
-
-describe('FarmService.getFarmsByProximity', () => {
-  let service: FarmService;
-
-  const lat = 32.3;
-  const lng = -90.18;
-  const radiusKm = 10;
-
-  const getFindAllCall = () => MockFarm.findAll.mock.calls[0][0] as Record<string, unknown>;
-
-  const getLiteralSql = (value: unknown): string => {
-    if (value && typeof value === 'object' && 'val' in value) {
-      return String((value as { val: string }).val);
-    }
-    return String(value);
-  };
-
-  const getProximitySql = () => {
-    const call = getFindAllCall();
-    const dWithinClause = (call.where as Record<string, unknown>).location;
-    const orderEntry = (call.order as [unknown, string][])[0];
-
-    return {
-      where: call.where,
-      dWithinSql: getLiteralSql(dWithinClause),
-      distanceOrderSql: getLiteralSql(orderEntry[0]),
-      distanceOrderDirection: orderEntry[1],
-    };
-  };
-
-  beforeEach(() => {
-    service = new FarmService();
-    MockFarm.findAll.mockReset();
-  });
-
-  test('queries approved farms within radius using ST_DWithin', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    const { where, dWithinSql } = getProximitySql();
-
-    expect(where).toMatchObject({ status: FarmStatus.APPROVED });
-    expect(dWithinSql).toContain('ST_DWithin');
-    expect(dWithinSql).toContain(`ST_MakePoint(${lng}, ${lat})`);
-    expect(dWithinSql).toContain('4326');
-    expect(dWithinSql).toContain(`${radiusKm * 1000}`);
-  });
-
-  test('excludes archived farms from proximity search', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    expect(getProximitySql().where).toMatchObject({ is_archived: false });
-  });
-
-  test('sorts results by ST_Distance ascending', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    const { distanceOrderSql, distanceOrderDirection } = getProximitySql();
-
-    expect(distanceOrderSql).toContain('ST_Distance');
-    expect(distanceOrderSql).toContain(`ST_MakePoint(${lng}, ${lat})`);
-    expect(distanceOrderDirection).toBe('ASC');
-  });
-
-  test('returns farms inside the radius as FarmDTOs', async () => {
-    const nearbyFarm = makeFarmRow({ id: 'uuid-near', farm_name: 'Nearby Farm' });
-    MockFarm.findAll.mockResolvedValue([nearbyFarm] as any);
-
-    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
-      id: 'uuid-near',
-      farm_name: 'Nearby Farm',
-      location: { lat: 32.3, lng: -90.18 },
-    });
-  });
-
-  test('returns an empty array when no farms exist', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    expect(result).toEqual([]);
-  });
-
-  test('returns an empty array when all farms are outside the radius', async () => {
-    MockFarm.findAll.mockResolvedValue([]);
-
-    const result = await service.getFarmsByProximity(lat, lng, 1);
-
-    expect(result).toEqual([]);
-    expect(getProximitySql().dWithinSql).toContain('1000');
-  });
-
-  test('preserves findAll result order (closest first)', async () => {
-    const farther = makeFarmRow({ id: 'uuid-far', farm_name: 'Farther Farm' });
-    const closer = makeFarmRow({ id: 'uuid-close', farm_name: 'Closer Farm' });
-    MockFarm.findAll.mockResolvedValue([closer, farther] as any);
-
-    const result = await service.getFarmsByProximity(lat, lng, radiusKm);
-
-    expect(result.map((farm) => farm.id)).toEqual(['uuid-close', 'uuid-far']);
-  });
-
-  test('propagates database errors', async () => {
-    MockFarm.findAll.mockRejectedValue(new Error('PostGIS query failed'));
-
-    await expect(service.getFarmsByProximity(lat, lng, radiusKm)).rejects.toThrow(
-      'PostGIS query failed'
-    );
-  });
-});
-
-// ─── FarmService.getFarmsByStatus ────────────────────────────────────────────
-
-describe('FarmService.getFarmsByStatus', () => {
+describe('FarmService (Firestore)', () => {
   let service: FarmService;
 
   beforeEach(() => {
+    mockFirestoreInstance = new FakeFirestore();
     service = new FarmService();
-    MockFarm.findAll.mockReset();
-  });
-
-  test('excludes archived farms', async () => {
-    MockFarm.findAll.mockResolvedValue([makeFarmRow()] as any);
-
-    await service.getFarmsByStatus(FarmStatus.PENDING_APPROVAL);
-
-    expect(MockFarm.findAll).toHaveBeenCalledWith({
-      where: { status: FarmStatus.PENDING_APPROVAL, is_archived: false },
+    mockSendEmail.mockReset().mockResolvedValue(undefined);
+    mockGetUserByFirebaseUid.mockReset().mockResolvedValue({
+      id: 'owner-1',
+      firebase_uid: 'owner-1',
+      email: 'owner@example.com',
+      role: Role.FARMER,
+      is_verified: true,
+      firstName: 'Owner',
+      lastName: 'One',
+      phone: null,
     });
   });
-});
 
-// ─── FarmService.archiveFarm / unarchiveFarm ─────────────────────────────────
-
-describe('FarmService.archiveFarm / unarchiveFarm', () => {
-  let service: FarmService;
-
-  const makeInstance = (overrides: Partial<Record<string, unknown>> = {}) => {
-    const data = { ...makeFarmRow(), ...overrides };
-    return {
-      ...data,
-      save: jest.fn().mockResolvedValue(undefined),
-      reload: jest.fn().mockResolvedValue(undefined),
-      toJSON() {
-        return { ...this };
-      },
-    };
-  };
-
-  beforeEach(() => {
-    service = new FarmService();
-    MockFarm.findByPk.mockReset();
-  });
-
-  test('archiveFarm sets is_archived to true and persists', async () => {
-    const instance = makeInstance({ is_archived: false });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.archiveFarm('uuid-1');
-
-    expect((instance as any).is_archived).toBe(true);
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(result.is_archived).toBe(true);
-  });
-
-  test('archiveFarm does not change the farm status', async () => {
-    const instance = makeInstance({ is_archived: false, status: FarmStatus.APPROVED });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.archiveFarm('uuid-1');
-
-    expect(result.status).toBe(FarmStatus.APPROVED);
-  });
-
-  test('archiveFarm is a no-op when already archived', async () => {
-    const instance = makeInstance({ is_archived: true });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.archiveFarm('uuid-1');
-
-    expect(instance.save).not.toHaveBeenCalled();
-    expect(result.is_archived).toBe(true);
-  });
-
-  test('archiveFarm throws when the farm does not exist', async () => {
-    MockFarm.findByPk.mockResolvedValue(null);
-
-    await expect(service.archiveFarm('missing')).rejects.toThrow('Farm with id missing not found.');
-  });
-
-  test('unarchiveFarm sets is_archived to false and persists', async () => {
-    const instance = makeInstance({ is_archived: true });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.unarchiveFarm('uuid-1');
-
-    expect((instance as any).is_archived).toBe(false);
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(result.is_archived).toBe(false);
-  });
-
-  test('unarchiveFarm preserves the farm status (restores prior state)', async () => {
-    const instance = makeInstance({ is_archived: true, status: FarmStatus.REJECTED });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.unarchiveFarm('uuid-1');
-
-    expect(result.status).toBe(FarmStatus.REJECTED);
-  });
-
-  test('unarchiveFarm is a no-op when not archived', async () => {
-    const instance = makeInstance({ is_archived: false });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.unarchiveFarm('uuid-1');
-
-    expect(instance.save).not.toHaveBeenCalled();
-    expect(result.is_archived).toBe(false);
-  });
-
-  test('unarchiveFarm throws when the farm does not exist', async () => {
-    MockFarm.findByPk.mockResolvedValue(null);
-
-    await expect(service.unarchiveFarm('missing')).rejects.toThrow(
-      'Farm with id missing not found.'
-    );
-  });
-});
-
-// ─── FarmService.updateFarm ──────────────────────────────────────────────────
-
-describe('FarmService.updateFarm', () => {
-  let service: FarmService;
-
-  /** Creates a mock Farm instance (as returned by findByPk) */
-  const makeFarmInstance = (overrides: Partial<Record<string, unknown>> = {}) => {
-    const data: Record<string, unknown> = {
-      id: 'uuid-1',
-      owner_user_id: 'owner-1',
-      usda_farm_id: '1001',
-      farm_name: 'Original Name',
-      primary_phone: '555-0100',
-      primary_email: 'farm@test.com',
-      website: null,
-      social_media: null,
-      farm_address: '123 Farm Rd',
-      county: 'Hinds',
-      cities_served: ['Jackson'],
-      location: { type: 'Point', coordinates: [-90.18, 32.3] },
-      seasonal_products: ['Fruits and Vegetables'],
-      meat_products: [],
-      other_products: [],
-      seasonal_products_detail: 'Original description',
-      meat_products_detail: null,
-      other_products_detail: null,
-      market_sales_data: null,
-      growing_practices: [],
-      food_safety_certifications: [],
-      farm_experiences: [],
-      farm_characteristics: [],
-      farm_to_school_sales: [],
-      f2s_experience: null,
-      minimum_order: null,
-      delivery_details: null,
-      cover_photo: null,
-      carousel_photos: [],
-      status: FarmStatus.PENDING_APPROVAL,
-      createdAt: new Date('2025-01-01'),
-      updatedAt: new Date('2025-06-01'),
-      ...overrides,
-    };
-
-    const freshUpdatedAt = new Date('2025-06-02T12:00:00.000Z');
-
-    return {
-      ...data,
-      save: jest.fn().mockResolvedValue(undefined),
-      reload: jest.fn().mockImplementation(function (this: Record<string, unknown>) {
-        // Simulate database refreshing updatedAt after save
-        this.updatedAt = freshUpdatedAt;
-        return Promise.resolve(undefined);
-      }),
-      toJSON() {
-        return { ...this };
-      },
-    };
-  };
-
-  beforeEach(() => {
-    service = new FarmService();
-    mockSendEmail.mockClear();
-  });
-
-  // ── partial update ────────────────────────────────────────────────────────
-
-  test('single field partial update: only that field is changed', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', { farm_name: 'New Name' });
-
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(result.farm_name).toBe('New Name');
-    // Other fields unchanged
-    expect(result.seasonal_products_detail).toBe('Original description');
-    expect(result.primary_phone).toBe('555-0100');
-  });
-
-  test('multiple fields update: all provided fields change', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', {
-      farm_name: 'Updated Farm',
-      seasonal_products_detail: 'New description',
-      primary_phone: '555-9999',
+  describe('createFarm', () => {
+    test('creates a farm and reserves its usda_farm_id', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      expect(farm.owner_user_id).toBe('owner-1');
+      expect(farm.usda_farm_id).toBe('usda-1');
+      expect(farm.status).toBe(FarmStatus.PENDING_APPROVAL);
     });
 
-    expect(result.farm_name).toBe('Updated Farm');
-    expect(result.seasonal_products_detail).toBe('New description');
-    expect(result.primary_phone).toBe('555-9999');
-  });
+    test('rejects a second farm created with an already-used usda_farm_id', async () => {
+      await service.createFarm('owner-1', baseInput);
 
-  // ── timestamp verification ────────────────────────────────────────────────
-
-  test('reload() is called after save to get fresh updatedAt', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    await service.updateFarm('uuid-1', { farm_name: 'New Name' });
-
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(instance.reload).toHaveBeenCalledTimes(1);
-    // reload must be called AFTER save
-    const saveOrder = (instance.save as jest.Mock).mock.invocationCallOrder[0];
-    const reloadOrder = (instance.reload as jest.Mock).mock.invocationCallOrder[0];
-    expect(reloadOrder).toBeGreaterThan(saveOrder);
-  });
-
-  test('returned updatedAt reflects fresh value from database (post-reload)', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', { farm_name: 'New Name' });
-
-    // Should be the freshUpdatedAt set in reload mock, not the original
-    expect(result.updatedAt).toBe(new Date('2025-06-02T12:00:00.000Z').toISOString());
-    expect(result.updatedAt).not.toBe(new Date('2025-06-01').toISOString());
-  });
-
-  // ── empty input ───────────────────────────────────────────────────────────
-
-  test('empty input object: no data changes, save still called', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', {});
-
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(result.farm_name).toBe('Original Name');
-    expect(result.seasonal_products_detail).toBe('Original description');
-  });
-
-  // ── invalid farm id ───────────────────────────────────────────────────────
-
-  test('nonexistent farm id: throws error', async () => {
-    MockFarm.findByPk.mockResolvedValue(null);
-
-    await expect(service.updateFarm('nonexistent-id', { farm_name: 'X' })).rejects.toThrow(
-      'Farm with id nonexistent-id not found.'
-    );
-  });
-
-  // ── update then fetch ─────────────────────────────────────────────────────
-
-  test('update a farm then fetch it: DTO matches updated values', async () => {
-    const instance = makeFarmInstance();
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const dto = await service.updateFarm('uuid-1', {
-      farm_name: 'Freshly Updated',
-      seasonal_products_detail: 'New desc',
-      farm_characteristics: ['BIPOC-Owned Farm'],
+      await expect(
+        service.createFarm('owner-2', { ...baseInput, farm_name: 'Other Farm' })
+      ).rejects.toThrow('Farm with that USDA farm ID already exists.');
     });
 
-    expect(dto.id).toBe('uuid-1');
-    expect(dto.farm_name).toBe('Freshly Updated');
-    expect(dto.seasonal_products_detail).toBe('New desc');
-    expect(dto.farm_characteristics).toEqual(['BIPOC-Owned Farm']);
-    expect(dto.updatedAt).toBe(new Date('2025-06-02T12:00:00.000Z').toISOString());
+    test('two farms with different usda_farm_ids can both be created', async () => {
+      await service.createFarm('owner-1', baseInput);
+      await expect(
+        service.createFarm('owner-2', { ...baseInput, usda_farm_id: 'usda-2' })
+      ).resolves.toMatchObject({ usda_farm_id: 'usda-2' });
+    });
   });
 
-  // ── error propagation ─────────────────────────────────────────────────────
+  describe('updateFarm usda_farm_id reassignment', () => {
+    test('moving a farm to a usda_farm_id already used by another farm is rejected', async () => {
+      const farmA = await service.createFarm('owner-1', baseInput);
+      await service.createFarm('owner-2', { ...baseInput, usda_farm_id: 'usda-2' });
 
-  test('propagates database errors from findByPk', async () => {
-    MockFarm.findByPk.mockRejectedValue(new Error('DB error'));
+      await expect(service.updateFarm(farmA.id, { usda_farm_id: 'usda-2' })).rejects.toThrow(
+        'Farm with that USDA farm ID already exists.'
+      );
+    });
 
-    await expect(service.updateFarm('uuid-1', {})).rejects.toThrow('DB error');
+    test('a farm can be moved to a free usda_farm_id, freeing up the old one for reuse', async () => {
+      const farmA = await service.createFarm('owner-1', baseInput);
+
+      await service.updateFarm(farmA.id, { usda_farm_id: 'usda-new' });
+
+      // usda-1 should be free again for a new farm.
+      await expect(
+        service.createFarm('owner-2', { ...baseInput, usda_farm_id: 'usda-1' })
+      ).resolves.toMatchObject({ usda_farm_id: 'usda-1' });
+    });
   });
 
-  test('propagates errors from save()', async () => {
-    const instance = makeFarmInstance();
-    (instance.save as jest.Mock).mockRejectedValue(new Error('Save failed'));
-    MockFarm.findByPk.mockResolvedValue(instance as any);
+  describe('resubmitFarm', () => {
+    test('moves a rejected farm back to PENDING_APPROVAL and resolves open rejections atomically', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      // createFarmRejection both records the rejection and flips the farm to REJECTED
+      // (and emails the owner via the mocked userService/emailService above).
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
 
-    await expect(service.updateFarm('uuid-1', { farm_name: 'X' })).rejects.toThrow('Save failed');
-  });
+      const resubmitted = await service.resubmitFarm(farm.id, 'owner-1', {
+        farm_name: 'Updated Farm Name',
+      });
 
-  test('rejected farm resubmission generates diff and emails admins', async () => {
-    const instance = makeFarmInstance({
-      status: FarmStatus.REJECTED,
-      rejection_reason: 'Missing GAP documentation',
-    });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
+      expect(resubmitted.status).toBe(FarmStatus.PENDING_APPROVAL);
+      expect(resubmitted.farm_name).toBe('Updated Farm Name');
 
-    const result = await service.updateFarm('uuid-1', {
-      farm_name: 'Resubmitted Farm Name',
-      seasonal_products_detail: 'Updated farm description',
-    });
-
-    expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
-    expect(instance.save).toHaveBeenCalledTimes(2);
-    expect(instance.reload).toHaveBeenCalledTimes(2);
-    expect(mockSendEmail).toHaveBeenCalledTimes(1);
-
-    const [to, subject, emailBody] = mockSendEmail.mock.calls[0] as [
-      string,
-      string,
-      { body: string; changes: { field: string; previous: string; current: string }[] },
-    ];
-    expect(to).toBe('mfsn@uwblueprint.org');
-    expect(subject).toContain('Farm Resubmitted: Resubmitted Farm Name');
-    expect(emailBody.body).toContain('Missing GAP documentation');
-    expect(emailBody.changes).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          field: 'Farm Name',
-          previous: 'Original Name',
-          current: 'Resubmitted Farm Name',
-        }),
-        expect.objectContaining({ field: 'Seasonal Products Detail' }),
-      ])
-    );
-  });
-
-  test('rejected farm update with no actual field change does not email admins', async () => {
-    const instance = makeFarmInstance({
-      status: FarmStatus.REJECTED,
-      rejection_reason: 'Missing GAP documentation',
-    });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', {
-      farm_name: 'Original Name',
+      const rejection = await service.getLatestFarmRejectionByFarmId(farm.id);
+      expect(rejection?.resolved_at).not.toBeNull();
+      expect(rejection?.resolution_type).toBe(FarmRejectionResolutionType.RESUBMITTED);
     });
 
-    expect(result.status).toBe(FarmStatus.REJECTED);
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(mockSendEmail).not.toHaveBeenCalled();
-  });
-
-  test('rejected farm resubmitting same location as lat/lng does not false-positive diff or email', async () => {
-    const instance = makeFarmInstance({
-      status: FarmStatus.REJECTED,
-      rejection_reason: 'Please verify location',
-      location: { type: 'Point', coordinates: [-90.18, 32.3] },
+    test('throws when the farm is not currently REJECTED', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await expect(
+        service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'New Name' })
+      ).rejects.toThrow('not REJECTED');
     });
-    MockFarm.findByPk.mockResolvedValue(instance as any);
-
-    const result = await service.updateFarm('uuid-1', {
-      location: { lat: 32.3, lng: -90.18 },
-    });
-
-    expect(result.status).toBe(FarmStatus.REJECTED);
-    expect(result.location).toEqual({ lat: 32.3, lng: -90.18 });
-    expect(instance.save).toHaveBeenCalledTimes(1);
-    expect(mockSendEmail).not.toHaveBeenCalled();
   });
 });

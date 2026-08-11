@@ -11,7 +11,7 @@ import {
 } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
-import { Collections, getFirestore, newId, toIso } from '@/utilities/firestore';
+import { Collections, getFirestore, toIso } from '@/utilities/firestore';
 
 const Logger = logger(__filename);
 
@@ -48,9 +48,9 @@ class UserService implements IUserService {
   private async findByFirebaseUid(
     firebaseUid: string
   ): Promise<{ id: string; data: UserDoc } | null> {
-    const snap = await this.users().where('firebase_uid', '==', firebaseUid).limit(1).get();
-    if (snap.empty) return null;
-    const doc = snap.docs[0];
+    // User doc ids are the Firebase Auth uid (see createUser), so this is a direct lookup.
+    const doc = await this.users().doc(firebaseUid).get();
+    if (!doc.exists) return null;
     return { id: doc.id, data: doc.data() as UserDoc };
   }
 
@@ -199,7 +199,9 @@ class UserService implements IUserService {
         resolvedFirebaseUid = firebaseUid;
       }
 
-      const id = newId();
+      // The user doc id is the Firebase Auth uid, so it matches UserDTO.id everywhere
+      // an authenticated request derives its user from Firebase Auth (see authHelpers.ts).
+      const id = resolvedFirebaseUid;
       const now = new Date().toISOString();
       const data: UserDoc = {
         firebase_uid: resolvedFirebaseUid,
