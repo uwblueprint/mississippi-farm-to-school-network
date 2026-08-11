@@ -44,11 +44,7 @@
 	{#if imagesLoading}
 		<p class="farm-request-modal__photo-status">Loading photos…</p>
 	{:else if imageUrls[photoIndex]}
-		<img
-			class="farm-request-modal__photo"
-			src={imageUrls[photoIndex]}
-			alt="Photo of {farmName}"
-		/>
+		<img class="farm-request-modal__photo" src={imageUrls[photoIndex]} alt="Photo of {farmName}" />
 	{:else}
 		<p class="farm-request-modal__photo-status">No photos submitted</p>
 	{/if}

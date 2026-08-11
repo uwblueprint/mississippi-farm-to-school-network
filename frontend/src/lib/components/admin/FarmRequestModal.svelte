@@ -307,8 +307,8 @@
 		}}
 	>
 		{#snippet body()}
-			This will archive <strong>{farm.farm_name}</strong> and remove it from the pending queue. You
-			can restore it later from archived farms.
+			This will archive <strong>{farm.farm_name}</strong> and remove it from the pending queue. You can
+			restore it later from archived farms.
 		{/snippet}
 	</ConfirmDialog>
 {/if}

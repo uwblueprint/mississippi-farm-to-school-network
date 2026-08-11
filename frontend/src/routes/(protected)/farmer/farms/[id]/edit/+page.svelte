@@ -36,7 +36,9 @@
 		return value;
 	}
 
-	const backHref = $derived(safeReturnTo($page.url.searchParams.get('returnTo')) ?? '/farmer/farms');
+	const backHref = $derived(
+		safeReturnTo($page.url.searchParams.get('returnTo')) ?? '/farmer/farms'
+	);
 
 	// --- GraphQL mutations (client-side; auth via Firebase ID token) ---------
 	const UPDATE_FARM = `

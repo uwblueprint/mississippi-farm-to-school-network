@@ -33,10 +33,7 @@ export const ADMIN_SORT_ITEMS: { value: RequestSort; label: string }[] = [
 	{ value: 'NAME_ASC', label: 'Farm name (A–Z)' }
 ];
 
-export const ADMIN_FILTER_LABELS: Record<
-	'ALL' | PendingRequestType,
-	string
-> = {
+export const ADMIN_FILTER_LABELS: Record<'ALL' | PendingRequestType, string> = {
 	ALL: 'All Requests',
 	NEW_APPLICATION: 'New Applications',
 	UPDATED_APPLICATION: 'Updated Applications'

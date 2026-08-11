@@ -38,9 +38,7 @@
 	{#if cardView === 'review'}
 		<div class="review-application-card__copy">
 			<h3 class="review-application-card__title">Review Application</h3>
-			<p class="review-application-card__body">
-				Review the information submitted by the farm.
-			</p>
+			<p class="review-application-card__body">Review the information submitted by the farm.</p>
 			<p class="review-application-card__body">
 				Choose <strong>Approve</strong> to publish the farm profile, or
 				<strong> Request Changes</strong> if additional information or corrections are needed.

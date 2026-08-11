@@ -8,7 +8,12 @@
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
 	import { ADMIN_FILTER_LABELS, ADMIN_SORT_ITEMS } from '$lib/constants/admin-request';
 	import { gqlClient } from '$lib/graphqlClient';
-	import type { PendingFarmDto, PendingRequest, RequestFilter, RequestSort } from '$lib/types/admin';
+	import type {
+		PendingFarmDto,
+		PendingRequest,
+		RequestFilter,
+		RequestSort
+	} from '$lib/types/admin';
 	import { PENDING_FARMS_QUERY, pendingFarmToRequest } from '$lib/utils/pending-request-adapter';
 
 	let requests = $state<PendingRequest[]>([]);
@@ -46,13 +51,11 @@
 	});
 
 	const filterItems = $derived(
-		(Object.keys(ADMIN_FILTER_LABELS) as Array<keyof typeof ADMIN_FILTER_LABELS>).map(
-			(value) => ({
-				value,
-				label: ADMIN_FILTER_LABELS[value],
-				count: counts[value]
-			})
-		)
+		(Object.keys(ADMIN_FILTER_LABELS) as Array<keyof typeof ADMIN_FILTER_LABELS>).map((value) => ({
+			value,
+			label: ADMIN_FILTER_LABELS[value],
+			count: counts[value]
+		}))
 	);
 
 	function bySort(a: PendingRequest, b: PendingRequest): number {

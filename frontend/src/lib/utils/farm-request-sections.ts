@@ -42,9 +42,7 @@ export function buildReviewSections(farm: PendingFarmDto): ReviewSection[] {
 	const sections: ReviewSection[] = [
 		{
 			title: 'About',
-			fields: [
-				{ kind: 'list', label: 'Growing Practices', values: farm.growing_practices }
-			]
+			fields: [{ kind: 'list', label: 'Growing Practices', values: farm.growing_practices }]
 		},
 		{
 			title: 'Products Offered',
