@@ -1,5 +1,6 @@
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import { Role } from '@/types';
+import { FakeFirestore } from './helpers/fakeFirestore';
 
 const mockGetUser = jest.fn();
 
@@ -9,11 +10,19 @@ jest.mock('firebase-admin', () => ({
   })),
 }));
 
+let mockFirestoreInstance: FakeFirestore;
+
+jest.mock('@/utilities/firestore', () => ({
+  ...jest.requireActual('@/utilities/firestore'),
+  getFirestore: () => mockFirestoreInstance,
+}));
+
 import authHelper from '@/utilities/authHelpers';
 
 describe('authHelper (Firebase Auth)', () => {
   beforeEach(() => {
     mockGetUser.mockReset();
+    mockFirestoreInstance = new FakeFirestore();
   });
 
   test('requireAuth throws AuthenticationError when firebaseUid is missing', async () => {
@@ -133,5 +142,31 @@ describe('authHelper (Firebase Auth)', () => {
       role: Role.ADMIN,
       is_verified: true,
     });
+  });
+
+  test('role comes from the Firestore user profile, not just claims/email domain', async () => {
+    // A regular gmail.com admin promoted via updateUser: no custom claim, no
+    // qualifying email domain, but a Firestore profile with role ADMIN.
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-promoted',
+      email: 'promoted-admin@gmail.com',
+      emailVerified: true,
+      customClaims: {},
+    });
+    await mockFirestoreInstance.collection('users').doc('firebase-promoted').set({
+      firebase_uid: 'firebase-promoted',
+      email: 'promoted-admin@gmail.com',
+      role: Role.ADMIN,
+      is_verified: true,
+      firstName: null,
+      lastName: null,
+      phone: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await expect(
+      authHelper.requireRole({ firebaseUid: 'firebase-promoted' }, [Role.ADMIN])
+    ).resolves.toMatchObject({ role: Role.ADMIN });
   });
 });

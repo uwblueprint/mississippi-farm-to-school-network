@@ -87,7 +87,7 @@ describe('FarmService (Firestore)', () => {
       const farmA = await service.createFarm('owner-1', baseInput);
       await service.createFarm('owner-2', { ...baseInput, usda_farm_id: 'usda-2' });
 
-      await expect(service.updateFarm(farmA.id, { usda_farm_id: 'usda-2' })).rejects.toThrow(
+      await expect(service.updateFarm(farmA.id, { usda_farm_id: 'usda-2' }, false)).rejects.toThrow(
         'Farm with that USDA farm ID already exists.'
       );
     });
@@ -95,7 +95,7 @@ describe('FarmService (Firestore)', () => {
     test('a farm can be moved to a free usda_farm_id, freeing up the old one for reuse', async () => {
       const farmA = await service.createFarm('owner-1', baseInput);
 
-      await service.updateFarm(farmA.id, { usda_farm_id: 'usda-new' });
+      await service.updateFarm(farmA.id, { usda_farm_id: 'usda-new' }, false);
 
       // usda-1 should be free again for a new farm.
       await expect(
@@ -111,9 +111,12 @@ describe('FarmService (Firestore)', () => {
       // (and emails the owner via the mocked userService/emailService above).
       await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
 
-      const resubmitted = await service.resubmitFarm(farm.id, 'owner-1', {
-        farm_name: 'Updated Farm Name',
-      });
+      const resubmitted = await service.resubmitFarm(
+        farm.id,
+        'owner-1',
+        { farm_name: 'Updated Farm Name' },
+        false
+      );
 
       expect(resubmitted.status).toBe(FarmStatus.PENDING_APPROVAL);
       expect(resubmitted.farm_name).toBe('Updated Farm Name');
@@ -126,8 +129,64 @@ describe('FarmService (Firestore)', () => {
     test('throws when the farm is not currently REJECTED', async () => {
       const farm = await service.createFarm('owner-1', baseInput);
       await expect(
-        service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'New Name' })
+        service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'New Name' }, false)
       ).rejects.toThrow('not REJECTED');
+    });
+
+    test('a non-admin cannot resubmit an archived farm', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+      await service.archiveFarm(farm.id);
+
+      await expect(
+        service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'New Name' }, false)
+      ).rejects.toThrow('archived');
+    });
+
+    test('an admin can resubmit an archived farm', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+      await service.archiveFarm(farm.id);
+
+      await expect(
+        service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'New Name' }, true)
+      ).resolves.toMatchObject({ status: FarmStatus.PENDING_APPROVAL });
+    });
+  });
+
+  describe('createFarmRejection', () => {
+    test('cannot reject a farm that is already approved', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.approveFarm(farm.id);
+
+      await expect(service.createFarmRejection(farm.id, 'admin-1', 'Reason')).rejects.toThrow(
+        'already been approved'
+      );
+    });
+  });
+
+  describe('updateFarm on a REJECTED farm outside resubmitFarm', () => {
+    test('editing a rejected farm through updateFarm resolves the open rejection', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+
+      const updated = await service.updateFarm(farm.id, { farm_name: 'A Whole New Name' }, false);
+
+      expect(updated.status).toBe(FarmStatus.PENDING_APPROVAL);
+
+      const rejection = await service.getLatestFarmRejectionByFarmId(farm.id);
+      expect(rejection?.resolved_at).not.toBeNull();
+      expect(rejection?.resolution_type).toBe(FarmRejectionResolutionType.RESUBMITTED);
+      await expect(service.getLatestActiveRejection(farm.id)).resolves.toBeNull();
+    });
+
+    test('a non-admin cannot edit an archived farm', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.archiveFarm(farm.id);
+
+      await expect(service.updateFarm(farm.id, { farm_name: 'New Name' }, false)).rejects.toThrow(
+        'archived'
+      );
     });
   });
 });

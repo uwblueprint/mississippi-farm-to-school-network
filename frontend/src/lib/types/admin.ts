@@ -34,6 +34,7 @@ export type PendingFarmDto = {
 	cover_photo: string | null;
 	carousel_photos: string[];
 	status: FarmStatus;
+	was_previously_rejected: boolean;
 	createdAt: string;
 	updatedAt: string;
 	owner: {

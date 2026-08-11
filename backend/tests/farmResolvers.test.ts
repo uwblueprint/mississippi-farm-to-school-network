@@ -16,6 +16,7 @@ const mockRequireEmailVerified = jest.fn();
 const mockRequireRole = jest.fn();
 const mockRequireOwnerOrAdmin = jest.fn();
 const mockSendEmail = jest.fn();
+const mockGetUserByFirebaseUid = jest.fn();
 
 jest.mock('@/services/implementations/farmService', () => ({
   __esModule: true,
@@ -34,7 +35,9 @@ jest.mock('@/services/implementations/farmService', () => ({
 
 jest.mock('@/services/implementations/userService', () => ({
   __esModule: true,
-  default: jest.fn().mockImplementation(() => ({})),
+  default: jest.fn().mockImplementation(() => ({
+    getUserByFirebaseUid: mockGetUserByFirebaseUid,
+  })),
 }));
 
 jest.mock('@/services/implementations/emailService', () => ({
@@ -99,6 +102,12 @@ const updateFarm = farmResolvers.Mutation.updateFarm as (
 const resubmitFarm = farmResolvers.Mutation.resubmitFarm as (
   parent: undefined,
   args: { id: string; input: Record<string, unknown> },
+  context: AuthContext
+) => Promise<unknown>;
+
+const owner = farmResolvers.FarmDTO.owner as (
+  farm: { id: string; owner_user_id: string },
+  args: unknown,
   context: AuthContext
 ) => Promise<unknown>;
 
@@ -290,7 +299,12 @@ describe('farmResolvers.Mutation.unarchiveFarm', () => {
   });
 });
 
-describe('farmResolvers.Mutation.updateFarm (archived guard)', () => {
+// The archived-farm guard itself now lives in farmService.updateFarm/resubmitFarm
+// (see farmService.test.ts), reading the same doc it writes so it can't race a
+// concurrent archiveFarm call. These resolver tests just verify the resolver
+// derives `isAdmin` from the caller's role and passes it through, instead of
+// doing its own (previously stale) is_archived check against a separate read.
+describe('farmResolvers.Mutation.updateFarm', () => {
   const farmId = 'farm-uuid-1';
   const ownerUserId = 'owner-uuid-1';
 
@@ -301,53 +315,35 @@ describe('farmResolvers.Mutation.updateFarm (archived guard)', () => {
     mockRequireRole.mockReset();
     mockGetFarmById.mockReset();
 
-    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId });
     mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
     mockUpdateFarm.mockResolvedValue({ id: farmId });
-  });
-
-  test('owner (non-admin) cannot edit an archived farm', async () => {
-    mockGetFarmById.mockResolvedValue({
-      id: farmId,
-      owner_user_id: ownerUserId,
-      is_archived: true,
-    });
-    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
-
-    await expect(
-      updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext)
-    ).rejects.toThrow('archived');
-    expect(mockUpdateFarm).not.toHaveBeenCalled();
-  });
-
-  test('admin can edit an archived farm', async () => {
-    mockGetFarmById.mockResolvedValue({
-      id: farmId,
-      owner_user_id: ownerUserId,
-      is_archived: true,
-    });
-    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
-
-    await updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
-
-    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' });
-  });
-
-  test('owner can edit a non-archived farm without an admin check', async () => {
     mockGetFarmById.mockResolvedValue({
       id: farmId,
       owner_user_id: ownerUserId,
       is_archived: false,
     });
+  });
+
+  test('passes isAdmin=false for a non-admin caller', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId, role: Role.FARMER });
 
     await updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
 
     expect(mockRequireRole).not.toHaveBeenCalled();
-    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' });
+    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' }, false);
+  });
+
+  test('passes isAdmin=true for an admin caller', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: 'admin-1', role: Role.ADMIN });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: 'admin-1' });
+
+    await updateFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
+
+    expect(mockUpdateFarm).toHaveBeenCalledWith(farmId, { farm_name: 'X' }, true);
   });
 });
 
-describe('farmResolvers.Mutation.resubmitFarm (archived guard)', () => {
+describe('farmResolvers.Mutation.resubmitFarm', () => {
   const farmId = 'farm-uuid-1';
   const ownerUserId = 'owner-uuid-1';
 
@@ -358,36 +354,31 @@ describe('farmResolvers.Mutation.resubmitFarm (archived guard)', () => {
     mockRequireRole.mockReset();
     mockGetFarmById.mockReset();
 
-    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId });
     mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
     mockResubmitFarm.mockResolvedValue({ id: farmId });
-  });
-
-  test('owner (non-admin) cannot resubmit an archived farm', async () => {
-    mockGetFarmById.mockResolvedValue({
-      id: farmId,
-      owner_user_id: ownerUserId,
-      is_archived: true,
-    });
-    mockRequireRole.mockRejectedValue(new Error('Forbidden'));
-
-    await expect(
-      resubmitFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext)
-    ).rejects.toThrow('archived');
-    expect(mockResubmitFarm).not.toHaveBeenCalled();
-  });
-
-  test('owner can resubmit a non-archived farm', async () => {
     mockGetFarmById.mockResolvedValue({
       id: farmId,
       owner_user_id: ownerUserId,
       is_archived: false,
     });
+  });
+
+  test('passes isAdmin=false for a non-admin caller', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId, role: Role.FARMER });
 
     await resubmitFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
 
     expect(mockRequireRole).not.toHaveBeenCalled();
-    expect(mockResubmitFarm).toHaveBeenCalledWith(farmId, ownerUserId, { farm_name: 'X' });
+    expect(mockResubmitFarm).toHaveBeenCalledWith(farmId, ownerUserId, { farm_name: 'X' }, false);
+  });
+
+  test('passes isAdmin=true for an admin caller', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: 'admin-1', role: Role.ADMIN });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: 'admin-1' });
+
+    await resubmitFarm(undefined, { id: farmId, input: { farm_name: 'X' } }, authContext);
+
+    expect(mockResubmitFarm).toHaveBeenCalledWith(farmId, 'admin-1', { farm_name: 'X' }, true);
   });
 });
 
@@ -539,5 +530,39 @@ describe('farmResolvers.Mutation.createFarm', () => {
     expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.FARMER]);
     expect(mockCreateFarm).toHaveBeenCalledWith(verifiedFarmer.id, minimalCreateFarmInput);
     expect(result).toEqual(created);
+  });
+});
+
+describe('farmResolvers.FarmDTO.owner', () => {
+  const farm = { id: 'farm-1', owner_user_id: 'owner-uuid-1' };
+
+  beforeEach(() => {
+    mockRequireRole.mockReset();
+    mockGetUserByFirebaseUid.mockReset();
+  });
+
+  test('returns null for a non-admin caller without looking up the owner', async () => {
+    mockRequireRole.mockRejectedValue(new ForbiddenError('nope'));
+
+    await expect(owner(farm, {}, authContext)).resolves.toBeNull();
+    expect(mockGetUserByFirebaseUid).not.toHaveBeenCalled();
+  });
+
+  test('returns the owner for an admin caller', async () => {
+    mockRequireRole.mockResolvedValue({ id: 'admin-1', role: Role.ADMIN });
+    const ownerUser = { id: 'owner-uuid-1', email: 'owner@example.com' };
+    mockGetUserByFirebaseUid.mockResolvedValue(ownerUser);
+
+    await expect(owner(farm, {}, authContext)).resolves.toEqual(ownerUser);
+  });
+
+  test('returns null (not a thrown error) when the owner has no Firestore profile', async () => {
+    // A single farm with a missing owner profile shouldn't break the whole farms
+    // list — the frontend client here treats any GraphQL error as a hard failure
+    // of the entire request, not just this field.
+    mockRequireRole.mockResolvedValue({ id: 'admin-1', role: Role.ADMIN });
+    mockGetUserByFirebaseUid.mockRejectedValue(new Error('User not found.'));
+
+    await expect(owner(farm, {}, authContext)).resolves.toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import { ForbiddenError } from 'apollo-server';
 import IFarmService from '@/services/interfaces/farmService';
 import {
   CreateFarmInput,
@@ -375,11 +376,18 @@ class FarmService implements IFarmService {
     }
   }
 
-  async updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO> {
+  async updateFarm(id: string, input: UpdateFarmInput, isAdmin: boolean): Promise<FarmDTO> {
     try {
       this.validateFarmOptionArrays(input);
 
       const { data: farm } = await this.getFarmDoc(id);
+
+      if (farm.is_archived && !isAdmin) {
+        throw new ForbiddenError(
+          'This farm is archived and cannot be edited. Please contact an administrator.'
+        );
+      }
+
       const farmBeforeUpdate = this.convertToFarmDTO(id, farm);
       const rejectionSnapshot = this.getRejectedSnapshot(farm, farmBeforeUpdate);
       const wasRejected = farm.status === FarmStatus.REJECTED;
@@ -413,7 +421,25 @@ class FarmService implements IFarmService {
         if (resubmissionDiff.length > 0) {
           next.status = FarmStatus.PENDING_APPROVAL;
           next.updatedAt = new Date().toISOString();
-          await this.farms().doc(id).set(next);
+
+          // Editing a REJECTED farm through this path (rather than resubmitFarm)
+          // still needs to resolve its open rejection record(s), or
+          // getLatestActiveRejection keeps showing a rejection banner forever.
+          const batch = getFirestore().batch();
+          batch.set(this.farms().doc(id), next);
+          const openRejectionsSnap = await this.rejections().where('farm_id', '==', id).get();
+          const resolvedAt = new Date().toISOString();
+          for (const doc of openRejectionsSnap.docs) {
+            const data = doc.data() as FarmRejectionDoc;
+            if (data.resolved_at == null) {
+              batch.update(doc.ref, {
+                resolved_at: resolvedAt,
+                resolution_type: FarmRejectionResolutionType.RESUBMITTED,
+              });
+            }
+          }
+          await batch.commit();
+
           updatedFarm = this.convertToFarmDTO(id, next);
           const rejectionReason = this.getRejectionReason(farm);
           void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
@@ -485,33 +511,47 @@ class FarmService implements IFarmService {
     let farmDto: FarmDTO;
 
     try {
-      const { data: farm } = await this.getFarmDoc(farmId);
-      const farmSnapshot = this.convertToFarmSnapshot(farmId, farm);
+      const farmRef = this.farms().doc(farmId);
       const id = newId();
       const now = new Date().toISOString();
 
-      const rejectionRecord: FarmRejectionDoc = {
-        farm_id: farmId,
-        rejected_by_user_id: rejectedByUserId,
-        rejection_reason: rejectionReason,
-        farm_snapshot: farmSnapshot,
-        farm_snapshot_updated_at: farm.updatedAt,
-        created_at: now,
-        resolved_at: null,
-        resolution_type: null,
-      };
+      // Runs the read-check-write as one transaction so a concurrent approveFarm
+      // can't race this: whichever commits first wins, and the other retries and
+      // sees the up-to-date status, instead of silently overwriting each other.
+      const { rejectionRecord, farm } = await getFirestore().runTransaction(async (tx) => {
+        const farmSnap = await tx.get(farmRef);
+        if (!farmSnap.exists) {
+          throw new Error(`Farm with id ${farmId} not found.`);
+        }
+        const farmData = farmSnap.data() as FarmDoc;
 
-      await this.rejections().doc(id).set(rejectionRecord);
+        if (farmData.status === FarmStatus.APPROVED) {
+          throw new Error('Cannot reject a farm that has already been approved.');
+        }
 
-      await this.farms()
-        .doc(farmId)
-        .set({
-          ...farm,
+        const farmSnapshot = this.convertToFarmSnapshot(farmId, farmData);
+        const record: FarmRejectionDoc = {
+          farm_id: farmId,
+          rejected_by_user_id: rejectedByUserId,
+          rejection_reason: rejectionReason,
+          farm_snapshot: farmSnapshot,
+          farm_snapshot_updated_at: farmData.updatedAt,
+          created_at: now,
+          resolved_at: null,
+          resolution_type: null,
+        };
+
+        tx.create(this.rejections().doc(id), record);
+        tx.set(farmRef, {
+          ...farmData,
           status: FarmStatus.REJECTED,
           rejection_reason: rejectionReason,
-          rejection_snapshot: this.convertToFarmDTO(farmId, farm),
+          rejection_snapshot: this.convertToFarmDTO(farmId, farmData),
           updatedAt: now,
         } satisfies FarmDoc);
+
+        return { rejectionRecord: record, farm: farmData };
+      });
 
       rejection = this.convertToFarmRejectionDTO(id, rejectionRecord);
       farmDto = this.convertToFarmDTO(farmId, {
@@ -604,6 +644,7 @@ class FarmService implements IFarmService {
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
+      was_previously_rejected: Boolean(data.rejection_reason),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -664,6 +705,7 @@ class FarmService implements IFarmService {
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
+      was_previously_rejected: Boolean(data.rejection_reason),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -893,7 +935,8 @@ class FarmService implements IFarmService {
   async resubmitFarm(
     farmId: string,
     _resubmittedByUserId: string,
-    input: UpdateFarmInput
+    input: UpdateFarmInput,
+    isAdmin: boolean
   ): Promise<FarmDTO> {
     try {
       const updateValues = Object.fromEntries(
@@ -902,14 +945,20 @@ class FarmService implements IFarmService {
 
       const farmRef = this.farms().doc(farmId);
       // Reads and writes both run inside the transaction so a concurrent write to the
-      // farm or its rejections (e.g. an admin approving/rejecting it) can't be silently
-      // overwritten by a batch built from a stale read.
+      // farm or its rejections (e.g. an admin approving/rejecting it, or archiving it)
+      // can't be silently overwritten by a batch built from a stale read.
       const next = await getFirestore().runTransaction(async (tx) => {
         const farmSnap = await tx.get(farmRef);
         if (!farmSnap.exists) {
           throw new Error(`Farm with id ${farmId} not found.`);
         }
         const farm = farmSnap.data() as FarmDoc;
+
+        if (farm.is_archived && !isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
 
         if (farm.status !== FarmStatus.REJECTED) {
           throw new Error(

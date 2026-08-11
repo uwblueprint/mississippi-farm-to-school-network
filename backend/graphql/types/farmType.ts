@@ -52,6 +52,11 @@ const farmType = gql`
     carousel_photos: [String!]!
     status: FarmStatus!
     is_archived: Boolean!
+    """
+    True once the farm has ever been rejected, even after a later resubmission
+    or approval. Distinguishes a first-time application from a resubmitted one.
+    """
+    was_previously_rejected: Boolean!
     createdAt: String!
     updatedAt: String!
     """

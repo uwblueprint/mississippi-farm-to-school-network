@@ -37,6 +37,7 @@ export const PENDING_FARMS_QUERY = `
 			cover_photo
 			carousel_photos
 			status
+			was_previously_rejected
 			createdAt
 			updatedAt
 			owner {
@@ -79,7 +80,7 @@ export const ARCHIVE_FARM_MUTATION = `
 `;
 
 function isResubmission(farm: PendingFarmDto): boolean {
-	return farm.createdAt !== farm.updatedAt;
+	return farm.was_previously_rejected;
 }
 
 /** Decorates one `farmsByStatus(PENDING_APPROVAL)` result with queue-specific fields. */
