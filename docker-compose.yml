@@ -11,6 +11,7 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      - GRAPHQL_URL=http://backend:3000/graphql
     command: npm run dev -- --host 0.0.0.0
     networks:
       - mfsn-network

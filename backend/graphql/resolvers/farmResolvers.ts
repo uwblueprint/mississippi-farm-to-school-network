@@ -1,4 +1,4 @@
-import { AuthenticationError, ForbiddenError } from 'apollo-server';
+import { AuthenticationError, ForbiddenError, UserInputError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
@@ -17,7 +17,10 @@ import authHelper from '@/utilities/authHelpers';
 import EmailService from '@/services/implementations/emailService';
 import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
+import logger from '@/utilities/logger';
+import { getErrorMessage } from '@/utilities/errorUtils';
 
+const Logger = logger(__filename);
 const farmService: IFarmService = new FarmService();
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
@@ -148,24 +151,14 @@ const farmResolvers = {
       { id, input }: { id: string; input: UpdateFarmInput },
       context: AuthContext
     ): Promise<FarmDTO> => {
-      await authHelper.requireEmailVerified(context);
+      const currentUser = await authHelper.requireEmailVerified(context);
       const farm = await farmService.getFarmById(id);
 
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
-      if (farm.is_archived) {
-        const isAdmin = await authHelper
-          .requireRole(context, [Role.ADMIN])
-          .then(() => true)
-          .catch(() => false);
-        if (!isAdmin) {
-          throw new ForbiddenError(
-            'This farm is archived and cannot be edited. Please contact an administrator.'
-          );
-        }
-      }
-
-      return farmService.updateFarm(id, input);
+      // The archived check itself runs inside farmService.updateFarm against the
+      // same read it uses for the write, so it can't race a concurrent archiveFarm.
+      return farmService.updateFarm(id, input, currentUser.role === Role.ADMIN);
     },
 
     approveFarm: async (
@@ -177,6 +170,26 @@ const farmResolvers = {
       return farmService.approveFarm(id);
     },
 
+    rejectFarm: async (
+      _parent: undefined,
+      { id, rejectionReason }: { id: string; rejectionReason: string },
+      context: AuthContext
+    ): Promise<ActiveFarmRejectionDTO> => {
+      const admin = await authHelper.requireRole(context, [Role.ADMIN]);
+      const trimmed = rejectionReason.trim();
+      if (!trimmed) {
+        throw new UserInputError('A rejection reason is required.');
+      }
+
+      const rejection = await farmService.createFarmRejection(id, admin.id, trimmed);
+      return {
+        id: rejection.id,
+        farm_id: rejection.farm_id,
+        rejection_reason: rejection.rejection_reason,
+        created_at: rejection.created_at,
+      };
+    },
+
     resubmitFarm: async (
       _parent: undefined,
       { id, input }: { id: string; input: UpdateFarmInput },
@@ -186,19 +199,10 @@ const farmResolvers = {
       const farm = await farmService.getFarmById(id);
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
-      if (farm.is_archived) {
-        const isAdmin = await authHelper
-          .requireRole(context, [Role.ADMIN])
-          .then(() => true)
-          .catch(() => false);
-        if (!isAdmin) {
-          throw new ForbiddenError(
-            'This farm is archived and cannot be edited. Please contact an administrator.'
-          );
-        }
-      }
-
-      return farmService.resubmitFarm(id, currentUser.id, input);
+      // The archived check itself runs inside farmService.resubmitFarm's transaction
+      // against the same read it uses for the write, so it can't race a concurrent
+      // archiveFarm call.
+      return farmService.resubmitFarm(id, currentUser.id, input, currentUser.role === Role.ADMIN);
     },
 
     archiveFarm: async (
@@ -224,13 +228,23 @@ const farmResolvers = {
     owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
       try {
         await authHelper.requireRole(context, [Role.ADMIN]);
-        return userService.getUserById(farm.owner_user_id);
       } catch (error: unknown) {
         if (error instanceof AuthenticationError || error instanceof ForbiddenError) {
           return null;
         }
-
         throw error;
+      }
+
+      try {
+        return await userService.getUserByFirebaseUid(farm.owner_user_id);
+      } catch (error: unknown) {
+        // A farm whose owner has no Firestore profile (e.g. deleted user, seed
+        // data) shouldn't fail the whole farms list — the client here treats any
+        // GraphQL error as a hard failure of the entire request, not just this field.
+        Logger.warn(
+          `Failed to resolve owner for farm ${farm.id}. Reason = ${getErrorMessage(error)}`
+        );
+        return null;
       }
     },
     usda_farm_id: async (

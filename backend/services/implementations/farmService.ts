@@ -1,3 +1,4 @@
+import { ForbiddenError } from 'apollo-server';
 import IFarmService from '@/services/interfaces/farmService';
 import {
   CreateFarmInput,
@@ -30,6 +31,7 @@ import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
+import type { Query } from 'firebase-admin/firestore';
 import {
   Collections,
   FirestoreLocation,
@@ -115,6 +117,34 @@ class FarmService implements IFarmService {
     return getFirestore().collection(Collections.farms);
   }
 
+  private farmUsdaIds() {
+    return getFirestore().collection(Collections.farmUsdaIds);
+  }
+
+  /** Atomically moves the usda_farm_id uniqueness reservation from oldUsdaId to newUsdaId. */
+  private async reassignUsdaFarmId(
+    farmId: string,
+    oldUsdaId: string,
+    newUsdaId: string
+  ): Promise<void> {
+    const newRef = this.farmUsdaIds().doc(newUsdaId);
+    try {
+      await getFirestore().runTransaction(async (tx) => {
+        const newSnap = await tx.get(newRef);
+        if (newSnap.exists) {
+          throw new Error('Farm with that USDA farm ID already exists.');
+        }
+        tx.create(newRef, { farm_id: farmId });
+        tx.delete(this.farmUsdaIds().doc(oldUsdaId));
+      });
+    } catch (error: unknown) {
+      if ((error as { code?: number }).code === 6 /* ALREADY_EXISTS */) {
+        throw new Error('Farm with that USDA farm ID already exists.');
+      }
+      throw error;
+    }
+  }
+
   private rejections() {
     return getFirestore().collection(Collections.farmRejections);
   }
@@ -164,14 +194,6 @@ class FarmService implements IFarmService {
     let createdFarm: FarmDTO;
 
     try {
-      const existing = await this.farms()
-        .where('usda_farm_id', '==', input.usda_farm_id)
-        .limit(1)
-        .get();
-      if (!existing.empty) {
-        throw new Error('Farm with that USDA farm ID already exists.');
-      }
-
       const id = newId();
       const now = new Date().toISOString();
       const data: FarmDoc = {
@@ -209,7 +231,23 @@ class FarmService implements IFarmService {
         updatedAt: now,
       };
 
-      await this.farms().doc(id).set(data);
+      const usdaIdRef = this.farmUsdaIds().doc(input.usda_farm_id);
+      try {
+        await getFirestore().runTransaction(async (tx) => {
+          const usdaIdSnap = await tx.get(usdaIdRef);
+          if (usdaIdSnap.exists) {
+            throw new Error('Farm with that USDA farm ID already exists.');
+          }
+          tx.create(usdaIdRef, { farm_id: id });
+          tx.set(this.farms().doc(id), data);
+        });
+      } catch (error: unknown) {
+        if ((error as { code?: number }).code === 6 /* ALREADY_EXISTS */) {
+          throw new Error('Farm with that USDA farm ID already exists.');
+        }
+        throw error;
+      }
+
       createdFarm = this.convertToFarmDTO(id, data);
     } catch (error: unknown) {
       Logger.error(`Failed to create farm. Reason = ${getErrorMessage(error)}`);
@@ -239,6 +277,8 @@ class FarmService implements IFarmService {
 
   async getFarmsByProximity(lat: number, lng: number, radiusKm: number): Promise<FarmDTO[]> {
     try {
+      // Firestore has no native radius query, so we still scan every approved, non-archived
+      // farm and filter in memory; a geohash-bucketed index would be needed to bound this.
       const snap = await this.farms()
         .where('status', '==', FarmStatus.APPROVED)
         .where('is_archived', '==', false)
@@ -277,12 +317,21 @@ class FarmService implements IFarmService {
         }
       }
 
-      const snap = await this.farms().get();
+      // Push simple equality filters down to Firestore so the hottest path (the public,
+      // non-admin farms query, which always sets status + is_archived) doesn't have to
+      // read the whole collection to throw most of it away.
+      let query: Query = this.farms();
+      if (filter?.status) {
+        query = query.where('status', '==', filter.status);
+      }
+      if (filter?.is_archived !== undefined) {
+        query = query.where('is_archived', '==', filter.is_archived);
+      }
+
+      const snap = await query.get();
       let farms = snap.docs.map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc));
 
-      if (filter?.status) {
-        farms = farms.filter((f) => f.status === filter.status);
-      } else if (filter?.approved !== undefined) {
+      if (!filter?.status && filter?.approved !== undefined) {
         farms = farms.filter((f) =>
           filter.approved ? f.status === FarmStatus.APPROVED : f.status !== FarmStatus.APPROVED
         );
@@ -309,10 +358,6 @@ class FarmService implements IFarmService {
         farms = farms.filter((f) => arraysOverlap(f.other_products, filter.other_products));
       }
 
-      if (filter?.is_archived !== undefined) {
-        farms = farms.filter((f) => f.is_archived === filter.is_archived);
-      }
-
       farms.sort((a, b) => {
         const countyCmp = a.county.localeCompare(b.county);
         if (countyCmp !== 0) return countyCmp;
@@ -331,11 +376,18 @@ class FarmService implements IFarmService {
     }
   }
 
-  async updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO> {
+  async updateFarm(id: string, input: UpdateFarmInput, isAdmin: boolean): Promise<FarmDTO> {
     try {
       this.validateFarmOptionArrays(input);
 
       const { data: farm } = await this.getFarmDoc(id);
+
+      if (farm.is_archived && !isAdmin) {
+        throw new ForbiddenError(
+          'This farm is archived and cannot be edited. Please contact an administrator.'
+        );
+      }
+
       const farmBeforeUpdate = this.convertToFarmDTO(id, farm);
       const rejectionSnapshot = this.getRejectedSnapshot(farm, farmBeforeUpdate);
       const wasRejected = farm.status === FarmStatus.REJECTED;
@@ -343,6 +395,10 @@ class FarmService implements IFarmService {
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
+
+      if (updateValues.usda_farm_id && updateValues.usda_farm_id !== farm.usda_farm_id) {
+        await this.reassignUsdaFarmId(id, farm.usda_farm_id, updateValues.usda_farm_id);
+      }
 
       const next: FarmDoc = {
         ...farm,
@@ -365,7 +421,25 @@ class FarmService implements IFarmService {
         if (resubmissionDiff.length > 0) {
           next.status = FarmStatus.PENDING_APPROVAL;
           next.updatedAt = new Date().toISOString();
-          await this.farms().doc(id).set(next);
+
+          // Editing a REJECTED farm through this path (rather than resubmitFarm)
+          // still needs to resolve its open rejection record(s), or
+          // getLatestActiveRejection keeps showing a rejection banner forever.
+          const batch = getFirestore().batch();
+          batch.set(this.farms().doc(id), next);
+          const openRejectionsSnap = await this.rejections().where('farm_id', '==', id).get();
+          const resolvedAt = new Date().toISOString();
+          for (const doc of openRejectionsSnap.docs) {
+            const data = doc.data() as FarmRejectionDoc;
+            if (data.resolved_at == null) {
+              batch.update(doc.ref, {
+                resolved_at: resolvedAt,
+                resolution_type: FarmRejectionResolutionType.RESUBMITTED,
+              });
+            }
+          }
+          await batch.commit();
+
           updatedFarm = this.convertToFarmDTO(id, next);
           const rejectionReason = this.getRejectionReason(farm);
           void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
@@ -405,7 +479,7 @@ class FarmService implements IFarmService {
     const subject = 'Your Farm Has Been Approved!';
 
     try {
-      const owner = await userService.getUserById(updatedFarm.owner_user_id);
+      const owner = await userService.getUserByFirebaseUid(updatedFarm.owner_user_id);
       const greeting = owner.firstName
         ? `Congratulations, ${owner.firstName}!`
         : 'Congratulations!';
@@ -433,40 +507,83 @@ class FarmService implements IFarmService {
     rejectedByUserId: string,
     rejectionReason: string
   ): Promise<FarmRejectionDTO> {
+    let rejection: FarmRejectionDTO;
+    let farmDto: FarmDTO;
+
     try {
-      const { data: farm } = await this.getFarmDoc(farmId);
-      const farmSnapshot = this.convertToFarmSnapshot(farmId, farm);
+      const farmRef = this.farms().doc(farmId);
       const id = newId();
       const now = new Date().toISOString();
 
-      const rejectionRecord: FarmRejectionDoc = {
-        farm_id: farmId,
-        rejected_by_user_id: rejectedByUserId,
-        rejection_reason: rejectionReason,
-        farm_snapshot: farmSnapshot,
-        farm_snapshot_updated_at: farm.updatedAt,
-        created_at: now,
-        resolved_at: null,
-        resolution_type: null,
-      };
+      // Runs the read-check-write as one transaction so a concurrent approveFarm
+      // can't race this: whichever commits first wins, and the other retries and
+      // sees the up-to-date status, instead of silently overwriting each other.
+      const { rejectionRecord, farm } = await getFirestore().runTransaction(async (tx) => {
+        const farmSnap = await tx.get(farmRef);
+        if (!farmSnap.exists) {
+          throw new Error(`Farm with id ${farmId} not found.`);
+        }
+        const farmData = farmSnap.data() as FarmDoc;
 
-      await this.rejections().doc(id).set(rejectionRecord);
+        if (farmData.status === FarmStatus.APPROVED) {
+          throw new Error('Cannot reject a farm that has already been approved.');
+        }
 
-      await this.farms()
-        .doc(farmId)
-        .set({
-          ...farm,
+        const farmSnapshot = this.convertToFarmSnapshot(farmId, farmData);
+        const record: FarmRejectionDoc = {
+          farm_id: farmId,
+          rejected_by_user_id: rejectedByUserId,
+          rejection_reason: rejectionReason,
+          farm_snapshot: farmSnapshot,
+          farm_snapshot_updated_at: farmData.updatedAt,
+          created_at: now,
+          resolved_at: null,
+          resolution_type: null,
+        };
+
+        tx.create(this.rejections().doc(id), record);
+        tx.set(farmRef, {
+          ...farmData,
           status: FarmStatus.REJECTED,
           rejection_reason: rejectionReason,
-          rejection_snapshot: this.convertToFarmDTO(farmId, farm),
+          rejection_snapshot: this.convertToFarmDTO(farmId, farmData),
           updatedAt: now,
         } satisfies FarmDoc);
 
-      return this.convertToFarmRejectionDTO(id, rejectionRecord);
+        return { rejectionRecord: record, farm: farmData };
+      });
+
+      rejection = this.convertToFarmRejectionDTO(id, rejectionRecord);
+      farmDto = this.convertToFarmDTO(farmId, {
+        ...farm,
+        status: FarmStatus.REJECTED,
+        rejection_reason: rejectionReason,
+        updatedAt: now,
+      });
     } catch (error: unknown) {
       Logger.error(`Failed to create farm rejection. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+
+    try {
+      const owner = await userService.getUserByFirebaseUid(farmDto.owner_user_id);
+      const greeting = owner.firstName ? `Hi ${owner.firstName},` : 'Hi,';
+      await emailService.sendEmail(owner.email, 'Changes requested for your farm application', {
+        title: 'Changes requested for your farm application',
+        previewText: 'Your farm application needs updates before it can be approved.',
+        recipientName: owner.firstName || undefined,
+        body: `${greeting} Your farm ${farmDto.farm_name} was not approved yet. Please update your application and resubmit.\n\nReason:\n${rejectionReason}`,
+        ctaText: 'Update your farm',
+        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/farmer/farms`,
+        isFarmerEmail: true,
+      });
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm rejected but failed to send rejection email. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return rejection;
   }
 
   async getLatestFarmRejectionByFarmId(farmId: string): Promise<FarmRejectionDTO | null> {
@@ -527,6 +644,7 @@ class FarmService implements IFarmService {
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
+      was_previously_rejected: Boolean(data.rejection_reason),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -587,6 +705,7 @@ class FarmService implements IFarmService {
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
       is_archived: data.is_archived,
+      was_previously_rejected: Boolean(data.rejection_reason),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -816,48 +935,65 @@ class FarmService implements IFarmService {
   async resubmitFarm(
     farmId: string,
     _resubmittedByUserId: string,
-    input: UpdateFarmInput
+    input: UpdateFarmInput,
+    isAdmin: boolean
   ): Promise<FarmDTO> {
     try {
-      const { data: farm } = await this.getFarmDoc(farmId);
-
-      if (farm.status !== FarmStatus.REJECTED) {
-        throw new Error(
-          `Farm with id ${farmId} cannot be resubmitted because its status is ${farm.status}, not REJECTED.`
-        );
-      }
-
       const updateValues = Object.fromEntries(
         Object.entries(input).filter(([, value]) => value !== undefined)
       ) as Partial<UpdateFarmInput>;
 
-      const next: FarmDoc = {
-        ...farm,
-        ...updateValues,
-        location: updateValues.location
-          ? { lat: updateValues.location.lat, lng: updateValues.location.lng }
-          : farm.location,
-        status: FarmStatus.PENDING_APPROVAL,
-        updatedAt: new Date().toISOString(),
-      } as FarmDoc;
-
-      const db = getFirestore();
-      const batch = db.batch();
-      batch.set(this.farms().doc(farmId), next);
-
-      const activeSnap = await this.rejections().where('farm_id', '==', farmId).get();
-      const now = new Date().toISOString();
-      for (const doc of activeSnap.docs) {
-        const data = doc.data() as FarmRejectionDoc;
-        if (data.resolved_at == null) {
-          batch.update(doc.ref, {
-            resolved_at: now,
-            resolution_type: FarmRejectionResolutionType.RESUBMITTED,
-          });
+      const farmRef = this.farms().doc(farmId);
+      // Reads and writes both run inside the transaction so a concurrent write to the
+      // farm or its rejections (e.g. an admin approving/rejecting it, or archiving it)
+      // can't be silently overwritten by a batch built from a stale read.
+      const next = await getFirestore().runTransaction(async (tx) => {
+        const farmSnap = await tx.get(farmRef);
+        if (!farmSnap.exists) {
+          throw new Error(`Farm with id ${farmId} not found.`);
         }
-      }
+        const farm = farmSnap.data() as FarmDoc;
 
-      await batch.commit();
+        if (farm.is_archived && !isAdmin) {
+          throw new ForbiddenError(
+            'This farm is archived and cannot be edited. Please contact an administrator.'
+          );
+        }
+
+        if (farm.status !== FarmStatus.REJECTED) {
+          throw new Error(
+            `Farm with id ${farmId} cannot be resubmitted because its status is ${farm.status}, not REJECTED.`
+          );
+        }
+
+        const activeSnap = await tx.get(this.rejections().where('farm_id', '==', farmId));
+
+        const nextFarm: FarmDoc = {
+          ...farm,
+          ...updateValues,
+          location: updateValues.location
+            ? { lat: updateValues.location.lat, lng: updateValues.location.lng }
+            : farm.location,
+          status: FarmStatus.PENDING_APPROVAL,
+          updatedAt: new Date().toISOString(),
+        } as FarmDoc;
+
+        tx.set(farmRef, nextFarm);
+
+        const now = new Date().toISOString();
+        for (const doc of activeSnap.docs) {
+          const data = doc.data() as FarmRejectionDoc;
+          if (data.resolved_at == null) {
+            tx.update(doc.ref, {
+              resolved_at: now,
+              resolution_type: FarmRejectionResolutionType.RESUBMITTED,
+            });
+          }
+        }
+
+        return nextFarm;
+      });
+
       return this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to resubmit farm. Reason = ${getErrorMessage(error)}`);

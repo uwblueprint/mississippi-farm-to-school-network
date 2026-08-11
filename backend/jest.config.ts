@@ -9,12 +9,13 @@ const config: Config = {
   testMatch: ['**/tests/**/*.test.ts'],
   clearMocks: true,
   setupFiles: ['reflect-metadata'],
-  // Sequelize-era service tests; domain services now use Firestore.
+  // Sequelize-era tests for services that have since moved to Firestore; they mock
+  // Sequelize models these services no longer call, so they can't pass as-is.
+  // farmService/userService were rewritten against a Firestore fake (see tests/helpers)
+  // and no longer need to be excluded.
   testPathIgnorePatterns: [
     '/node_modules/',
     '/build/',
-    'farmService.test.ts',
-    'userService.test.ts',
     'imageService.test.ts',
     'announcementService.test.ts',
     'farmArchive.flow.test.ts',

@@ -46,12 +46,15 @@ const LATEST_REJECTION = `
 	}
 `;
 
-const FILES_BY_FARM = `
-	query FilesByFarm($farmId: String!) {
-		filesByFarm(farmId: $farmId) {
-			fileId
+// Same `images` collection used by new-farm upload + admin/map galleries
+// (not the legacy stored_files / filesByFarm path).
+const GET_IMAGES = `
+	query GetImages($farmId: String!) {
+		getImages(farmId: $farmId) {
+			id
+			index
 			url
-			originalFileName
+			contentType
 		}
 	}
 `;
@@ -101,7 +104,9 @@ export const load: PageLoad = async ({ params }) => {
 		gqlClient<{
 			latestActiveFarmRejection: { rejection_reason: string; created_at: string } | null;
 		}>(LATEST_REJECTION, { farmId: id }),
-		gqlClient<{ filesByFarm: FarmImage[] }>(FILES_BY_FARM, { farmId: id })
+		gqlClient<{
+			getImages: Array<{ id: string; index: number; url: string; contentType: string }>;
+		}>(GET_IMAGES, { farmId: id })
 	]);
 
 	const r =
@@ -111,11 +116,20 @@ export const load: PageLoad = async ({ params }) => {
 		: null;
 
 	const images: FarmImage[] =
-		imagesRes.status === 'fulfilled' ? (imagesRes.value.filesByFarm ?? []) : [];
+		imagesRes.status === 'fulfilled'
+			? (imagesRes.value.getImages ?? []).map((img) => ({
+					fileId: img.id,
+					url: img.url,
+					originalFileName:
+						img.contentType === 'image/png'
+							? `Photo ${img.index + 1}.png`
+							: `Photo ${img.index + 1}.jpg`
+				}))
+			: [];
 
-	// Split the farm's files into the two image buckets. cover_photo /
-	// carousel_photos hold stored_files ids (URLs are short-lived, so files are
-	// re-resolved via filesByFarm on every load).
+	// Split into cover / gallery buckets. cover_photo / carousel_photos hold
+	// `images` collection ids (URLs are short-lived, so files are re-resolved
+	// via getImages on every load).
 	//
 	// coverId/galleryIds are the PERSISTED ids and are what bucket writes must be
 	// based on; cover/gallery are the display subset (an id whose signed-URL

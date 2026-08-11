@@ -13,7 +13,6 @@ jest.mock('@/models/image.model', () => ({
   },
 }));
 
-import { Op } from 'sequelize';
 import ImageService from '@/services/implementations/imageService';
 
 const makeRow = (overrides: Record<string, unknown> = {}) => ({
@@ -62,16 +61,20 @@ describe('ImageService.createImageRecord', () => {
 describe('ImageService.getImagesByFarm', () => {
   const service = new ImageService();
 
-  test('queries by farm, filtered to index >= 1 (gallery, excludes thumbnail), ordered ascending', async () => {
-    mockFindAll.mockResolvedValue([makeRow({ id: 'b', index: 1 }), makeRow({ id: 'c', index: 2 })]);
+  test('queries by farm and returns all images ordered by index ascending', async () => {
+    mockFindAll.mockResolvedValue([
+      makeRow({ id: 'a', index: 0 }),
+      makeRow({ id: 'b', index: 1 }),
+      makeRow({ id: 'c', index: 2 }),
+    ]);
 
     const dtos = await service.getImagesByFarm('farm-1');
 
     expect(mockFindAll).toHaveBeenCalledWith({
-      where: { farm_id: 'farm-1', index: { [Op.gte]: 1 } },
+      where: { farm_id: 'farm-1' },
       order: [['index', 'ASC']],
     });
-    expect(dtos.map((d) => d.id)).toEqual(['b', 'c']);
+    expect(dtos.map((d) => d.id)).toEqual(['a', 'b', 'c']);
   });
 });
 

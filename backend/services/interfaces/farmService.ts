@@ -44,10 +44,13 @@ interface IFarmService {
    * Update a farm by id
    * @param id farm's id
    * @param input the farm fields to be updated
+   * @param isAdmin whether the caller is an admin; archived farms can only be
+   * edited by admins, and this check is performed against the same read used
+   * for the write to avoid a TOCTOU race with a concurrent archiveFarm call.
    * @returns a FarmDTO with the updated farm's information
    * @throws Error if farm update fails
    */
-  updateFarm(id: string, input: UpdateFarmInput): Promise<FarmDTO>;
+  updateFarm(id: string, input: UpdateFarmInput, isAdmin: boolean): Promise<FarmDTO>;
 
   /**
    * Get farms by their FarmStatus
@@ -105,13 +108,15 @@ interface IFarmService {
    * @param farmId farm's id
    * @param resubmittedByUserId id of the user resubmitting the farm
    * @param input the farm fields to update
+   * @param isAdmin whether the caller is an admin (see updateFarm's isAdmin doc)
    * @returns a FarmDTO with status PENDING_APPROVAL
    * @throws Error if farm is not in REJECTED status or update fails
    */
   resubmitFarm(
     farmId: string,
     resubmittedByUserId: string,
-    input: UpdateFarmInput
+    input: UpdateFarmInput,
+    isAdmin: boolean
   ): Promise<FarmDTO>;
 
   /**

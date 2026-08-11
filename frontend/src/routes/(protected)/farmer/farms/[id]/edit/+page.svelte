@@ -11,6 +11,7 @@
 	import { gqlClient } from '$lib/graphqlClient';
 	import { IMAGE_ACCEPT, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
 	import { formModelToUpdateInput } from '$lib/farmMapping';
+	import { uploadFarmPhoto } from '$lib/utils/farm-image-upload';
 	import {
 		NONE_OF_THE_ABOVE,
 		GROWING_PRACTICES,
@@ -29,6 +30,16 @@
 	// farmById(id) query and the updateFarm(id, input) / resubmitFarm(id, input) mutations.
 	const farmId = $derived($page.params.id);
 
+	/** Safe in-app path from `?returnTo=` (e.g. admin → edit → back to /admin). */
+	function safeReturnTo(value: string | null): string | null {
+		if (!value || !value.startsWith('/') || value.startsWith('//')) return null;
+		return value;
+	}
+
+	const backHref = $derived(
+		safeReturnTo($page.url.searchParams.get('returnTo')) ?? '/farmer/farms'
+	);
+
 	// --- GraphQL mutations (client-side; auth via Firebase ID token) ---------
 	const UPDATE_FARM = `
 		mutation UpdateFarm($id: ID!, $input: UpdateFarmInput!) {
@@ -40,30 +51,11 @@
 			resubmitFarm(id: $id, input: $input) { id status }
 		}
 	`;
-	const UPLOAD_FARM_IMAGE = `
-		mutation UploadFarmImage($farmId: String!, $originalFileName: String!, $contentType: String!, $dataBase64: String!) {
-			uploadFarmImage(farmId: $farmId, originalFileName: $originalFileName, contentType: $contentType, dataBase64: $dataBase64) {
-				fileId
-				url
-				originalFileName
-			}
+	const DELETE_IMAGE = `
+		mutation DeleteImage($imageId: String!) {
+			deleteImage(imageId: $imageId)
 		}
 	`;
-	const DELETE_FILE = `
-		mutation DeleteFile($fileId: String!) {
-			deleteFile(fileId: $fileId)
-		}
-	`;
-
-	// Encode file bytes as raw base64 (no data: prefix) for uploadFarmImage.
-	function toBase64(bytes: Uint8Array): string {
-		let binary = '';
-		const chunk = 0x8000;
-		for (let i = 0; i < bytes.length; i += chunk) {
-			binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
-		}
-		return btoa(binary);
-	}
 
 	// --- Form state ---------------------------------------------------------
 	// Backend-mapped fields, seeded from the loader (farmToFormModel). The
@@ -79,7 +71,7 @@
 	const FOOD_SAFETY_OPTIONS = [...FOOD_SAFETY_CERTIFICATIONS, NONE_OF_THE_ABOVE];
 
 	// The two image buckets, resolved by the loader from cover_photo /
-	// carousel_photos (stored_files ids) + filesByFarm. Derived from `data`
+	// carousel_photos (`images` ids) + getImages. Derived from `data`
 	// rather than copied into `farm` so they track uploads/removals across
 	// invalidateAll(). Writes are based on the PERSISTED ids (coverId/galleryIds),
 	// not the display subset, so a transiently unresolvable file is never evicted.
@@ -114,12 +106,12 @@
 		}
 	}
 
-	// Persist a bucket assignment (cover_photo / carousel_photos hold
-	// stored_files ids). Sent separately from the main Save so image edits are
-	// immediate and never clobber unsaved field edits. ALWAYS writes both
-	// columns from the current state (+ the change), so the first edit of a
-	// legacy farm (files but empty columns) persists the displayed split
-	// instead of losing the other bucket.
+	// Persist a bucket assignment (cover_photo / carousel_photos hold `images`
+	// ids). Sent separately from the main Save so image edits are immediate and
+	// never clobber unsaved field edits. ALWAYS writes both columns from the
+	// current state (+ the change), so the first edit of a legacy farm (files
+	// but empty columns) persists the displayed split instead of losing the
+	// other bucket.
 	async function assignImages(next: { cover?: string | null; gallery?: string[] }) {
 		const cover = next.cover !== undefined ? next.cover : coverId;
 		const input: { cover_photo?: string; carousel_photos: string[] } = {
@@ -129,10 +121,10 @@
 		await gqlClient(UPDATE_FARM, { id: farmId, input });
 	}
 
-	// Upload each valid file to the farm's file pool and return the new
-	// stored_files ids. filesFromDrop caps the drop path; the file pickers reach
-	// here unfiltered, so re-apply the same limit for every upload surface.
-	async function uploadStoredFiles(files: File[]): Promise<string[]> {
+	// Upload each valid file into the `images` collection (same path as
+	// new-farm). filesFromDrop caps the drop path; the file pickers reach here
+	// unfiltered, so re-apply the same limit for every upload surface.
+	async function uploadImageFiles(files: File[]): Promise<string[]> {
 		const valid = files.filter((file) => file.size <= MAX_UPLOAD_BYTES);
 		const oversized = files.length - valid.length;
 		if (valid.length === 0) {
@@ -142,18 +134,11 @@
 		actionError =
 			oversized > 0 ? `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.` : '';
 
-		const fileIds: string[] = [];
+		const imageIds: string[] = [];
 		for (const file of valid) {
-			const dataBase64 = toBase64(new Uint8Array(await file.arrayBuffer()));
-			const res = await gqlClient<{ uploadFarmImage: { fileId: string } }>(UPLOAD_FARM_IMAGE, {
-				farmId,
-				originalFileName: file.name,
-				contentType: file.type || 'application/octet-stream',
-				dataBase64
-			});
-			fileIds.push(res.uploadFarmImage.fileId);
+			imageIds.push(await uploadFarmPhoto(farmId, file));
 		}
-		return fileIds;
+		return imageIds;
 	}
 
 	// Dashboard Image bucket: exactly one file becomes the cover (the zone is
@@ -164,7 +149,7 @@
 		uploading = true;
 		try {
 			const previousCoverId = coverId;
-			const [fileId] = await uploadStoredFiles(Array.from(files).slice(0, 1));
+			const [fileId] = await uploadImageFiles(Array.from(files).slice(0, 1));
 			if (fileId) {
 				await assignImages({ cover: fileId });
 				if (
@@ -173,7 +158,7 @@
 					!galleryIds.includes(previousCoverId)
 				) {
 					try {
-						await gqlClient(DELETE_FILE, { fileId: previousCoverId });
+						await gqlClient(DELETE_IMAGE, { imageId: previousCoverId });
 					} catch {
 						// best-effort cleanup; an orphaned old cover is harmless
 					}
@@ -200,7 +185,7 @@
 		}
 		uploading = true;
 		try {
-			const fileIds = await uploadStoredFiles(Array.from(files).slice(0, remaining));
+			const fileIds = await uploadImageFiles(Array.from(files).slice(0, remaining));
 			if (files.length > remaining) {
 				actionError = `Only ${remaining} more photo${remaining === 1 ? '' : 's'} fit — the gallery holds ${MAX_GALLERY_PHOTOS}.`;
 			}
@@ -230,7 +215,7 @@
 			// Unreference first, then delete the blob: if the delete fails the file
 			// is merely orphaned (invisible), never a dangling gallery entry.
 			await assignImages({ gallery: galleryIds.filter((id) => id !== fileId) });
-			await gqlClient(DELETE_FILE, { fileId });
+			await gqlClient(DELETE_IMAGE, { imageId: fileId });
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Remove failed.';
 		} finally {
@@ -246,7 +231,7 @@
 
 {#snippet actionBar()}
 	<div class="action-bar">
-		<ActionButton variant="outline" href="/farmer/farms">
+		<ActionButton variant="outline" href={backHref}>
 			{#snippet iconLeft()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"

@@ -2,6 +2,7 @@ import { FirebaseError } from 'firebase/app';
 import {
 	createUserWithEmailAndPassword,
 	onIdTokenChanged,
+	getIdTokenResult,
 	sendEmailVerification,
 	sendPasswordResetEmail,
 	signInWithEmailAndPassword,
@@ -12,6 +13,7 @@ import {
 	type UserCredential
 } from 'firebase/auth';
 import { getFirebaseAuth } from '$lib/firebase';
+import type { UserRole } from '$lib/types/admin';
 
 const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -105,6 +107,26 @@ export function getPostAuthDestination(email: string, _context: 'login' | 'verif
 
 	// Farmers see helper pop-ups on /onboarding first, then continue to /farmer.
 	return '/onboarding';
+}
+
+/**
+ * Resolves the signed-in user's role. The `role` custom claim is authoritative once the
+ * backend provisions it; until then we fall back to the admin email domain.
+ */
+export async function resolveUserRole(user: User): Promise<UserRole> {
+	const { claims } = await getIdTokenResult(user);
+	const claimedRole = typeof claims.role === 'string' ? claims.role.toUpperCase() : null;
+
+	if (claimedRole === 'ADMIN' || claimedRole === 'FARMER') {
+		return claimedRole;
+	}
+
+	return isAdminEmail(user.email ?? '') ? 'ADMIN' : 'FARMER';
+}
+
+/** Best-effort display name for the signed-in admin, falling back to the email local part. */
+export function getDisplayName(user: User): string {
+	return user.displayName?.trim() || (user.email ?? '').split('@')[0] || 'Admin';
 }
 
 export async function loginWithEmail(email: string, password: string): Promise<UserCredential> {

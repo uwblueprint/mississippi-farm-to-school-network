@@ -3,6 +3,12 @@ import { Role, UserDTO } from '@/types';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import { AuthContext } from '@/middlewares/auth';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import IUserService from '@/services/interfaces/userService';
+import UserService from '@/services/implementations/userService';
+import logger from '@/utilities/logger';
+
+const Logger = logger(__filename);
+const userService: IUserService = new UserService();
 
 const AUTHENTICATION_REQUIRED_MESSAGE = 'You must be logged in to access this resource.';
 const USER_NOT_FOUND_MESSAGE = 'Authenticated user was not found.';
@@ -12,7 +18,7 @@ const OWNERSHIP_REQUIRED_MESSAGE = 'You do not have permission to access or modi
 
 const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
 
-function resolveRole(
+function resolveRoleFromClaimsOrEmail(
   email: string | undefined,
   customClaims?: Record<string, unknown> | null
 ): Role {
@@ -24,6 +30,28 @@ function resolveRole(
     return Role.ADMIN;
   }
   return Role.FARMER;
+}
+
+/**
+ * Role promotions (e.g. via updateUser) are only ever written to the Firestore
+ * `users.role` field, never to Firebase Auth custom claims, so that must be the
+ * primary source of truth. Custom claims / email domain remain a fallback for
+ * requests that arrive before a Firestore profile doc exists.
+ */
+async function resolveRole(
+  firebaseUid: string,
+  email: string | undefined,
+  customClaims?: Record<string, unknown> | null
+): Promise<Role> {
+  try {
+    const user = await userService.getUserByFirebaseUid(firebaseUid);
+    return user.role;
+  } catch (error: unknown) {
+    Logger.info(
+      `No Firestore profile found for firebase_uid ${firebaseUid}, falling back to claims/email for role resolution. Reason = ${getErrorMessage(error)}`
+    );
+    return resolveRoleFromClaimsOrEmail(email, customClaims);
+  }
 }
 
 function splitDisplayName(displayName?: string): {
@@ -57,7 +85,7 @@ async function userFromFirebaseAuth(firebaseUid: string): Promise<UserDTO> {
       id: authUser.uid,
       firebase_uid: authUser.uid,
       email,
-      role: resolveRole(email, claims),
+      role: await resolveRole(authUser.uid, email, claims),
       is_verified: Boolean(authUser.emailVerified),
       firstName: typeof claims.firstName === 'string' ? claims.firstName : firstName,
       lastName: typeof claims.lastName === 'string' ? claims.lastName : lastName,
@@ -102,7 +130,8 @@ const AuthHelper = {
 
   /**
    * Ensures the request is authenticated and the user has one of the allowed roles.
-   * Role comes from Auth custom claims, or admin email domain, otherwise FARMER.
+   * Role comes from the Firestore user profile, falling back to Auth custom claims
+   * or admin email domain when no profile exists yet.
    */
   requireRole: async (context: AuthContext, roles: Role[]): Promise<UserDTO> => {
     const user = await AuthHelper.requireEmailVerified(context);

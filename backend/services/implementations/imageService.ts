@@ -63,7 +63,6 @@ class ImageService implements IImageService {
       const snap = await this.images().where('farm_id', '==', farmId).get();
       return snap.docs
         .map((doc) => toDTO(doc.id, doc.data() as ImageDoc))
-        .filter((img) => img.index >= 1)
         .sort((a, b) => a.index - b.index);
     } catch (error: unknown) {
       Logger.error(`Failed to get images for farm. Reason = ${getErrorMessage(error)}`);

@@ -10,6 +10,12 @@ export const Collections = {
   announcements: 'announcements',
   images: 'images',
   storedFiles: 'stored_files',
+  // Enforces usda_farm_id uniqueness: doc id is the usda_farm_id value itself, so
+  // Firestore's per-document transaction conflict detection can guard against races
+  // (a query-based "does a doc with this field value exist" check can't be, since
+  // Firestore transactions don't detect a new document being added that newly matches
+  // a query that previously returned no results).
+  farmUsdaIds: 'farm_usda_ids',
 } as const;
 
 export type FirestoreLocation = { lat: number; lng: number };
@@ -44,7 +50,7 @@ export function toIso(value: unknown): string {
   if (typeof value === 'string') {
     return new Date(value).toISOString();
   }
-  return new Date().toISOString();
+  throw new Error(`toIso: expected a Date, Firestore Timestamp, or string, got ${typeof value}`);
 }
 
 export function toDate(value: unknown): Date {

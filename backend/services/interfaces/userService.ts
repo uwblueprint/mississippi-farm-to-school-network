@@ -25,6 +25,18 @@ interface IUserService {
   getUserByEmail(email: string): Promise<UserDTO>;
 
   /**
+   * Get user associated with a Firebase Auth uid. `UserDTO.id` mirrors the Firebase uid
+   * (see `authHelpers.ts`), which is a different id space from the Firestore `users`
+   * document id `getUserById` looks up by — use this whenever the id in hand came from
+   * an authenticated user or an `owner_user_id`/`owner`-style reference, not from a raw
+   * Firestore document id.
+   * @param firebaseUid user's Firebase Auth uid
+   * @returns a UserDTO with user's information
+   * @throws Error if user retrieval fails
+   */
+  getUserByFirebaseUid(firebaseUid: string): Promise<UserDTO>;
+
+  /**
    * Get role of user associated with authId
    * @param authId user's authId
    * @returns role of the user
@@ -47,14 +59,6 @@ interface IUserService {
    * @throws Error if user authId retrieval fails
    */
   getAuthIdById(userId: string): Promise<string>;
-
-  /**
-   * Get current user information
-   * @param firebaseUid user's firebase uid
-   * @returns a UserDTO with user's information
-   * @throws Error if user retrieval fails
-   */
-  getCurrentUser(firebaseUid: string): Promise<UserDTO>;
 
   /**
    * Get all user information (possibly paginated in the future)

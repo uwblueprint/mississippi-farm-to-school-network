@@ -152,6 +152,10 @@ export type FarmDTO = {
   carousel_photos: string[];
   status: FarmStatus;
   is_archived: boolean;
+  // True once the farm has ever been rejected, even after a later resubmission
+  // or approval. Used to distinguish a first-time application from a resubmitted
+  // one — createdAt/updatedAt differ on any edit, not just a post-rejection one.
+  was_previously_rejected: boolean;
   createdAt: string;
   updatedAt: string;
 };
