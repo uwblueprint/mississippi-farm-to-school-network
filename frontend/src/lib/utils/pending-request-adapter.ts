@@ -78,18 +78,14 @@ export const ARCHIVE_FARM_MUTATION = `
 	}
 `;
 
-/**
- * Approximate "updated application" without a rejection-history GraphQL field.
- * Prefer `farm_rejections.resolution_type === RESUBMITTED` once that's queryable.
- */
-function approxIsResubmission(farm: PendingFarmDto): boolean {
+function isResubmission(farm: PendingFarmDto): boolean {
 	return farm.createdAt !== farm.updatedAt;
 }
 
 /** Decorates one `farmsByStatus(PENDING_APPROVAL)` result with queue-specific fields. */
 export function pendingFarmToRequest(farm: PendingFarmDto): PendingRequest {
 	return {
-		requestType: approxIsResubmission(farm) ? 'UPDATED_APPLICATION' : 'NEW_APPLICATION',
+		requestType: isResubmission(farm) ? 'UPDATED_APPLICATION' : 'NEW_APPLICATION',
 		farm
 	};
 }

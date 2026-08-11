@@ -56,8 +56,6 @@
 	white-space: nowrap;
 }
 
-/* Sort dropdown: see the shared SortDropdown component for its own scoped styles */
-
 .farm-map-sidebar__list {
 	flex: 1;
 	overflow-y: auto;
