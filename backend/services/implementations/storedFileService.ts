@@ -84,14 +84,9 @@ class StoredFileService implements IStoredFileService {
     try {
       const snap = await this.files().where('farm_id', '==', farmId).get();
       return snap.docs
-        .map((doc) => toDTO(doc.id, doc.data() as StoredFileDoc))
-        .sort((a, b) => {
-          const aCreated = (snap.docs.find((d) => d.id === a.id)?.data() as StoredFileDoc)
-            ?.createdAt;
-          const bCreated = (snap.docs.find((d) => d.id === b.id)?.data() as StoredFileDoc)
-            ?.createdAt;
-          return String(aCreated ?? '').localeCompare(String(bCreated ?? ''));
-        });
+        .map((doc) => ({ id: doc.id, data: doc.data() as StoredFileDoc }))
+        .sort((a, b) => a.data.createdAt.localeCompare(b.data.createdAt))
+        .map(({ id, data }) => toDTO(id, data));
     } catch (error: unknown) {
       Logger.error(`Failed to list stored file records. Reason = ${getErrorMessage(error)}`);
       throw error;
