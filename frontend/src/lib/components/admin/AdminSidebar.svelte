@@ -12,7 +12,7 @@
 		{ href: '/admin/archived', label: 'Archived farms and Pending Farms' },
 		{ href: '/admin/farms', label: 'Farms' },
 		{ href: '/admin/accounts', label: 'Accounts' },
-		{ href: '/admin/announcements', label: 'Manage Annoucements' }
+		{ href: '/admin/announcements', label: 'Manage Announcements' }
 	];
 
 	function isCurrent(href: string): boolean {
