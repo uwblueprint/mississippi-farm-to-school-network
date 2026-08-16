@@ -38,6 +38,8 @@ interface IAnnouncementService {
    */
   deleteAnnouncement(id: string): Promise<AnnouncementDTO>;
 
+  getLiveAnnouncements(): Promise<AnnouncementDTO[]>;
+
   /**
    * Get live and upcoming announcements
    * @returns array of AnnouncementDTOs

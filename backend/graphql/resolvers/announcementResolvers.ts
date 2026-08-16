@@ -14,6 +14,14 @@ const announcementService: IAnnouncementService = new AnnouncementService();
 
 const announcementResolvers = {
   Query: {
+    liveAnnouncements: async (
+      _parent: undefined,
+      __: unknown,
+      context: AuthContext
+    ): Promise<AnnouncementDTO[]> => {
+      await authHelper.requireRole(context, [Role.ADMIN, Role.FARMER]);
+      return announcementService.getLiveAnnouncements();
+    },
     liveAndUpcomingAnnouncements: async (
       _parent: undefined,
       __: unknown,

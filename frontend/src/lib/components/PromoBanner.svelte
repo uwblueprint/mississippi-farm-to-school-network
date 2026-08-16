@@ -43,14 +43,14 @@
 		const valid = new Set(announcements.map(keyOf));
 		let stored: string[] = [];
 		try {
-			stored = JSON.parse(sessionStorage.getItem(storageKey) ?? '[]');
+			stored = JSON.parse(localStorage.getItem(storageKey) ?? '[]');
 		} catch {
 			stored = [];
 		}
 		const pruned = stored.filter((key) => valid.has(key));
 		dismissed = new Set(pruned);
 		try {
-			sessionStorage.setItem(storageKey, JSON.stringify(pruned));
+			localStorage.setItem(storageKey, JSON.stringify(pruned));
 		} catch {
 			// storage unavailable — dismissals just won't persist
 		}
@@ -89,7 +89,7 @@
 		next.add(keyOf(current));
 		dismissed = next;
 		try {
-			sessionStorage.setItem(storageKey, JSON.stringify([...next]));
+			localStorage.setItem(storageKey, JSON.stringify([...next]));
 		} catch {
 			// storage unavailable — dismissals just won't persist
 		}
