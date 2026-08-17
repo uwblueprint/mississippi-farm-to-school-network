@@ -63,4 +63,8 @@ export type MapFarm = {
 };
 
 export type FarmTag =
-	'Processing' | 'Pickup Location' | 'CSA Farm' | 'Farmers Market' | 'Field Trips';
+	| 'Processing'
+	| 'Pickup Location'
+	| 'CSA Farm'
+	| 'Farmers Market'
+	| 'Field Trips';
