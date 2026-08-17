@@ -11,7 +11,8 @@ export const ADMIN_FARMS_PAGE_SIZE = 11;
 
 /** Named slots into `farmOptions` — keep in sync with those array orderings. */
 export const CSA_EXPERIENCE = FARM_EXPERIENCES[0];
-export const [INTEREST_K12, INTEREST_ECE, ONLINE_SALES_OPTION, DELIVERY_OPTION] = FARM_TO_SCHOOL_SALES;
+export const [INTEREST_K12, INTEREST_ECE, ONLINE_SALES_OPTION, DELIVERY_OPTION] =
+	FARM_TO_SCHOOL_SALES;
 const AGRITOURISM_EXPERIENCES = FARM_EXPERIENCES.slice(1, 4); // U-Pick, Farm Stand, Farm Tours
 const FARM_STAND = FARM_EXPERIENCES[2];
 
@@ -242,11 +243,16 @@ export function farmMatchesFilters(farm: AdminFarmRow, filters: FarmColumnFilter
 		return false;
 	}
 	if (
-		!matchesYesNoFilter(filters.online_sales, hasOption(farm.farm_to_school_sales, ONLINE_SALES_OPTION))
+		!matchesYesNoFilter(
+			filters.online_sales,
+			hasOption(farm.farm_to_school_sales, ONLINE_SALES_OPTION)
+		)
 	) {
 		return false;
 	}
-	if (!matchesYesNoFilter(filters.delivery, hasOption(farm.farm_to_school_sales, DELIVERY_OPTION))) {
+	if (
+		!matchesYesNoFilter(filters.delivery, hasOption(farm.farm_to_school_sales, DELIVERY_OPTION))
+	) {
 		return false;
 	}
 	if (!matchesMultiFilter(filters.interest, farm.farm_to_school_sales)) return false;
@@ -257,7 +263,9 @@ export function sortFarms(farms: AdminFarmRow[], sort: SortState): AdminFarmRow[
 	if (!sort) return farms;
 	const { column, direction } = sort;
 	const dir = direction === 'asc' ? 1 : -1;
-	return farms.toSorted((a, b) => a[column].localeCompare(b[column], undefined, { sensitivity: 'base' }) * dir);
+	return farms.toSorted(
+		(a, b) => a[column].localeCompare(b[column], undefined, { sensitivity: 'base' }) * dir
+	);
 }
 
 export function visiblePageNumbers(current: number, total: number): number[] {

@@ -262,8 +262,9 @@
 						<span class="farms-table__text">{formatInterest(farm.farm_to_school_sales)}</span>
 					</div>
 					<div class="farms-table__cell">
-						<span class="farms-table__text farms-table__text--clamp" title={formatSeasonalProduce(farm)}
-							>{formatSeasonalProduce(farm)}</span
+						<span
+							class="farms-table__text farms-table__text--clamp"
+							title={formatSeasonalProduce(farm)}>{formatSeasonalProduce(farm)}</span
 						>
 					</div>
 					<div class="farms-table__cell">
@@ -272,8 +273,9 @@
 						>
 					</div>
 					<div class="farms-table__cell">
-						<span class="farms-table__text farms-table__text--clamp" title={formatFarmersMarkets(farm)}
-							>{formatFarmersMarkets(farm)}</span
+						<span
+							class="farms-table__text farms-table__text--clamp"
+							title={formatFarmersMarkets(farm)}>{formatFarmersMarkets(farm)}</span
 						>
 					</div>
 					<div class="farms-table__cell">

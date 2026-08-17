@@ -137,9 +137,7 @@
 		showExportModal = false;
 		try {
 			const toExport =
-				selectedIds.size > 0
-					? filteredFarms.filter((f) => selectedIds.has(f.id))
-					: filteredFarms;
+				selectedIds.size > 0 ? filteredFarms.filter((f) => selectedIds.has(f.id)) : filteredFarms;
 			downloadFarmsCsv(toExport);
 			showToast(
 				'success',
@@ -160,7 +158,7 @@
 	<title>Farms | Admin</title>
 </svelte:head>
 
-	<main class="admin-page">
+<main class="admin-page">
 	<div class="admin-page__inner">
 		<header class="admin-page__header">
 			<h1 class="admin-page__title">Farms</h1>
@@ -298,7 +296,7 @@
 		Export all <strong>{exportCount}</strong> farms as a CSV file. The exported file will include all
 		visible table columns.
 	{:else}
-		Export the <strong>{exportCount}</strong> selected farms as a CSV file. The exported file will
-		include all visible table columns.
+		Export the <strong>{exportCount}</strong> selected farms as a CSV file. The exported file will include
+		all visible table columns.
 	{/if}
 {/snippet}

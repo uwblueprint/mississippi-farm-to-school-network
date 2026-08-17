@@ -1,10 +1,6 @@
 <script lang="ts">
 	const contactRows = [0, 1, 2, 3, 4, 5] as const;
-	const leftSections = [
-		{ fields: 2 },
-		{ fields: 3 },
-		{ fields: 3 }
-	] as const;
+	const leftSections = [{ fields: 2 }, { fields: 3 }, { fields: 3 }] as const;
 	const asideSections = [{ fields: 2 }, { fields: 3 }] as const;
 </script>
 

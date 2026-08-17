@@ -3,11 +3,7 @@ export type FarmStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 export type FarmMarkerType = 'farm' | 'market' | 'processing' | 'csa' | 'pickup';
 
 export type FoodCategorySection =
-	| 'Fruits and Vegetables'
-	| 'Dairy and Eggs'
-	| 'Herbs'
-	| 'Meat'
-	| 'Other';
+	'Fruits and Vegetables' | 'Dairy and Eggs' | 'Herbs' | 'Meat' | 'Other';
 
 export type FarmLocation = {
 	lat: number;
@@ -63,8 +59,4 @@ export type MapFarm = {
 };
 
 export type FarmTag =
-	| 'Processing'
-	| 'Pickup Location'
-	| 'CSA Farm'
-	| 'Farmers Market'
-	| 'Field Trips';
+	'Processing' | 'Pickup Location' | 'CSA Farm' | 'Farmers Market' | 'Field Trips';
