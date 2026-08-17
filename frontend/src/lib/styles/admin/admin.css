@@ -1140,33 +1140,49 @@
 
 .farms-table__scroll {
 	position: relative;
-	display: flex;
 	width: 100%;
 	overflow-x: auto;
 	overflow-y: visible;
 }
 
-.farms-table__pinned {
-	position: sticky;
-	left: 0;
-	z-index: 2;
-	flex-shrink: 0;
-	width: 17rem;
-	background: #ffffff;
-	border-right: 2px solid var(--color-neutral-200, #f5f6f8);
-	box-shadow: 4px 0 8px rgba(19, 25, 39, 0.04);
-}
-
-.farms-table__main {
-	flex: 1 0 auto;
+.farms-table__grid {
 	min-width: max-content;
 }
 
 .farms-table__row {
+	display: grid;
+	grid-template-columns:
+		4rem
+		13rem
+		16rem
+		18rem
+		10rem
+		repeat(3, 11rem)
+		repeat(4, 9.5rem)
+		repeat(4, 12rem);
 	align-items: stretch;
 	min-height: 3.75rem;
 	border-bottom: 1px solid var(--color-neutral-200, #f5f6f8);
 	background: #ffffff;
+}
+
+.farms-table__cell--pin-check {
+	position: sticky;
+	left: 0;
+	z-index: 2;
+}
+
+.farms-table__cell--pin-name {
+	position: sticky;
+	left: 4rem;
+	z-index: 2;
+	border-right: 2px solid var(--color-neutral-200, #f5f6f8);
+	box-shadow: 4px 0 8px rgba(19, 25, 39, 0.04);
+}
+
+.farms-table__row--header .farms-table__cell--pin-check,
+.farms-table__row--header .farms-table__cell--pin-name {
+	z-index: 3;
 }
 
 .farms-table__row--header {
@@ -1206,22 +1222,6 @@
 	box-sizing: border-box;
 	background: inherit;
 	min-width: 0;
-}
-
-.farms-table__pinned .farms-table__row {
-	display: grid;
-	grid-template-columns: 4rem minmax(0, 1fr);
-}
-
-.farms-table__row--wide {
-	display: grid;
-	grid-template-columns:
-		16rem
-		18rem
-		10rem
-		repeat(3, 11rem)
-		repeat(4, 9.5rem)
-		repeat(4, 12rem);
 }
 
 .farms-table__cell--check {

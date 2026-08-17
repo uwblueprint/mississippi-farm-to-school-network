@@ -1,20 +1,9 @@
 <script lang="ts">
 	import ColumnFilterDropdown from '$lib/components/admin/farms/ColumnFilterDropdown.svelte';
-	import FarmValuePills from '$lib/components/admin/farms/FarmValuePills.svelte';
+	import FarmsTableRow from '$lib/components/admin/farms/FarmsTableRow.svelte';
 	import {
-		CSA_EXPERIENCE,
-		DELIVERY_OPTION,
 		FILTER_LABELS,
 		FILTER_OPTIONS,
-		ONLINE_SALES_OPTION,
-		formatAgritourism,
-		formatExperience,
-		formatFarmersMarkets,
-		formatInterest,
-		formatSeasonalProduce,
-		hasOption,
-		shortCharacteristic,
-		yesNoLabel,
 		type AdminFarmRow,
 		type FarmColumnFilters,
 		type FilterableColumn,
@@ -52,11 +41,6 @@
 		someSelected
 	}: Props = $props();
 
-	function handleCheckboxClick(event: MouseEvent, id: string) {
-		event.stopPropagation();
-		onToggleSelect(id);
-	}
-
 	let openFilter: FilterableColumn | null = $state(null);
 	let hoveredFarmId = $state<string | null>(null);
 
@@ -76,9 +60,9 @@
 	aria-label="Farms table"
 >
 	<div class="farms-table__scroll">
-		<div class="farms-table__pinned">
+		<div class="farms-table__grid">
 			<div class="farms-table__row farms-table__row--header">
-				<div class="farms-table__cell farms-table__cell--check">
+				<div class="farms-table__cell farms-table__cell--check farms-table__cell--pin-check">
 					<button
 						class="farms-checkbox"
 						class:farms-checkbox--checked={allSelected}
@@ -96,7 +80,7 @@
 						{/if}
 					</button>
 				</div>
-				<div class="farms-table__cell farms-table__cell--header">
+				<div class="farms-table__cell farms-table__cell--header farms-table__cell--pin-name">
 					<button
 						class="farms-table__header-btn"
 						type="button"
@@ -111,44 +95,6 @@
 						<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
 					</button>
 				</div>
-			</div>
-
-			{#each farms as farm, index (farm.id)}
-				{@const selected = selectedIds.has(farm.id)}
-				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-				<div
-					class="farms-table__row farms-table__row--clickable"
-					class:farms-table__row--zebra={index % 2 === 0}
-					class:farms-table__row--selected={selected}
-					class:farms-table__row--hovered={hoveredFarmId === farm.id}
-					onmouseenter={() => (hoveredFarmId = farm.id)}
-					onmouseleave={() => (hoveredFarmId = null)}
-					onclick={() => onRowClick(farm.id)}
-				>
-					<div class="farms-table__cell farms-table__cell--check">
-						<button
-							class="farms-checkbox"
-							class:farms-checkbox--checked={selected}
-							type="button"
-							aria-label={`Select ${farm.farm_name}`}
-							aria-checked={selected}
-							role="checkbox"
-							onclick={(event) => handleCheckboxClick(event, farm.id)}
-						>
-							{#if selected}
-								<img src="/images/admin/checkboxCheckIcon.svg" alt="" />
-							{/if}
-						</button>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text" title={farm.farm_name}>{farm.farm_name}</span>
-					</div>
-				</div>
-			{/each}
-		</div>
-
-		<div class="farms-table__main">
-			<div class="farms-table__row farms-table__row--header farms-table__row--wide">
 				<div class="farms-table__cell farms-table__cell--header">
 					<button
 						class="farms-table__header-btn"
@@ -210,80 +156,15 @@
 			</div>
 
 			{#each farms as farm, index (farm.id)}
-				{@const selected = selectedIds.has(farm.id)}
-				<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-				<div
-					class="farms-table__row farms-table__row--wide farms-table__row--clickable"
-					class:farms-table__row--zebra={index % 2 === 0}
-					class:farms-table__row--selected={selected}
-					class:farms-table__row--hovered={hoveredFarmId === farm.id}
-					onmouseenter={() => (hoveredFarmId = farm.id)}
-					onmouseleave={() => (hoveredFarmId = null)}
-					onclick={() => onRowClick(farm.id)}
-				>
-					<div class="farms-table__cell">
-						<span class="farms-table__text" title={farm.primary_email}>{farm.primary_email}</span>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text" title={farm.farm_address}>{farm.farm_address}</span>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text" title={farm.primary_phone}>{farm.primary_phone}</span>
-					</div>
-					<div class="farms-table__cell">
-						<FarmValuePills values={farm.growing_practices} tone="green" />
-					</div>
-					<div class="farms-table__cell">
-						<FarmValuePills
-							values={farm.farm_characteristics}
-							tone="purple"
-							formatLabel={shortCharacteristic}
-						/>
-					</div>
-					<div class="farms-table__cell">
-						<FarmValuePills values={farm.food_safety_certifications} tone="orange" />
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text"
-							>{yesNoLabel(hasOption(farm.farm_experiences, CSA_EXPERIENCE))}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text"
-							>{yesNoLabel(hasOption(farm.farm_to_school_sales, ONLINE_SALES_OPTION))}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text"
-							>{yesNoLabel(hasOption(farm.farm_to_school_sales, DELIVERY_OPTION))}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text">{formatInterest(farm.farm_to_school_sales)}</span>
-					</div>
-					<div class="farms-table__cell">
-						<span
-							class="farms-table__text farms-table__text--clamp"
-							title={formatSeasonalProduce(farm)}>{formatSeasonalProduce(farm)}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text farms-table__text--clamp" title={formatAgritourism(farm)}
-							>{formatAgritourism(farm)}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span
-							class="farms-table__text farms-table__text--clamp"
-							title={formatFarmersMarkets(farm)}>{formatFarmersMarkets(farm)}</span
-						>
-					</div>
-					<div class="farms-table__cell">
-						<span class="farms-table__text farms-table__text--clamp" title={formatExperience(farm)}
-							>{formatExperience(farm)}</span
-						>
-					</div>
-				</div>
+				<FarmsTableRow
+					{farm}
+					{index}
+					selected={selectedIds.has(farm.id)}
+					hovered={hoveredFarmId === farm.id}
+					{onRowClick}
+					{onToggleSelect}
+					onHover={(id) => (hoveredFarmId = id)}
+				/>
 			{/each}
 		</div>
 
