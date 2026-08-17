@@ -4,6 +4,7 @@
 	import { onAuthStateChanged } from 'firebase/auth';
 
 	import AdminSidebar from '$lib/components/admin/AdminSidebar.svelte';
+	import ToastHost from '$lib/components/ToastHost.svelte';
 	import { getDisplayName, resolveUserRole } from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
 	import '$lib/styles/admin/admin.css';
@@ -40,4 +41,5 @@
 		<AdminSidebar {adminName} />
 		{@render children()}
 	</div>
+	<ToastHost />
 {/if}
