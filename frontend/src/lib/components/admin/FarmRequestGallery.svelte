@@ -42,7 +42,8 @@
 
 <div class="farm-request-modal__gallery">
 	{#if imagesLoading}
-		<p class="farm-request-modal__photo-status">Loading photos…</p>
+		<div class="farm-modal-skeleton__photo" aria-hidden="true"></div>
+		<span class="sr-only">Loading photos</span>
 	{:else if imageUrls[photoIndex]}
 		<img class="farm-request-modal__photo" src={imageUrls[photoIndex]} alt="Photo of {farmName}" />
 	{:else}

@@ -56,6 +56,6 @@
 			</div>
 		</div>
 
-		<img class="request-card__chevron" src="/images/admin/chevronRightIcon.svg" alt="" />
+		<img class="request-card__chevron" src="/images/common/chevronRightIcon.svg" alt="" />
 	</div>
 </button>

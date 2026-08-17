@@ -21,3 +21,12 @@ export function formatRelativeTime(isoTimestamp: string, now: Date = new Date())
 		year: 'numeric'
 	});
 }
+
+/** Formats an ISO timestamp as a full date, e.g. "July 20, 2026". */
+export function formatFullDate(isoTimestamp: string): string {
+	return new Date(isoTimestamp).toLocaleDateString('en-US', {
+		month: 'long',
+		day: 'numeric',
+		year: 'numeric'
+	});
+}

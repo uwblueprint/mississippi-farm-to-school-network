@@ -1,6 +1,4 @@
 <script lang="ts">
-	import ToastHost from '$lib/components/announcements/ToastHost.svelte';
-
 	let { children } = $props();
 
 	$effect(() => {
@@ -11,7 +9,6 @@
 </script>
 
 {@render children()}
-<ToastHost />
 
 <style>
 	:global(html.announcements-hide-scrollbar) {
