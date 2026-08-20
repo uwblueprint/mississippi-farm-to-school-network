@@ -97,7 +97,7 @@
 
 	function onPointerUp(event: PointerEvent) {
 		if (event.pointerType === 'mouse') return;
-		if ((event.target as HTMLElement).closest('button')) return;
+		if ((event.target as HTMLElement).closest('button, a')) return;
 		active = !active;
 	}
 
@@ -161,7 +161,7 @@
 				<span class="promo-icon">{@render alertIcon()}</span>
 
 				<div class="promo-content">
-					<p class="promo-title">{current.title}</p>
+					<p class="promo-title">{@html current.title}</p>
 					<p class="promo-caption">{current.date}</p>
 				</div>
 
@@ -213,7 +213,7 @@
 					<span class="promo-icon">{@render alertIcon()}</span>
 
 					<div class="promo-content">
-						<p class="promo-title">{a.title}</p>
+						<p class="promo-title">{@html a.title}</p>
 						<p class="promo-caption">{a.date}</p>
 					</div>
 
@@ -353,6 +353,11 @@
 		font-size: var(--type-b1-size);
 		line-height: 1.4;
 		color: #000000;
+	}
+
+	.promo-title :global(a) {
+		color: var(--mfsn-primary-500);
+		text-decoration: underline;
 	}
 
 	.promo-caption {
