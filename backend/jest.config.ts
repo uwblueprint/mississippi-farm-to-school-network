@@ -11,13 +11,12 @@ const config: Config = {
   setupFiles: ['reflect-metadata'],
   // Sequelize-era tests for services that have since moved to Firestore; they mock
   // Sequelize models these services no longer call, so they can't pass as-is.
-  // farmService/userService were rewritten against a Firestore fake (see tests/helpers)
-  // and no longer need to be excluded.
+  // farmService/userService/announcementService were rewritten against a Firestore
+  // fake (see tests/helpers) and no longer need to be excluded.
   testPathIgnorePatterns: [
     '/node_modules/',
     '/build/',
     'imageService.test.ts',
-    'announcementService.test.ts',
     'farmArchive.flow.test.ts',
   ],
   modulePathIgnorePatterns: ['<rootDir>/build/'],

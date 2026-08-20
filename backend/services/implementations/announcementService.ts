@@ -169,6 +169,21 @@ class AnnouncementService implements IAnnouncementService {
     }
   }
 
+  async getLiveAnnouncements(): Promise<AnnouncementDTO[]> {
+    const snap = await this.announcements().get();
+    const now = new Date();
+    return snap.docs
+      .map((doc) => ({ id: doc.id, data: doc.data() as AnnouncementDoc }))
+      .filter(({ data }) => {
+        if (data.deleted_at) return false;
+        if (toDate(data.start_date) > now) return false;
+        if (!data.end_date) return true;
+        return toDate(data.end_date) >= now;
+      })
+      .sort((a, b) => toDate(a.data.start_date).getTime() - toDate(b.data.start_date).getTime())
+      .map(({ id, data }) => this.convertToAnnouncementDTO(id, data));
+  }
+
   async getLiveAndUpcomingAnnouncements(): Promise<AnnouncementDTO[]> {
     const snap = await this.announcements().get();
     const now = new Date();
