@@ -435,12 +435,14 @@
 
 <style>
 	.edit-page {
-		padding: 72px clamp(32px, 8cqi, 110px);
+		/* Matches the add-farm page's .container: a 760px centred column, so the
+		   two forms read as one flow. */
+		padding: 40px 24px 64px;
 		display: flex;
 		flex-direction: column;
-		gap: 28px;
+		gap: 18px;
 		width: 100%;
-		max-width: 1400px;
+		max-width: 760px;
 		margin: 0 auto;
 		box-sizing: border-box;
 		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
@@ -454,18 +456,18 @@
 		gap: 16px;
 	}
 
-	/* Back/Save ↔ main content: 70px total (28px flex gap + 42px) */
+	/* Back/Save ↔ main content: 28px total (18px flex gap + 10px) */
 	.edit-page > .action-bar:first-child {
-		margin-bottom: 42px;
+		margin-bottom: 10px;
 	}
 
 	.edit-page > .action-bar:last-child {
-		margin-top: 42px;
+		margin-top: 10px;
 	}
 
 	.edit-title {
 		font-family: 'Figtree Variable', 'Figtree', sans-serif;
-		font-size: 32px;
+		font-size: 26px;
 		font-weight: 500;
 		line-height: normal;
 		color: #000;
@@ -479,15 +481,15 @@
 	.form-error {
 		margin: 0;
 		color: #c4341f;
-		font-size: 17px;
+		font-size: 14px;
 		font-weight: 400;
 	}
 
-	/* Helper text under a field. Sits inside .section's 38px flex gap, so pull it
+	/* Helper text under a field. Sits inside .section's 18px flex gap, so pull it
 	   back up to read as part of the field above rather than a separate row. */
 	.field-note {
-		margin: -28px 0 0;
-		color: #858790;
+		margin: -10px 0 0;
+		color: #666;
 		font-size: 14px;
 		font-weight: 400;
 	}
@@ -495,20 +497,20 @@
 	.section {
 		display: flex;
 		flex-direction: column;
-		gap: 38px;
+		gap: 18px;
 	}
 
 	.section__heading {
 		color: #000;
-		font-size: 24px;
-		font-weight: 400;
-		line-height: 34px;
-		margin: 12px 0 4px;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: 1.4;
+		margin: 28px 0 16px;
 	}
 
 	.section__hint {
-		color: #000;
-		font-size: 21px;
+		color: #666;
+		font-size: 14px;
 		font-weight: 300;
 		margin: 0;
 	}
@@ -516,22 +518,22 @@
 	/* Section subtitle (e.g. "Photo Gallery", "Dashboard Image") — H2 headline */
 	.section__subtitle {
 		color: #000;
-		font-size: 24px;
-		font-weight: 400;
-		line-height: 34px;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: 1.4;
 	}
 
 	.field-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 38px;
+		gap: 18px;
 	}
 
 	.file-link {
 		color: #3742b4;
 		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 21px;
-		font-weight: 300;
+		font-size: 14px;
+		font-weight: 400;
 		line-height: normal;
 		text-decoration-line: underline;
 		text-decoration-style: solid;
@@ -544,8 +546,8 @@
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 48px;
-		/* end of questions ↔ Save: 48px total (28px flex gap + 20px) */
-		margin-top: 20px;
+		gap: 24px;
+		/* end of questions ↔ Save: 28px total (18px flex gap + 10px) */
+		margin-top: 10px;
 	}
 </style>
