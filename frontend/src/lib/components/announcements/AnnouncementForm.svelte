@@ -136,6 +136,16 @@
 		selection?.addRange(range);
 	}
 
+	function showLinkHighlight(range: Range) {
+		if (typeof Highlight === 'undefined' || !CSS.highlights) return;
+		CSS.highlights.set('link-target', new Highlight(range));
+	}
+
+	function clearLinkHighlight() {
+		if (typeof CSS === 'undefined' || !CSS.highlights) return;
+		CSS.highlights.delete('link-target');
+	}
+
 	function toggleLinkField() {
 		if (!editorEl) return;
 
@@ -161,6 +171,7 @@
 		if (!editorEl.contains(range.commonAncestorContainer)) return;
 
 		savedRange = range.cloneRange();
+		showLinkHighlight(savedRange);
 		linkUrl = '';
 		linkFieldOpen = true;
 		queueMicrotask(() => linkInputEl?.focus());
@@ -177,6 +188,7 @@
 	}
 
 	function closeLinkField() {
+		clearLinkHighlight();
 		linkFieldOpen = false;
 		linkUrl = '';
 		savedRange = null;
@@ -617,6 +629,11 @@
 		line-height: 1.5rem;
 		color: #000000;
 		outline: none;
+	}
+
+	:global(::highlight(link-target)) {
+		background-color: Highlight;
+		color: HighlightText;
 	}
 
 	.message-input :global(a) {
