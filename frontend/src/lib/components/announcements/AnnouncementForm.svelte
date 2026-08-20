@@ -784,7 +784,7 @@
 		position: fixed;
 		right: 0;
 		bottom: 0;
-		left: 0;
+		left: var(--admin-sidebar-width, 0px);
 		z-index: 40;
 		padding: 1.5rem;
 		background: var(--color-neutral-0);
