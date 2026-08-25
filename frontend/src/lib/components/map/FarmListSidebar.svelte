@@ -21,6 +21,7 @@
 		map: MapboxMap | null;
 		selectedFarmId?: string | null;
 		onSelectFarm?: (farm: MapFarm) => void;
+		onVisibleFarmsChange?: (farms: MapFarm[]) => void;
 		loading?: boolean;
 		error?: string | null;
 	}
@@ -30,6 +31,7 @@
 		map,
 		selectedFarmId = $bindable(null),
 		onSelectFarm,
+		onVisibleFarmsChange,
 		loading = false,
 		error = null
 	}: Props = $props();
@@ -47,6 +49,10 @@
 	const selectedFarmIndex = $derived(
 		selectedFarmId ? visibleFarms.findIndex((farm) => farm.id === selectedFarmId) : -1
 	);
+
+	$effect(() => {
+		onVisibleFarmsChange?.(visibleFarms);
+	});
 
 	function handleSelect(farm: MapFarm) {
 		selectedFarmId = farm.id;
