@@ -2,6 +2,7 @@ import { gql } from 'apollo-server';
 
 const announcementType = gql`
   type Query {
+    liveAnnouncements: [AnnouncementDTO!]!
     liveAndUpcomingAnnouncements: [AnnouncementDTO!]!
     pastAnnouncements: [AnnouncementDTO!]!
   }

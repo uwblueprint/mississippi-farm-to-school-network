@@ -2,11 +2,12 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import PromoBanner from '$lib/components/PromoBanner.svelte';
 	import { getFirebaseAuth } from '$lib/firebase';
 	import { gqlClient } from '$lib/graphqlClient';
 	import { logout, sendPasswordResetEmailHandler } from '$lib/auth';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	const MY_FARMS_COUNT = `
 		query MyFarmsCount {
@@ -61,6 +62,15 @@
 	<main class="dashboard__main">
 		{@render children()}
 	</main>
+	{#if data.announcements.length > 0}
+		<div class="dashboard__announcements">
+			<PromoBanner
+				announcements={data.announcements}
+				dismissable
+				storageKey="farmer-announcements-dismissed"
+			/>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -78,5 +88,12 @@
 		min-width: 0;
 		/* establishes the sizing context for the cqi-based fluid spacing inside */
 		container-type: inline-size;
+	}
+
+	.dashboard__announcements {
+		position: fixed;
+		right: 2.25rem;
+		bottom: 2.25rem;
+		z-index: 60;
 	}
 </style>
