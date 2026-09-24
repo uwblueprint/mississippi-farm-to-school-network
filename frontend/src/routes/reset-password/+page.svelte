@@ -46,7 +46,7 @@
 				label="Email Address"
 				type="email"
 				name="email"
-				autocomplete="email"
+				autocomplete="username"
 				required
 				bind:value={email}
 			/>

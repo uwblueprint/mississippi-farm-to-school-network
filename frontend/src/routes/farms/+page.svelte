@@ -13,6 +13,7 @@
 	let map = $state<MapboxMap | null>(null);
 	let selectedFarmId = $state<string | null>(null);
 	let farms = $state<MapFarm[]>([]);
+	let visibleFarms = $state<MapFarm[]>([]);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
 
@@ -37,9 +38,11 @@
 					return { ...farm, ...images };
 				})
 			);
+			visibleFarms = farms;
 		} catch {
 			loadError = 'Network error. Check your connection and try again.';
 			farms = [];
+			visibleFarms = [];
 		} finally {
 			loading = false;
 		}
@@ -56,8 +59,15 @@
 </svelte:head>
 
 <div class="farm-map-page">
-	<FarmListSidebar {farms} bind:selectedFarmId {map} {loading} error={loadError} />
+	<FarmListSidebar
+		{farms}
+		bind:selectedFarmId
+		{map}
+		{loading}
+		error={loadError}
+		onVisibleFarmsChange={(nextFarms) => (visibleFarms = nextFarms)}
+	/>
 	<div class="farm-map-panel">
-		<FarmMap {farms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
+		<FarmMap farms={visibleFarms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
 	</div>
 </div>

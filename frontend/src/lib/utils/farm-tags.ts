@@ -28,7 +28,7 @@ const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
 	'Field Trips': (farm) => hasOption(farm.farm_experiences, 'Farm Tours/Field Trips Welcome')
 };
 
-const TAG_ORDER: FarmTag[] = [
+export const FARM_TAG_ORDER: FarmTag[] = [
 	'Processing',
 	'Pickup Location',
 	'CSA Farm',
@@ -44,7 +44,7 @@ export function getFarmTags(
 ): FarmTag[] {
 	// Every listed tag has an explicit predicate; default to excluding any tag
 	// that doesn't (safer than silently showing an unimplemented tag on every farm).
-	return TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm as MapFarm) ?? false);
+	return FARM_TAG_ORDER.filter((tag) => TAG_PREDICATES[tag]?.(farm as MapFarm) ?? false);
 }
 
 /** Derive map marker type from FarmDTO option arrays. */

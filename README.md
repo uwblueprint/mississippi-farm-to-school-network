@@ -55,6 +55,12 @@ Detailed onboarding notes: [Technical Onboarding](https://www.notion.so/uwbluepr
 Erica Han  
 [ericahan22](https://github.com/ericahan22)
 
+Rohan Saha
+[rohansaha27](https://github.com/rohansaha27)
+
+Jesse Huang
+[jeessh](https://github.com/jeessh)
+
 Fiona Cai  
 [@fiona-cai](https://x.com/fcaiona)
 
