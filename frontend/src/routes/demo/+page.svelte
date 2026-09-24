@@ -48,7 +48,7 @@
 					<PromoBanner {announcements} expanded={true} />
 				</div>
 				<div class="space-y-2">
-					<p class="text-sm text-surface-600-400">Dismissable (persists per session)</p>
+					<p class="text-sm text-surface-600-400">Dismissable (persists locally)</p>
 					<PromoBanner
 						{announcements}
 						expanded={true}

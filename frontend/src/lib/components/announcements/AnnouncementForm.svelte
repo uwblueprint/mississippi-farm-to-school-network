@@ -136,6 +136,16 @@
 		selection?.addRange(range);
 	}
 
+	function showLinkHighlight(range: Range) {
+		if (typeof Highlight === 'undefined' || !CSS.highlights) return;
+		CSS.highlights.set('link-target', new Highlight(range));
+	}
+
+	function clearLinkHighlight() {
+		if (typeof CSS === 'undefined' || !CSS.highlights) return;
+		CSS.highlights.delete('link-target');
+	}
+
 	function toggleLinkField() {
 		if (!editorEl) return;
 
@@ -161,6 +171,7 @@
 		if (!editorEl.contains(range.commonAncestorContainer)) return;
 
 		savedRange = range.cloneRange();
+		showLinkHighlight(savedRange);
 		linkUrl = '';
 		linkFieldOpen = true;
 		queueMicrotask(() => linkInputEl?.focus());
@@ -177,6 +188,7 @@
 	}
 
 	function closeLinkField() {
+		clearLinkHighlight();
 		linkFieldOpen = false;
 		linkUrl = '';
 		savedRange = null;
@@ -619,6 +631,11 @@
 		outline: none;
 	}
 
+	:global(::highlight(link-target)) {
+		background-color: Highlight;
+		color: HighlightText;
+	}
+
 	.message-input :global(a) {
 		color: var(--mfsn-primary-500);
 		text-decoration: underline;
@@ -784,7 +801,7 @@
 		position: fixed;
 		right: 0;
 		bottom: 0;
-		left: 0;
+		left: var(--admin-sidebar-width, 0px);
 		z-index: 40;
 		padding: 1.5rem;
 		background: var(--color-neutral-0);
