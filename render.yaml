@@ -12,13 +12,11 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      # Upload the Firebase service-account JSON as a Render Secret File named
+      # firebase-service-account.json; Render mounts it under /etc/secrets/.
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        value: /etc/secrets/firebase-service-account.json
       # Secrets: set these in the Render dashboard (sync: false keeps them out of git).
-      - key: FIREBASE_PROJECT_ID
-        sync: false
-      - key: FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL
-        sync: false
-      - key: FIREBASE_SVC_ACCOUNT_PRIVATE_KEY
-        sync: false
       - key: FIREBASE_STORAGE_DEFAULT_BUCKET
         sync: false
       - key: FIREBASE_WEB_API_KEY
