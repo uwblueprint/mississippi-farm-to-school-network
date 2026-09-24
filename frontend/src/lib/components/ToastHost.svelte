@@ -4,6 +4,7 @@
 	import { toast } from '$lib/state/toast.svelte';
 	import checkIcon from '$lib/assets/announcements/check.svg';
 	import trashIcon from '$lib/assets/announcements/trash.svg';
+	import alertIcon from '$lib/assets/alert-circle.svg';
 
 	const reducedMotion =
 		typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -22,21 +23,33 @@
 
 {#if toast.current}
 	{#key toast.current.id}
+		{@const t = toast.current}
 		<div
-			class="toast"
+			class="toast toast--{t.kind}"
+			class:toast--titled={Boolean(t.title)}
 			role="status"
 			aria-live="polite"
 			in:riseIn|global
 			out:fade|global={{ duration: reducedMotion ? 0 : 180 }}
 		>
-			{#if toast.current.kind === 'success'}
+			{#if t.kind === 'success'}
 				<span class="toast-badge">
 					<img class="icon-check" src={checkIcon} alt="" />
 				</span>
-			{:else if toast.current.kind === 'delete'}
+			{:else if t.kind === 'delete'}
 				<img class="icon-trash" src={trashIcon} alt="" />
+			{:else if t.kind === 'error'}
+				<img class="icon-alert" src={alertIcon} alt="" />
 			{/if}
-			<p class="toast-message">{toast.current.message}</p>
+
+			{#if t.title}
+				<div class="toast-copy">
+					<p class="toast-title">{t.title}</p>
+					<p class="toast-message">{t.message}</p>
+				</div>
+			{:else}
+				<p class="toast-message">{t.message}</p>
+			{/if}
 		</div>
 	{/key}
 {/if}
@@ -59,6 +72,21 @@
 		transform-origin: bottom right;
 	}
 
+	.toast--titled {
+		align-items: flex-start;
+		width: 20.7rem;
+		min-width: 0;
+		border-radius: 10px 12px 12px 10px;
+	}
+
+	.toast--titled.toast--success {
+		border-left: 5px solid #93a883;
+	}
+
+	.toast--titled.toast--error {
+		border-left: 5px solid #ffca1a;
+	}
+
 	.toast-badge {
 		flex-shrink: 0;
 		display: flex;
@@ -66,7 +94,7 @@
 		justify-content: center;
 		width: 1.25rem;
 		height: 1.25rem;
-		background: var(--mfsn-success-100);
+		background: var(--mfsn-success-100, #b3e3a2);
 		border-radius: 50%;
 	}
 
@@ -83,12 +111,42 @@
 		height: 17.87px;
 	}
 
+	.icon-alert {
+		display: block;
+		flex-shrink: 0;
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.toast-copy {
+		display: flex;
+		flex-direction: column;
+		gap: 0.5rem;
+		min-width: 0;
+	}
+
+	.toast-title {
+		margin: 0;
+		font-family: var(--font-dm-sans, 'DM Sans', sans-serif);
+		font-weight: var(--font-weight-medium, 500);
+		font-size: var(--text-b3, 1rem);
+		line-height: 1.5rem;
+		color: var(--color-text-secondary, #4f545e);
+	}
+
 	.toast-message {
 		margin: 0;
-		font-family: var(--font-dm-sans);
-		font-weight: var(--font-weight-medium);
-		font-size: var(--text-b3);
+		font-family: var(--font-dm-sans, 'DM Sans', sans-serif);
+		font-weight: var(--font-weight-medium, 500);
+		font-size: var(--text-b3, 1rem);
 		line-height: 1.5rem;
-		color: var(--color-text-secondary);
+		color: var(--color-text-secondary, #4f545e);
+	}
+
+	.toast--titled .toast-message {
+		font-weight: 400;
+		font-size: 0.875rem;
+		line-height: 1rem;
+		color: var(--color-text-primary, #131927);
 	}
 </style>
