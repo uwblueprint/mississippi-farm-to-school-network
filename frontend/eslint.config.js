@@ -65,6 +65,6 @@ export default [
 	},
 	prettier,
 	{
-		ignores: ['.svelte-kit/', 'build/', 'dist/', 'node_modules/']
+		ignores: ['.svelte-kit/', '.vercel/', 'build/', 'dist/', 'node_modules/']
 	}
 ];

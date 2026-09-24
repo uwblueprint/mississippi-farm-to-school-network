@@ -1,0 +1,35 @@
+# Render Blueprint for the GraphQL backend (https://render.com/docs/blueprint-spec).
+# The frontend is deployed separately on Vercel.
+services:
+  - type: web
+    name: mfsn-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Secrets: set these in the Render dashboard (sync: false keeps them out of git).
+      - key: FIREBASE_PROJECT_ID
+        sync: false
+      - key: FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_SVC_ACCOUNT_PRIVATE_KEY
+        sync: false
+      - key: FIREBASE_STORAGE_DEFAULT_BUCKET
+        sync: false
+      - key: FIREBASE_WEB_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: MAILER_USER
+        sync: false
+      - key: MAILER_CLIENT_ID
+        sync: false
+      - key: MAILER_CLIENT_SECRET
+        sync: false
+      - key: MAILER_REFRESH_TOKEN
+        sync: false
