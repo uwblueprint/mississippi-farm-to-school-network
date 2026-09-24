@@ -9,6 +9,9 @@ import {
 
 export const ADMIN_FARMS_PAGE_SIZE = 11;
 
+/** Page size for fetching farms from the API (the resolver caps pageSize at 100). */
+export const ADMIN_FARMS_FETCH_PAGE_SIZE = 100;
+
 /** Named slots into `farmOptions` — keep in sync with those array orderings. */
 export const CSA_EXPERIENCE = FARM_EXPERIENCES[0];
 export const [INTEREST_K12, INTEREST_ECE, ONLINE_SALES_OPTION, DELIVERY_OPTION] =
@@ -38,8 +41,12 @@ export type AdminFarmRow = {
 };
 
 export const ADMIN_FARMS_QUERY = `
-	query AdminFarms {
-		farms(filter: { status: APPROVED, is_archived: false }) {
+	query AdminFarms($pageNumber: Int!, $pageSize: Int!) {
+		farms(
+			filter: { status: APPROVED, is_archived: false }
+			pageNumber: $pageNumber
+			pageSize: $pageSize
+		) {
 			id
 			farm_name
 			primary_email

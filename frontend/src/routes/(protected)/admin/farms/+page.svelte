@@ -8,6 +8,7 @@
 	import { gqlClient } from '$lib/graphqlClient';
 	import { showToast } from '$lib/state/toast.svelte';
 	import {
+		ADMIN_FARMS_FETCH_PAGE_SIZE,
 		ADMIN_FARMS_PAGE_SIZE,
 		ADMIN_FARMS_QUERY,
 		EMPTY_FILTERS,
@@ -39,8 +40,18 @@
 		loading = true;
 		loadError = null;
 		try {
-			const data = await gqlClient<{ farms: AdminFarmRow[] }>(ADMIN_FARMS_QUERY);
-			farms = data.farms;
+			// The farms query is paginated server-side; fetch every page so search,
+			// filters, and CSV export cover all farms rather than just the first page.
+			const all: AdminFarmRow[] = [];
+			for (let pageNumber = 1; ; pageNumber++) {
+				const data = await gqlClient<{ farms: AdminFarmRow[] }>(ADMIN_FARMS_QUERY, {
+					pageNumber,
+					pageSize: ADMIN_FARMS_FETCH_PAGE_SIZE
+				});
+				all.push(...data.farms);
+				if (data.farms.length < ADMIN_FARMS_FETCH_PAGE_SIZE) break;
+			}
+			farms = all;
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : 'Failed to load farms.';
 			farms = [];
@@ -80,8 +91,13 @@
 	);
 	const someFilteredSelected = $derived(filteredFarms.some((f) => selectedIds.has(f.id)));
 
-	const exportCount = $derived(selectedIds.size > 0 ? selectedIds.size : filteredFarms.length);
-	const exportingAll = $derived(selectedIds.size === 0);
+	// Selected farms are exported even if the current search/filters hide them,
+	// so the file always matches the count shown in the export dialog.
+	const selectedFarms = $derived(farms.filter((f) => selectedIds.has(f.id)));
+	const exportCount = $derived(
+		selectedFarms.length > 0 ? selectedFarms.length : filteredFarms.length
+	);
+	const exportingAll = $derived(selectedFarms.length === 0);
 
 	const emptyMessage = $derived(
 		farms.length === 0 ? 'No active farms yet.' : 'No farms match the current filters.'
@@ -136,8 +152,7 @@
 	function confirmExport() {
 		showExportModal = false;
 		try {
-			const toExport =
-				selectedIds.size > 0 ? filteredFarms.filter((f) => selectedIds.has(f.id)) : filteredFarms;
+			const toExport = selectedFarms.length > 0 ? selectedFarms : filteredFarms;
 			downloadFarmsCsv(toExport);
 			showToast(
 				'success',

@@ -32,6 +32,11 @@ const CSV_HEADERS = [
 ] as const;
 
 function escapeCsvCell(value: string): string {
+	// Farm fields are user-supplied; neutralize values a spreadsheet would treat as a
+	// formula (CSV/formula injection) by prefixing them with a single quote.
+	if (/^[=+\-@\t\r]/.test(value)) {
+		value = `'${value}`;
+	}
 	if (/[",\n\r]/.test(value)) {
 		return `"${value.replace(/"/g, '""')}"`;
 	}
@@ -74,5 +79,6 @@ export function downloadFarmsCsv(farms: AdminFarmRow[], filename = 'farms-export
 	link.href = url;
 	link.download = filename;
 	link.click();
-	URL.revokeObjectURL(url);
+	// Revoke on the next tick; revoking synchronously can cancel the download in some browsers.
+	setTimeout(() => URL.revokeObjectURL(url), 0);
 }
