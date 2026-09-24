@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import PromoBanner from '$lib/components/PromoBanner.svelte';
 	import { getFirebaseAuth } from '$lib/firebase';
 
-	let { children } = $props();
+	let { children, data } = $props();
 
 	// The (protected) gate guarantees a signed-in user by the time this renders;
 	// surface their identity in the sidebar profile block.
@@ -19,6 +20,15 @@
 	<main class="dashboard__main">
 		{@render children()}
 	</main>
+	{#if data.announcements.length > 0}
+		<div class="dashboard__announcements">
+			<PromoBanner
+				announcements={data.announcements}
+				dismissable
+				storageKey="farmer-announcements-dismissed"
+			/>
+		</div>
+	{/if}
 </div>
 
 <style>
@@ -36,5 +46,12 @@
 		min-width: 0;
 		/* establishes the sizing context for the cqi-based fluid spacing inside */
 		container-type: inline-size;
+	}
+
+	.dashboard__announcements {
+		position: fixed;
+		right: 2.25rem;
+		bottom: 2.25rem;
+		z-index: 60;
 	}
 </style>

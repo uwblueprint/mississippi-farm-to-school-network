@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { toDateString } from '$lib/utils/announcement-dates';
+	import { startOfToday, toDateString } from '$lib/utils/announcement-dates';
 	import chevronLeftIcon from '$lib/assets/announcements/chevron-left.svg';
 	import chevronRightIcon from '$lib/assets/announcements/chevron-right.svg';
 
@@ -15,6 +15,8 @@
 	}
 
 	let { month, rangeStart, rangeEnd, onprev, onnext, onselect }: Props = $props();
+
+	const todayValue = toDateString(startOfToday());
 
 	const label = $derived(month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }));
 
@@ -40,6 +42,7 @@
 		return {
 			value,
 			muted: day.getMonth() !== month.getMonth() || day.getFullYear() !== month.getFullYear(),
+			isToday: value === todayValue,
 			isEndpoint: value === rangeStart || value === rangeEnd,
 			isRangeStart: hasFullRange && value === rangeStart,
 			isRangeEnd: hasFullRange && value === rangeEnd,
@@ -73,6 +76,7 @@
 					<button
 						class="mini-day"
 						class:mini-day--muted={state.muted}
+						class:mini-day--today={state.isToday}
 						class:mini-day--in-range={state.inRange}
 						class:mini-day--range-start={state.isRangeStart}
 						class:mini-day--range-end={state.isRangeEnd}
@@ -186,6 +190,11 @@
 
 	.mini-day--in-range {
 		background: #ffe2e2;
+	}
+
+	.mini-day--today:not(.mini-day--endpoint) .mini-day-label {
+		background: #ffe2e2;
+		border-radius: 50%;
 	}
 
 	.mini-day--range-start::before,

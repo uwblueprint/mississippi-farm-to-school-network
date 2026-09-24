@@ -35,6 +35,8 @@
 
 <style>
 	.announcements-page {
+		flex: 1;
+		min-width: 0;
 		min-height: 100dvh;
 		padding: 3.125rem 1.5rem 4rem;
 		background: var(--color-neutral-0);
