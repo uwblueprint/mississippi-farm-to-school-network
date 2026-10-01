@@ -71,7 +71,7 @@
 				label="Email Address"
 				type="email"
 				name="email"
-				autocomplete="email"
+				autocomplete="username"
 				placeholder="farmer@gmail.com"
 				required
 				bind:value={email}

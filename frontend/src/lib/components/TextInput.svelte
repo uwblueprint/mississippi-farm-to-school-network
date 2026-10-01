@@ -173,10 +173,15 @@
 		resize: vertical;
 	}
 
-	/* --- size="lg": the farm edit form's Figma spec (ex-TextField) --- */
+	/* --- size="lg": the farm edit form, matching the add-farm page's
+	   .field-label / .field so the two forms look like one product. --- */
+	.field--lg {
+		gap: 6px;
+	}
+
 	.field--lg .label {
-		font-size: 21px;
-		font-weight: 300;
+		font-size: 15px;
+		font-weight: 500;
 		color: #131927;
 	}
 
@@ -186,19 +191,19 @@
 	}
 
 	.field--lg .input {
-		padding: 16.8px 22.4px;
-		border-width: 1.82px;
-		border-radius: 11.2px;
-		font-family: 'Nunito Variable', 'Nunito', 'DM Sans Variable', sans-serif;
-		font-size: 17.343px;
+		padding: 8px 16px;
+		border: 1px solid #d8d8d8;
+		border-radius: 8px;
+		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+		font-size: 14px;
 		font-weight: 400;
 		line-height: normal;
 		color: #383b4a;
 	}
 
 	.field--lg .readonly-value {
-		font-family: 'Nunito Variable', 'Nunito', sans-serif;
-		font-size: 17.343px;
+		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+		font-size: 14px;
 	}
 
 	.readonly-value {

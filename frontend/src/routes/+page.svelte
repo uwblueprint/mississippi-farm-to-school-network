@@ -1,5 +1,34 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { onAuthStateChanged } from 'firebase/auth';
 	import ActionButton from '$lib/components/ActionButton.svelte';
+	import { getFirebaseAuth } from '$lib/firebase';
+	import { resolveUserRole } from '$lib/auth';
+
+	// The session persists across visits (Firebase browserLocalPersistence), so the
+	// landing page points a signed-in user at their dashboard instead of a login
+	// form. Defaults to the signed-out view until Firebase restores its state.
+	let signedIn = $state(false);
+	let dashboardHref = $state('/farmer/farms');
+
+	onMount(() => {
+		let auth;
+		try {
+			auth = getFirebaseAuth();
+		} catch {
+			// Firebase config missing (e.g. an unconfigured preview build) — the
+			// landing page still renders, just always signed out.
+			return;
+		}
+
+		return onAuthStateChanged(auth, async (user) => {
+			signedIn = !!user && user.emailVerified;
+
+			if (user && signedIn) {
+				dashboardHref = (await resolveUserRole(user)) === 'ADMIN' ? '/admin' : '/farmer/farms';
+			}
+		});
+	});
 </script>
 
 <svelte:head>
@@ -25,8 +54,8 @@
 			<ActionButton variant="primary" href="/farms" label="Farms" class="home__cta" />
 			<ActionButton
 				variant="outline"
-				href="/login"
-				label="Login"
+				href={signedIn ? dashboardHref : '/login'}
+				label={signedIn ? 'Dashboard' : 'Login'}
 				class="home__cta home__cta--login"
 			/>
 		</div>

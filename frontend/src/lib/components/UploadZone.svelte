@@ -145,8 +145,9 @@
 		flex-direction: column;
 		align-items: center;
 		justify-content: center;
-		gap: 10px;
-		padding: 49px 24px 29px;
+		gap: 8px;
+		padding: 24px;
+		min-height: 144px;
 		border: 1px dashed #c5c8d8;
 		border-radius: 12px;
 		text-align: center;
@@ -182,7 +183,7 @@
 
 	/* Pull up out of the parent section's flex gap so it hugs the zone above. */
 	.upload-zone__error {
-		margin: -28px 0 0;
+		margin: -10px 0 0;
 		color: #c4341f;
 		font-size: 14px;
 		font-weight: 400;
@@ -192,33 +193,33 @@
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		width: 65px;
-		height: 65px;
+		width: 44px;
+		height: 44px;
 		flex-shrink: 0;
-		border-radius: 32.5px;
+		border-radius: 22px;
 		border: 1px solid #d6d6d6;
 		background: #fff;
 	}
 
 	.upload-zone__icon svg {
-		width: 35px;
-		height: 35px;
+		width: 22px;
+		height: 22px;
 		flex-shrink: 0;
 	}
 
 	.upload-zone__title {
 		color: #000;
 		text-align: center;
-		font-family: 'Figtree Variable', 'Figtree', sans-serif;
-		font-size: 22.711px;
+		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+		font-size: 15px;
 		font-weight: 500;
-		line-height: 38.933px;
+		line-height: 1.4;
 	}
 
 	.upload-zone__hint {
-		color: #000;
+		color: #666;
 		text-align: center;
-		font-size: 14px;
+		font-size: 13px;
 		font-weight: 400;
 		line-height: 16px;
 		align-self: stretch;
