@@ -25,12 +25,14 @@
 		}
 	}
 
-	function handleKeydown(event: KeyboardEvent) {
+	function handleWindowKeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') open = false;
 	}
 
 	$effect(() => () => clearTimeout(closeTimer));
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
 	class="farm-map-legend"
@@ -39,7 +41,6 @@
 	onmouseleave={scheduleClose}
 	onfocusin={show}
 	onfocusout={handleFocusOut}
-	onkeydown={handleKeydown}
 >
 	<button
 		type="button"

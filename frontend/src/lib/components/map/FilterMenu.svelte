@@ -1,4 +1,5 @@
 <script lang="ts" generics="T extends string | number">
+	import FilterPill from '$lib/components/FilterPill.svelte';
 	import type { FilterOption } from '$lib/utils/farm-filters';
 
 	interface Props {
@@ -37,33 +38,28 @@
 		}
 	}
 
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.key === 'Escape' && open) {
-			open = false;
-			root?.querySelector<HTMLButtonElement>('.filter-menu__trigger')?.focus();
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key !== 'Escape' || !open) return;
+		open = false;
+		if (root?.contains(document.activeElement)) {
+			root.querySelector<HTMLButtonElement>('button')?.focus();
 		}
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
+<svelte:window onclick={handleWindowClick} onkeydown={handleWindowKeydown} />
 
-<div class="filter-menu" bind:this={root} onkeydown={handleKeydown}>
-	<button
-		type="button"
-		class="filter-menu__trigger"
-		class:filter-menu__trigger--active={activeCount > 0}
+<div class="filter-menu" bind:this={root}>
+	<FilterPill
+		{label}
+		active={activeCount > 0}
+		badge={activeCount}
+		showChevron
+		chevronOpen={open}
 		aria-expanded={open}
 		aria-controls={menuId}
 		onclick={() => (open = !open)}
-	>
-		<span>{label}</span>
-		{#if activeCount > 0}
-			<span class="filter-menu__count" aria-label="{activeCount} selected">{activeCount}</span>
-		{/if}
-		<span class="filter-menu__chevron" class:filter-menu__chevron--open={open} aria-hidden="true"
-			>›</span
-		>
-	</button>
+	/>
 
 	{#if open}
 		<fieldset id={menuId} class="filter-menu__panel">
@@ -95,61 +91,6 @@
 <style>
 	.filter-menu {
 		position: relative;
-	}
-
-	.filter-menu__trigger {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.25rem;
-		height: 2.125rem;
-		padding: 0.3125rem 0.75rem;
-		border: 1px solid var(--color-neutral-300, #d3d5de);
-		border-radius: 1rem;
-		background: var(--color-neutral-0, #ffffff);
-		font-family: inherit;
-		font-size: 0.875rem;
-		line-height: 1rem;
-		color: var(--color-text-secondary, #4f545e);
-		white-space: nowrap;
-		cursor: pointer;
-		transition: background-color 0.15s ease;
-	}
-
-	.filter-menu__trigger:hover {
-		background: #f9fafb;
-	}
-
-	.filter-menu__trigger--active {
-		border: 1.5px solid #93a883;
-		font-weight: 600;
-		color: #455d32;
-	}
-
-	.filter-menu__count {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		min-width: 1.125rem;
-		height: 1.125rem;
-		padding: 0 0.3rem;
-		border-radius: 0.5625rem;
-		background: #587244;
-		font-size: 0.6875rem;
-		font-weight: 700;
-		color: #fff;
-	}
-
-	.filter-menu__chevron {
-		display: inline-block;
-		transform: rotate(90deg);
-		font-size: 0.85rem;
-		line-height: 1;
-		transition: transform 0.15s ease;
-	}
-
-	.filter-menu__chevron--open {
-		transform: rotate(-90deg);
 	}
 
 	.filter-menu__panel {
