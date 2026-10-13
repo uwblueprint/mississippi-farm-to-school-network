@@ -26,7 +26,7 @@
 			<ActionButton
 				variant="outline"
 				href="/login"
-				label="Login"
+				label="Farmer Login"
 				class="home__cta home__cta--login"
 			/>
 		</div>
