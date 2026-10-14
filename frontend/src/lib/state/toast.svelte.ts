@@ -4,6 +4,8 @@ export type Toast = {
 	id: number;
 	kind: ToastKind;
 	message: string;
+	/** Optional heading above the message (e.g. "CSV Export Complete"). */
+	title?: string;
 };
 
 const DISMISS_AFTER_MS = 4000;
@@ -18,9 +20,9 @@ export const toast = {
 	}
 };
 
-export function showToast(kind: ToastKind, message: string) {
+export function showToast(kind: ToastKind, message: string, title?: string) {
 	sequence += 1;
-	current = { id: sequence, kind, message };
+	current = { id: sequence, kind, message, title };
 	clearTimeout(timer);
 	timer = setTimeout(() => {
 		current = null;

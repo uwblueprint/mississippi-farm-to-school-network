@@ -1,14 +1,11 @@
 <script lang="ts">
-	import type { PendingFarmDto } from '$lib/types/admin';
-	import { buildReviewSections } from '$lib/utils/farm-request-sections';
+	import type { ReviewSection } from '$lib/utils/farm-request-sections';
 
 	interface Props {
-		farm: PendingFarmDto;
+		sections: ReviewSection[];
 	}
 
-	let { farm }: Props = $props();
-
-	const sections = $derived(buildReviewSections(farm));
+	let { sections }: Props = $props();
 </script>
 
 {#each sections as section (section.title)}

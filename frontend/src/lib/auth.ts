@@ -100,8 +100,8 @@ export function isAdminEmail(email: string): boolean {
 	return email.toLowerCase().endsWith(ADMIN_EMAIL_DOMAIN);
 }
 
-export function getPostAuthDestination(email: string, _context: 'login' | 'verified'): string {
-	if (isAdminEmail(email)) {
+export async function getPostAuthDestination(user: User): Promise<string> {
+	if ((await resolveUserRole(user)) === 'ADMIN') {
 		return '/admin';
 	}
 

@@ -11,7 +11,7 @@
 		statusOf
 	} from '$lib/utils/announcement-dates';
 	import { safeHref, serializeRichText, stripHtml } from '$lib/utils/rich-text';
-	import ConfirmDialog from './ConfirmDialog.svelte';
+	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import MiniCalendar from './MiniCalendar.svelte';
 	import calendarIcon from '$lib/assets/announcements/calendar-20-green.svg';
 	import linkIcon from '$lib/assets/announcements/link.svg';

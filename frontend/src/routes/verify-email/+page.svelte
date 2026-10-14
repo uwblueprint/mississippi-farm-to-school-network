@@ -70,7 +70,7 @@
 			}
 
 			if (user.emailVerified) {
-				goto(getPostAuthDestination(user.email ?? '', 'verified'));
+				void getPostAuthDestination(user).then((destination) => goto(destination));
 				return;
 			}
 

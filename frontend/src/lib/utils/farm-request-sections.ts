@@ -1,4 +1,5 @@
 import type { PendingFarmDto } from '$lib/types/admin';
+import type { MarketSalesData } from '$lib/types/farm';
 
 export type ReviewField =
 	| { kind: 'text'; label?: string; value: string | null | undefined }
@@ -36,7 +37,9 @@ export function buildReviewSections(farm: PendingFarmDto): ReviewSection[] {
 		farm.minimum_order != null ? `$${farm.minimum_order} minimum order.` : null;
 
 	const marketSales = farm.market_sales_data?.length
-		? farm.market_sales_data.map((entry) => `${entry.market} (${entry.times})`).join('; ')
+		? farm.market_sales_data
+				.map((entry: MarketSalesData) => `${entry.market} (${entry.times})`)
+				.join('; ')
 		: null;
 
 	const sections: ReviewSection[] = [

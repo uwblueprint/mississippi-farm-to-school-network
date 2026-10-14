@@ -43,7 +43,7 @@
 			}
 
 			await syncAuthTokenCookie(credential.user);
-			await goto(getPostAuthDestination(trimmedEmail, 'login'));
+			await goto(await getPostAuthDestination(credential.user));
 		} catch (error) {
 			const fieldError = getLoginFieldError(error);
 

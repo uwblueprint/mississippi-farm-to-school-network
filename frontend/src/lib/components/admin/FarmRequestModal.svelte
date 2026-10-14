@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-
+	import FarmModalShell from '$lib/components/admin/FarmModalShell.svelte';
 	import FarmRequestContact from '$lib/components/admin/FarmRequestContact.svelte';
 	import FarmRequestGallery from '$lib/components/admin/FarmRequestGallery.svelte';
 	import FarmRequestReviewPanel from '$lib/components/admin/FarmRequestReviewPanel.svelte';
 	import type { ReviewCardView } from '$lib/components/admin/FarmRequestReviewPanel.svelte';
 	import FarmRequestSections from '$lib/components/admin/FarmRequestSections.svelte';
-	import ConfirmDialog from '$lib/components/announcements/ConfirmDialog.svelte';
 	import {
 		MAP_TAG_MODIFIER,
 		REQUEST_TYPE_LABEL,
@@ -16,11 +14,11 @@
 	import type { PendingRequest } from '$lib/types/admin';
 	import {
 		APPROVE_FARM_MUTATION,
-		ARCHIVE_FARM_MUTATION,
 		REJECT_FARM_MUTATION,
 		pendingFarmMapTag,
 		pendingFarmOwner
 	} from '$lib/utils/pending-request-adapter';
+	import { buildReviewSections } from '$lib/utils/farm-request-sections';
 	import { formatRelativeTime } from '$lib/utils/relative-time';
 
 	interface Props {
@@ -37,37 +35,14 @@
 	let changeDetails = $state('');
 	let submitting = $state(false);
 	let actionError = $state<string | null>(null);
-	let menuOpen = $state(false);
-	let confirmDeleteOpen = $state(false);
-	let menuRoot = $state<HTMLDivElement | null>(null);
 
 	const farm = $derived(request.farm);
+	const sections = $derived(buildReviewSections(farm));
 	const owner = $derived(pendingFarmOwner(farm));
 	const mapTag = $derived(pendingFarmMapTag(farm));
 	const submittedLabel = $derived(`Submitted ${formatRelativeTime(farm.updatedAt)}`);
 	const contactHref = $derived(`mailto:${owner.email}`);
 	const canSubmitChanges = $derived(selectedReasons.size > 0 || changeDetails.trim().length > 0);
-
-	// Body scroll lock + Escape — independent of farm / form state.
-	$effect(() => {
-		const previousOverflow = document.body.style.overflow;
-		document.body.style.overflow = 'hidden';
-
-		function onKeydown(event: KeyboardEvent) {
-			if (event.key !== 'Escape' || submitting || confirmDeleteOpen) return;
-			if (menuOpen) {
-				menuOpen = false;
-				return;
-			}
-			onClose();
-		}
-
-		window.addEventListener('keydown', onKeydown);
-		return () => {
-			document.body.style.overflow = previousOverflow;
-			window.removeEventListener('keydown', onKeydown);
-		};
-	});
 
 	// Reset review form whenever the open request changes.
 	$effect(() => {
@@ -77,27 +52,7 @@
 		changeDetails = '';
 		submitting = false;
 		actionError = null;
-		menuOpen = false;
-		confirmDeleteOpen = false;
 	});
-
-	function handleBackdropClick(event: MouseEvent) {
-		if (submitting || confirmDeleteOpen) return;
-		if (event.target === event.currentTarget) onClose();
-	}
-
-	function handleWindowClick(event: MouseEvent) {
-		if (!menuOpen || !menuRoot) return;
-		if (!menuRoot.contains(event.target as Node)) {
-			menuOpen = false;
-		}
-	}
-
-	function toggleMenu(event: MouseEvent) {
-		event.stopPropagation();
-		if (submitting) return;
-		menuOpen = !menuOpen;
-	}
 
 	function toggleReason(reason: string) {
 		const next = new Set(selectedReasons);
@@ -152,99 +107,24 @@
 		}
 	}
 
-	function handleEdit() {
-		menuOpen = false;
-		const returnTo = encodeURIComponent('/admin');
-		void goto(`/farmer/farms/${request.farm.id}/edit?returnTo=${returnTo}`);
-	}
-
-	function handleDeleteClick() {
-		menuOpen = false;
-		confirmDeleteOpen = true;
-	}
-
-	async function handleConfirmDelete() {
-		if (submitting) return;
-		submitting = true;
-		actionError = null;
-
-		try {
-			await gqlClient(ARCHIVE_FARM_MUTATION, { id: request.farm.id });
-			confirmDeleteOpen = false;
-			onResolved?.(request);
-			onClose();
-		} catch (error) {
-			confirmDeleteOpen = false;
-			actionError = error instanceof Error ? error.message : 'Failed to delete farm.';
-		} finally {
-			submitting = false;
-		}
+	function handleArchived() {
+		onResolved?.(request);
 	}
 </script>
 
-<svelte:window onclick={handleWindowClick} />
-
-<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<div class="farm-request-overlay" role="presentation" onclick={handleBackdropClick}>
-	<div
-		class="farm-request-modal"
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="farm-request-modal-title"
-	>
-		<div class="farm-request-modal__toolbar">
-			<div class="farm-request-modal__menu-wrap" bind:this={menuRoot}>
-				<button
-					type="button"
-					class="farm-request-modal__icon-btn farm-request-modal__icon-btn--dots"
-					aria-label="More options"
-					aria-expanded={menuOpen}
-					aria-haspopup="menu"
-					disabled={submitting}
-					onclick={toggleMenu}
-				>
-					<img src="/images/admin/dotsVerticalIcon.svg" alt="" />
-				</button>
-
-				{#if menuOpen}
-					<ul class="farm-request-modal__menu" role="menu" aria-label="Farm actions">
-						<li role="presentation">
-							<button
-								type="button"
-								class="farm-request-modal__menu-item"
-								role="menuitem"
-								disabled={submitting}
-								onclick={handleEdit}
-							>
-								Edit
-							</button>
-						</li>
-						<li role="presentation">
-							<button
-								type="button"
-								class="farm-request-modal__menu-item farm-request-modal__menu-item--danger"
-								role="menuitem"
-								disabled={submitting}
-								onclick={handleDeleteClick}
-							>
-								Delete
-							</button>
-						</li>
-					</ul>
-				{/if}
-			</div>
-
-			<button
-				type="button"
-				class="farm-request-modal__icon-btn farm-request-modal__icon-btn--close"
-				aria-label="Close"
-				disabled={submitting}
-				onclick={onClose}
-			>
-				<img src="/images/admin/closeIcon.svg" alt="" />
-			</button>
-		</div>
-
+<FarmModalShell
+	farmId={farm.id}
+	farmName={farm.farm_name}
+	titleId="farm-request-modal-title"
+	returnTo="/admin"
+	removalContext="the pending queue"
+	menuDisabled={submitting}
+	closeDisabled={submitting}
+	blockClose={submitting}
+	{onClose}
+	onArchived={handleArchived}
+>
+	{#snippet children()}
 		<div class="farm-request-modal__columns">
 			<div class="farm-request-modal__details">
 				<div class="farm-request-modal__meta">
@@ -267,7 +147,7 @@
 				</div>
 
 				<FarmRequestContact {farm} />
-				<FarmRequestSections {farm} />
+				<FarmRequestSections {sections} />
 			</div>
 
 			<aside class="farm-request-modal__aside">
@@ -293,22 +173,5 @@
 				/>
 			</aside>
 		</div>
-	</div>
-</div>
-
-{#if confirmDeleteOpen}
-	<ConfirmDialog
-		title="Delete this farm?"
-		confirmLabel={submitting ? 'Deleting…' : 'Delete'}
-		tone="danger"
-		onconfirm={() => void handleConfirmDelete()}
-		oncancel={() => {
-			if (!submitting) confirmDeleteOpen = false;
-		}}
-	>
-		{#snippet body()}
-			This will archive <strong>{farm.farm_name}</strong> and remove it from the pending queue. You can
-			restore it later from archived farms.
-		{/snippet}
-	</ConfirmDialog>
-{/if}
+	{/snippet}
+</FarmModalShell>
