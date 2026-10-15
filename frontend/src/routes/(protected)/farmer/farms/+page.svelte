@@ -59,7 +59,9 @@
 	let onboardingUid = '';
 	let onboardingStep = $state<number | null>(null);
 	// The tour spotlights the farm that's under review (the one just submitted).
-	const onboardingFarm = $derived(farms.find((farm) => farm.status === 'PENDING_APPROVAL') ?? farms[0]);
+	const onboardingFarm = $derived(
+		farms.find((farm) => farm.status === 'PENDING_APPROVAL') ?? farms[0]
+	);
 
 	function finishOnboarding() {
 		markOnboardingComplete(onboardingUid);
