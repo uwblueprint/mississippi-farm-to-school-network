@@ -4,6 +4,8 @@
 
 	import FarmListSidebar from '$lib/components/map/FarmListSidebar.svelte';
 	import FarmMap from '$lib/components/map/FarmMap.svelte';
+	import AnnouncementBar from '$lib/components/map/AnnouncementBar.svelte';
+	import { setAnnouncements } from '$lib/state/announcementBar.svelte';
 	import { requestUserLocation } from '$lib/state/geolocation.svelte';
 	import { farmDtoToMapFarm, type FarmDto } from '$lib/utils/farm-adapter';
 	import { resolveFarmDisplayImages } from '$lib/utils/farm-images';
@@ -15,6 +17,16 @@
 	let farms = $state<MapFarm[]>([]);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+
+	async function loadAnnouncements() {
+		try {
+			const res = await fetch('/api/announcements/live');
+			const body = await res.json();
+			if (res.ok && body.ok) setAnnouncements(body.announcements);
+		} catch {
+			// the banner is non-essential; the map still works without it
+		}
+	}
 
 	async function loadFarms() {
 		loading = true;
@@ -48,6 +60,7 @@
 	onMount(() => {
 		requestUserLocation();
 		void loadFarms();
+		void loadAnnouncements();
 	});
 </script>
 
@@ -55,9 +68,12 @@
 	<title>Farms | Mississippi Farm to School Network</title>
 </svelte:head>
 
-<div class="farm-map-page">
-	<FarmListSidebar {farms} bind:selectedFarmId {map} {loading} error={loadError} />
-	<div class="farm-map-panel">
-		<FarmMap {farms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
+<div class="farm-map-shell">
+	<AnnouncementBar onLayoutChange={() => map?.resize()} />
+	<div class="farm-map-page">
+		<FarmListSidebar {farms} bind:selectedFarmId {map} {loading} error={loadError} />
+		<div class="farm-map-panel">
+			<FarmMap {farms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
+		</div>
 	</div>
 </div>

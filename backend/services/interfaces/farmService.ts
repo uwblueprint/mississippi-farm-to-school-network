@@ -96,6 +96,36 @@ interface IFarmService {
   unarchiveFarm(farmId: string): Promise<FarmDTO>;
 
   /**
+   * Flag a farm for deletion at its owner's request. The farm keeps its status
+   * (and stays on the map) until an admin approves the deletion.
+   * @param farmId farm's id
+   * @returns the updated FarmDTO with deletion_requested_at set
+   * @throws Error if the farm does not exist, is already archived, or the update fails
+   */
+  requestFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Approve a pending deletion request: archives the farm and stamps deletion_approved_at.
+   * @param farmId farm's id
+   * @throws Error if the farm has no pending deletion request or the update fails
+   */
+  approveFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Deny a pending deletion request, leaving the farm as it was before the request.
+   * @param farmId farm's id
+   * @throws Error if the farm has no pending deletion request or the update fails
+   */
+  denyFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Get every non-archived farm with a pending deletion request
+   * @returns array of FarmDTOs
+   * @throws Error if farm retrieval fails
+   */
+  getFarmDeletionRequests(): Promise<FarmDTO[]>;
+
+  /**
    * Get the latest unresolved rejection for a farm
    * @param farmId farm's id
    * @returns the latest active FarmRejectionDTO or null if no active rejection exists

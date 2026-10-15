@@ -14,7 +14,11 @@
 		RequestFilter,
 		RequestSort
 	} from '$lib/types/admin';
-	import { PENDING_FARMS_QUERY, pendingFarmToRequest } from '$lib/utils/pending-request-adapter';
+	import {
+		DELETION_REQUESTS_QUERY,
+		PENDING_FARMS_QUERY,
+		pendingFarmToRequest
+	} from '$lib/utils/pending-request-adapter';
 
 	let requests = $state<PendingRequest[]>([]);
 	let loading = $state(true);
@@ -30,8 +34,16 @@
 		loadError = null;
 
 		try {
-			const data = await gqlClient<{ farmsByStatus: PendingFarmDto[] }>(PENDING_FARMS_QUERY);
-			requests = data.farmsByStatus.map(pendingFarmToRequest);
+			const [pending, deletions] = await Promise.all([
+				gqlClient<{ farmsByStatus: PendingFarmDto[] }>(PENDING_FARMS_QUERY),
+				gqlClient<{ farmDeletionRequests: PendingFarmDto[] }>(DELETION_REQUESTS_QUERY)
+			]);
+			// A pending farm can also carry a deletion request; list it once, as the deletion.
+			const deletionIds = new Set(deletions.farmDeletionRequests.map((farm) => farm.id));
+			requests = [
+				...deletions.farmDeletionRequests,
+				...pending.farmsByStatus.filter((farm) => !deletionIds.has(farm.id))
+			].map(pendingFarmToRequest);
 		} catch (error) {
 			loadError = error instanceof Error ? error.message : 'Failed to load pending requests.';
 			requests = [];
@@ -47,7 +59,8 @@
 	const counts = $derived({
 		ALL: requests.length,
 		NEW_APPLICATION: requests.filter((r) => r.requestType === 'NEW_APPLICATION').length,
-		UPDATED_APPLICATION: requests.filter((r) => r.requestType === 'UPDATED_APPLICATION').length
+		UPDATED_APPLICATION: requests.filter((r) => r.requestType === 'UPDATED_APPLICATION').length,
+		DELETION_REQUEST: requests.filter((r) => r.requestType === 'DELETION_REQUEST').length
 	});
 
 	const filterItems = $derived(
@@ -61,7 +74,9 @@
 	function bySort(a: PendingRequest, b: PendingRequest): number {
 		if (sort === 'NAME_ASC') return a.farm.farm_name.localeCompare(b.farm.farm_name);
 
-		const diff = new Date(b.farm.updatedAt).getTime() - new Date(a.farm.updatedAt).getTime();
+		const time = (request: PendingRequest) =>
+			new Date(request.farm.deletion_requested_at ?? request.farm.updatedAt).getTime();
+		const diff = time(b) - time(a);
 		return sort === 'OLDEST' ? -diff : diff;
 	}
 

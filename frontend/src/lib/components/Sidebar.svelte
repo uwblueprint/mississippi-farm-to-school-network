@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import logoDefault from '$lib/assets/favicon.svg';
+	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	interface Props {
 		/** Logo image source; defaults to the app favicon (watermelon mark). */
@@ -11,20 +12,24 @@
 		profileRole?: string;
 		/** Signed-in user's headshot URL; omitted -> initial-letter avatar. */
 		avatarUrl?: string;
+		/** Page the profile menu's "View profile" opens. */
+		profileHref?: string;
 	}
 
 	let {
 		logoSrc = logoDefault,
 		profileName = 'Farmer',
 		profileRole = 'Farmer',
-		avatarUrl
+		avatarUrl,
+		profileHref = '/farmer/settings'
 	}: Props = $props();
 
-	// TODO(routes): add a "Contact MSFN" item once a contact page exists.
 	const navItems = [
 		{ label: 'Farms', href: '/farmer/farms' },
 		{ label: 'Map', href: '/farms' }
 	];
+
+	const CONTACT_URL = 'https://www.mississippifarmtoschool.org/contact';
 
 	const path = $derived(page.url.pathname);
 	const isActive = (href: string) => path === href || path.startsWith(href + '/');
@@ -44,28 +49,16 @@
 					{item.label}
 				</a>
 			{/each}
+			<a href={CONTACT_URL} class="sidebar__link" target="_blank" rel="noopener noreferrer">
+				Contact MFSN
+			</a>
 		</nav>
 	</div>
 
 	<div class="sidebar__bottom">
 		<hr class="sidebar__divider" />
-		<div class="sidebar__profile">
-			{#if avatarUrl}
-				<div
-					class="sidebar__avatar"
-					role="img"
-					aria-label={profileName}
-					style="background-image: url('{avatarUrl}')"
-				></div>
-			{:else}
-				<div class="sidebar__avatar sidebar__avatar--initial" role="img" aria-label={profileName}>
-					{profileName.charAt(0).toUpperCase()}
-				</div>
-			{/if}
-			<div class="sidebar__profile-text">
-				<span class="sidebar__profile-name">{profileName}</span>
-				<span class="sidebar__profile-role">{profileRole}</span>
-			</div>
+		<div data-onboarding="profile">
+			<ProfileMenu name={profileName} role={profileRole} {profileHref} {avatarUrl} />
 		</div>
 	</div>
 </aside>
@@ -135,59 +128,5 @@
 
 	.sidebar__link--active {
 		font-weight: 700;
-	}
-
-	.sidebar__profile {
-		display: flex;
-		align-items: center;
-		align-self: stretch;
-		gap: 16px;
-	}
-
-	.sidebar__avatar--initial {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background-color: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
-		color: var(--mfsn-primary, #587244);
-		font-size: 18px;
-		font-weight: 500;
-	}
-
-	.sidebar__avatar {
-		width: 40px;
-		height: 40px;
-		aspect-ratio: 1 / 1;
-		flex: none;
-		border-radius: 40px;
-		background-color: lightgray;
-		background-position: 50%;
-		background-size: cover;
-		background-repeat: no-repeat;
-	}
-
-	.sidebar__profile-text {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-
-	.sidebar__profile-name {
-		color: #131927; /* --text-icon-primary */
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 14px;
-		font-style: normal;
-		font-weight: 400;
-		line-height: normal;
-	}
-
-	.sidebar__profile-role {
-		color: #939393;
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 12px;
-		font-style: normal;
-		font-weight: 400;
-		line-height: normal;
 	}
 </style>

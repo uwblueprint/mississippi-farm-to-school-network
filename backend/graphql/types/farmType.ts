@@ -57,6 +57,13 @@ const farmType = gql`
     or approval. Distinguishes a first-time application from a resubmitted one.
     """
     was_previously_rejected: Boolean!
+    """
+    Set while the owner's deletion request awaits admin review. The farm keeps
+    its status (and its map listing) until the deletion is approved.
+    """
+    deletion_requested_at: String
+    "Set when an admin approves the deletion; the farm is archived at the same time."
+    deletion_approved_at: String
     createdAt: String!
     updatedAt: String!
     """
@@ -155,6 +162,15 @@ const farmType = gql`
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
     latestActiveFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
+    """
+    Admin only. The farm's most recent rejection even after the farmer resubmitted
+    (which resolves it), so reviewers can see what was asked for last time.
+    """
+    latestFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
+    "Admin only. Farms whose owners have asked for them to be deleted."
+    farmDeletionRequests: [FarmDTO!]!
+    "The signed-in user's farms whose deletion an admin has approved."
+    myApprovedFarmDeletions: [FarmDTO!]!
   }
 
   type Mutation {
@@ -165,6 +181,9 @@ const farmType = gql`
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     archiveFarm(id: ID!): FarmDTO!
     unarchiveFarm(id: ID!): FarmDTO!
+    requestFarmDeletion(id: ID!): FarmDTO!
+    approveFarmDeletion(id: ID!): FarmDTO!
+    denyFarmDeletion(id: ID!): FarmDTO!
   }
 
   type ActiveFarmRejectionDTO {

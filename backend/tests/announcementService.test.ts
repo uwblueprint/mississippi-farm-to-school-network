@@ -137,9 +137,61 @@ describe('AnnouncementService.createAnnouncement', () => {
     expect(result.overlappingAnnouncements).toHaveLength(1);
     expect(result.overlappingAnnouncements[0].id).toBe(existingId);
   });
+
+  test('a third announcement overlapping two others is rejected', async () => {
+    await seedAnnouncement({ startDate: TODAY, endDate: NEXT_WEEK });
+    await seedAnnouncement({ startDate: TOMORROW, endDate: NEXT_WEEK });
+
+    await expect(
+      service.createAnnouncement('user-1', {
+        message: 'Third',
+        start_date: TOMORROW,
+        end_date: TOMORROW,
+      })
+    ).rejects.toThrow('You have reached the limit for overlapping announcements.');
+  });
+
+  test('allows a range touching two announcements that never overlap each other', async () => {
+    await seedAnnouncement({ startDate: TODAY, endDate: TODAY });
+    await seedAnnouncement({ startDate: NEXT_WEEK, endDate: NEXT_WEEK });
+
+    const result = await service.createAnnouncement('user-1', {
+      message: 'Spanning',
+      start_date: TODAY,
+      end_date: NEXT_WEEK,
+    });
+
+    expect(result.overlappingAnnouncements).toHaveLength(2);
+  });
+
+  test('ignores deleted announcements when applying the limit', async () => {
+    await seedAnnouncement();
+    await seedAnnouncement({ deletedAt: new Date().toISOString() });
+
+    await expect(
+      service.createAnnouncement('user-1', { message: 'Second', start_date: TODAY })
+    ).resolves.toBeDefined();
+  });
 });
 
 describe('AnnouncementService.updateAnnouncement', () => {
+  test('moving an announcement into a range already holding two is rejected', async () => {
+    await seedAnnouncement({ startDate: TODAY, endDate: TOMORROW });
+    await seedAnnouncement({ startDate: TODAY, endDate: TOMORROW });
+    const id = await seedAnnouncement({ startDate: NEXT_WEEK, endDate: NEXT_WEEK });
+
+    await expect(
+      service.updateAnnouncement(id, { start_date: TOMORROW, end_date: NEXT_WEEK })
+    ).rejects.toThrow('You have reached the limit for overlapping announcements.');
+  });
+
+  test('editing one of two overlapping announcements still succeeds', async () => {
+    await seedAnnouncement();
+    const id = await seedAnnouncement();
+
+    await expect(service.updateAnnouncement(id, { message: 'Edited' })).resolves.toBeDefined();
+  });
+
   test('updating a past (expired) announcement throws an error', async () => {
     const id = await seedAnnouncement({ startDate: LAST_WEEK, endDate: YESTERDAY });
 

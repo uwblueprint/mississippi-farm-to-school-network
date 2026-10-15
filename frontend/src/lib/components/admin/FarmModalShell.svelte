@@ -4,7 +4,10 @@
 
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
-	import { ARCHIVE_FARM_MUTATION } from '$lib/utils/pending-request-adapter';
+	import {
+		ARCHIVE_FARM_MUTATION,
+		UNARCHIVE_FARM_MUTATION
+	} from '$lib/utils/pending-request-adapter';
 
 	interface Props {
 		farmId: string;
@@ -26,6 +29,10 @@
 		onClose: () => void;
 		/** Called after the farm is archived so the parent can refresh its list. */
 		onArchived?: (farmId: string) => void;
+		/** The farm is already archived: the menu offers "Restore" instead of "Delete". */
+		archived?: boolean;
+		/** Called after an archived farm is restored so the parent can refresh its list. */
+		onRestored?: (farmId: string) => void;
 		children: Snippet;
 	}
 
@@ -41,6 +48,8 @@
 		busy = false,
 		onClose,
 		onArchived,
+		archived = false,
+		onRestored,
 		children
 	}: Props = $props();
 
@@ -116,6 +125,23 @@
 			archiving = false;
 		}
 	}
+
+	async function handleRestore() {
+		menuOpen = false;
+		if (archiving) return;
+		archiving = true;
+		archiveError = null;
+
+		try {
+			await gqlClient(UNARCHIVE_FARM_MUTATION, { id: farmId });
+			onRestored?.(farmId);
+			onClose();
+		} catch (error) {
+			archiveError = error instanceof Error ? error.message : 'Failed to restore farm.';
+		} finally {
+			archiving = false;
+		}
+	}
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -156,14 +182,25 @@
 							</button>
 						</li>
 						<li role="presentation">
-							<button
-								type="button"
-								class="farm-request-modal__menu-item farm-request-modal__menu-item--danger"
-								role="menuitem"
-								onclick={handleDeleteClick}
-							>
-								Delete
-							</button>
+							{#if archived}
+								<button
+									type="button"
+									class="farm-request-modal__menu-item"
+									role="menuitem"
+									onclick={() => void handleRestore()}
+								>
+									{archiving ? 'Restoring…' : 'Restore'}
+								</button>
+							{:else}
+								<button
+									type="button"
+									class="farm-request-modal__menu-item farm-request-modal__menu-item--danger"
+									role="menuitem"
+									onclick={handleDeleteClick}
+								>
+									Delete
+								</button>
+							{/if}
 						</li>
 					</ul>
 				{/if}
@@ -200,7 +237,7 @@
 	>
 		{#snippet body()}
 			This will archive <strong>{farmName}</strong> and remove it from {removalContext}. You can
-			restore it later from archived farms.
+			restore it later from Deleted &amp; Pending Farms.
 		{/snippet}
 	</ConfirmDialog>
 {/if}

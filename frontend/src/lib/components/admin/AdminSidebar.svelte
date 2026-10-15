@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
 
 	interface Props {
 		adminName: string;
@@ -9,10 +10,9 @@
 
 	const NAV_ITEMS = [
 		{ href: '/admin', label: 'Pending Requests' },
-		{ href: '/admin/archived', label: 'Archived farms and Pending Farms' },
 		{ href: '/admin/farms', label: 'Farms' },
-		{ href: '/admin/accounts', label: 'Accounts' },
-		{ href: '/admin/announcements', label: 'Manage Announcements' }
+		{ href: '/admin/announcements', label: 'Manage Announcements' },
+		{ href: '/admin/archived', label: 'Deleted & Pending Farms' }
 	];
 
 	function isCurrent(href: string): boolean {
@@ -43,9 +43,6 @@
 
 	<div class="admin-sidebar__bottom">
 		<hr class="admin-sidebar__divider" />
-		<div>
-			<p class="admin-sidebar__user-name">{adminName}</p>
-			<p class="admin-sidebar__user-role">Admin</p>
-		</div>
+		<ProfileMenu name={adminName} role="Admin" profileHref="/admin/settings" showAvatar={false} />
 	</div>
 </aside>

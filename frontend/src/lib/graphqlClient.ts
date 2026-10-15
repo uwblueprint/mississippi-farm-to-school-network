@@ -10,6 +10,7 @@ import { getFirebaseAuth } from '$lib/firebase';
 // Browser-reachable backend URL. Defaults to the docker-compose-exposed port for
 // local dev; override via VITE_PUBLIC_GRAPHQL_URL for other environments.
 const GRAPHQL_URL = import.meta.env.VITE_PUBLIC_GRAPHQL_URL ?? 'http://localhost:3000/graphql';
+const REQUEST_TIMEOUT_MS = 30_000;
 
 // Minimal structural shape of a Firebase user (avoids importing the unresolved
 // `firebase/auth` types, which svelte-check can't resolve in this project).
@@ -38,14 +39,24 @@ export async function gqlClient<T>(query: string, variables?: Record<string, unk
 	}
 
 	const token = await user.getIdToken();
-	const res = await fetch(GRAPHQL_URL, {
-		method: 'POST',
-		headers: {
-			'Content-Type': 'application/json',
-			Authorization: `Bearer ${token}`
-		},
-		body: JSON.stringify({ query, variables })
-	});
+	let res: Response;
+	try {
+		res = await fetch(GRAPHQL_URL, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`
+			},
+			body: JSON.stringify({ query, variables }),
+			// a hung request would otherwise leave callers' "Saving…" states stuck forever
+			signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+		});
+	} catch (err) {
+		if (err instanceof DOMException && err.name === 'TimeoutError') {
+			throw new Error('The server took too long to respond. Please try again.');
+		}
+		throw err;
+	}
 
 	if (!res.ok) {
 		// The body parser rejects an oversized request before Apollo sees it, so a

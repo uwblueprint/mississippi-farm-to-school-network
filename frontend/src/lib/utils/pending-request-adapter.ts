@@ -1,11 +1,12 @@
-// Adapts the backend's `farmsByStatus(PENDING_APPROVAL)` GraphQL response into a
-// `PendingRequest`: the raw farm decorated with queue-specific requestType.
+// Adapts the admin queue GraphQL responses (`farmsByStatus(PENDING_APPROVAL)` and
+// `farmDeletionRequests`) into `PendingRequest`s: the raw farm decorated with a
+// queue-specific requestType.
 import type { PendingFarmDto, PendingRequest } from '$lib/types/admin';
 import { getFarmTags } from '$lib/utils/farm-tags';
+import { formatRelativeTime } from '$lib/utils/relative-time';
 
-export const PENDING_FARMS_QUERY = `
-	query PendingFarms {
-		farmsByStatus(status: PENDING_APPROVAL) {
+/** Fields selected for every farm shown in an admin queue (pending, changes requested, deleted). */
+const QUEUE_FARM_FIELDS = `
 			id
 			owner_user_id
 			farm_name
@@ -38,6 +39,8 @@ export const PENDING_FARMS_QUERY = `
 			carousel_photos
 			status
 			was_previously_rejected
+			deletion_requested_at
+			deletion_approved_at
 			createdAt
 			updatedAt
 			owner {
@@ -47,6 +50,34 @@ export const PENDING_FARMS_QUERY = `
 				email
 				phone
 			}
+`;
+
+export const PENDING_FARMS_QUERY = `
+	query PendingFarms {
+		farmsByStatus(status: PENDING_APPROVAL) {${QUEUE_FARM_FIELDS}
+		}
+	}
+`;
+
+/** Farms whose owners asked for them to be deleted (not yet approved or denied). */
+export const DELETION_REQUESTS_QUERY = `
+	query FarmDeletionRequests {
+		farmDeletionRequests {${QUEUE_FARM_FIELDS}
+		}
+	}
+`;
+
+/** `farmsByStatus` excludes archived farms, so these are only farms awaiting the farmer's edits. */
+export const CHANGES_REQUESTED_FARMS_QUERY = `
+	query ChangesRequestedFarms {
+		farmsByStatus(status: REJECTED) {${QUEUE_FARM_FIELDS}
+		}
+	}
+`;
+
+export const ARCHIVED_FARMS_QUERY = `
+	query ArchivedFarms($pageNumber: Int, $pageSize: Int) {
+		farms(filter: { is_archived: true }, pageNumber: $pageNumber, pageSize: $pageSize) {${QUEUE_FARM_FIELDS}
 		}
 	}
 `;
@@ -79,16 +110,52 @@ export const ARCHIVE_FARM_MUTATION = `
 	}
 `;
 
+export const UNARCHIVE_FARM_MUTATION = `
+	mutation UnarchiveFarm($id: ID!) {
+		unarchiveFarm(id: $id) {
+			id
+			is_archived
+		}
+	}
+`;
+
+export const APPROVE_FARM_DELETION_MUTATION = `
+	mutation ApproveFarmDeletion($id: ID!) {
+		approveFarmDeletion(id: $id) {
+			id
+			is_archived
+		}
+	}
+`;
+
+export const DENY_FARM_DELETION_MUTATION = `
+	mutation DenyFarmDeletion($id: ID!) {
+		denyFarmDeletion(id: $id) {
+			id
+			deletion_requested_at
+		}
+	}
+`;
+
 function isResubmission(farm: PendingFarmDto): boolean {
 	return farm.was_previously_rejected;
 }
 
-/** Decorates one `farmsByStatus(PENDING_APPROVAL)` result with queue-specific fields. */
+/** Decorates one admin-queue farm with queue-specific fields. */
 export function pendingFarmToRequest(farm: PendingFarmDto): PendingRequest {
+	if (farm.deletion_requested_at) return { requestType: 'DELETION_REQUEST', farm };
 	return {
 		requestType: isResubmission(farm) ? 'UPDATED_APPLICATION' : 'NEW_APPLICATION',
 		farm
 	};
+}
+
+/** "Submitted 2 days ago", or "Deletion requested …" for a deletion request. */
+export function requestTimeLabel(request: PendingRequest): string {
+	if (request.requestType === 'DELETION_REQUEST' && request.farm.deletion_requested_at) {
+		return `Deletion requested ${formatRelativeTime(request.farm.deletion_requested_at)}`;
+	}
+	return `Submitted ${formatRelativeTime(request.farm.updatedAt)}`;
 }
 
 /** Headline map tag for a pending farm, or null when none apply. */

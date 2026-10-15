@@ -5,8 +5,12 @@
 	import Modal from '$lib/components/Modal.svelte';
 	import RequestedChangesCard from '$lib/components/RequestedChangesCard.svelte';
 	import ApprovedCard from '$lib/components/ApprovedCard.svelte';
+	import DeletionApprovedCard from '$lib/components/DeletionApprovedCard.svelte';
+	import OnboardingFlow from '$lib/components/OnboardingFlow.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
-	import type { FarmStatus } from '$lib/farmStatus';
+	import { getFirebaseAuth } from '$lib/firebase';
+	import { markAddFarmOpened, markOnboardingComplete, onboardingStartStep } from '$lib/onboarding';
+	import { farmDisplayStatus, type FarmStatus } from '$lib/farmStatus';
 
 	// The signed-in farmer's own farms, across all statuses (backend myFarms query).
 	interface FarmListItem {
@@ -15,8 +19,10 @@
 		farm_address: string;
 		county: string;
 		status: FarmStatus;
-		/** The farm's first uploaded image; null when it has none (FarmCard then
-		 *  renders an empty grey block). */
+		/** Set while the farmer's deletion request awaits admin review. */
+		deletion_requested_at: string | null;
+		/** The farm's cover image; null when it has none (FarmCard then shows
+		 *  the default cover). */
 		primary_image_url: string | null;
 	}
 
@@ -28,8 +34,15 @@
 				farm_address
 				county
 				status
+				deletion_requested_at
 				primary_image_url
 			}
+		}
+	`;
+
+	const MY_APPROVED_DELETIONS = `
+		query MyApprovedFarmDeletions {
+			myApprovedFarmDeletions { id farm_name }
 		}
 	`;
 
@@ -43,26 +56,61 @@
 	let loading = $state(true);
 	let errorMessage = $state('');
 
-	// Status popup shown after the farms load: a rejected farm surfaces its
-	// requested changes on every visit (it needs action); an approval is
-	// celebrated once per farm (tracked in localStorage).
+	let onboardingUid = '';
+	let onboardingStep = $state<number | null>(null);
+	// The tour spotlights the farm that's under review (the one just submitted).
+	const onboardingFarm = $derived(farms.find((farm) => farm.status === 'PENDING_APPROVAL') ?? farms[0]);
+
+	function finishOnboarding() {
+		markOnboardingComplete(onboardingUid);
+		onboardingStep = null;
+	}
+
+	// Status popups shown after the farms load, one at a time: an approved
+	// deletion and an approval are each shown once per farm (tracked in
+	// localStorage); a rejected farm surfaces its requested changes on every
+	// visit (it needs action).
 	type StatusPopup =
+		| { kind: 'deletion-approved'; farm: { id: string; farm_name: string } }
 		| { kind: 'rejected'; farm: FarmListItem; reason: string }
 		| { kind: 'approved'; farm: FarmListItem };
-	let statusPopup = $state<StatusPopup | null>(null);
+	let popupQueue = $state<StatusPopup[]>([]);
+	const statusPopup = $derived(popupQueue[0] ?? null);
 
 	const SEEN_APPROVED_KEY = 'mfsn:seen-approved-farms';
+	const SEEN_DELETED_KEY = 'mfsn:seen-approved-deletions';
 
-	function seenApprovedIds(): string[] {
+	function seenIds(key: string): string[] {
 		try {
-			return JSON.parse(localStorage.getItem(SEEN_APPROVED_KEY) ?? '[]');
+			return JSON.parse(localStorage.getItem(key) ?? '[]');
 		} catch {
 			return [];
 		}
 	}
 
-	async function pickStatusPopup(loaded: FarmListItem[]) {
-		const rejected = loaded.find((farm) => farm.status === 'REJECTED');
+	function markSeen(key: string, farmId: string) {
+		localStorage.setItem(key, JSON.stringify([...seenIds(key), farmId]));
+	}
+
+	async function buildPopupQueue(loaded: FarmListItem[]): Promise<StatusPopup[]> {
+		const queue: StatusPopup[] = [];
+
+		try {
+			const res = await gqlClient<{
+				myApprovedFarmDeletions: { id: string; farm_name: string }[];
+			}>(MY_APPROVED_DELETIONS);
+			const seenDeleted = seenIds(SEEN_DELETED_KEY);
+			for (const farm of res.myApprovedFarmDeletions) {
+				if (!seenDeleted.includes(farm.id)) queue.push({ kind: 'deletion-approved', farm });
+			}
+		} catch {
+			// the dashboard still works without the deletion notice
+		}
+
+		// A farm awaiting deletion doesn't need its other status surfaced.
+		const live = loaded.filter((farm) => !farm.deletion_requested_at);
+
+		const rejected = live.find((farm) => farm.status === 'REJECTED');
 		if (rejected) {
 			let reason = 'Please review your farm details and resubmit your application.';
 			try {
@@ -73,25 +121,32 @@
 			} catch {
 				// popup still shows with the generic reason
 			}
-			statusPopup = { kind: 'rejected', farm: rejected, reason };
-			return;
+			queue.push({ kind: 'rejected', farm: rejected, reason });
+			return queue;
 		}
 
-		const seen = seenApprovedIds();
-		const approved = loaded.find((farm) => farm.status === 'APPROVED' && !seen.includes(farm.id));
-		if (approved) statusPopup = { kind: 'approved', farm: approved };
+		const seenApproved = seenIds(SEEN_APPROVED_KEY);
+		const approved = live.find(
+			(farm) => farm.status === 'APPROVED' && !seenApproved.includes(farm.id)
+		);
+		if (approved) queue.push({ kind: 'approved', farm: approved });
+		return queue;
 	}
 
-	function closeApprovedPopup(farmId: string) {
-		localStorage.setItem(SEEN_APPROVED_KEY, JSON.stringify([...seenApprovedIds(), farmId]));
-		statusPopup = null;
+	function closePopup() {
+		const popup = popupQueue[0];
+		if (popup?.kind === 'approved') markSeen(SEEN_APPROVED_KEY, popup.farm.id);
+		if (popup?.kind === 'deletion-approved') markSeen(SEEN_DELETED_KEY, popup.farm.id);
+		popupQueue = popupQueue.slice(1);
 	}
 
 	onMount(async () => {
 		try {
 			const data = await gqlClient<{ myFarms: FarmListItem[] }>(MY_FARMS);
 			farms = data.myFarms;
-			await pickStatusPopup(farms);
+			onboardingUid = getFirebaseAuth().currentUser?.uid ?? 'anonymous';
+			onboardingStep = onboardingStartStep(onboardingUid, farms.length);
+			if (onboardingStep === null) popupQueue = await buildPopupQueue(farms);
 		} catch (err) {
 			errorMessage = err instanceof Error ? err.message : 'Failed to load your farms.';
 		} finally {
@@ -107,7 +162,7 @@
 <section class="farms-page">
 	<header class="farms-header">
 		<h1 class="farms-title">Farms</h1>
-		<ActionButton variant="outline" href="/new-farm">
+		<ActionButton variant="outline" href="/new-farm" data-onboarding="add-farm">
 			{#snippet iconLeft()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
@@ -146,7 +201,7 @@
 					title={farm.farm_name}
 					subtitle={farm.farm_address}
 					subtitle2={farm.county}
-					status={farm.status}
+					status={farmDisplayStatus(farm)}
 					href={`/farmer/farms/${farm.id}/edit`}
 				/>
 			{/each}
@@ -154,17 +209,24 @@
 	{/if}
 </section>
 
+{#if onboardingStep !== null}
+	<OnboardingFlow
+		startStep={onboardingStep}
+		farmSelector={onboardingFarm ? `.farm-card[data-farm-id="${onboardingFarm.id}"]` : undefined}
+		onAddFarm={() => markAddFarmOpened(onboardingUid)}
+		onComplete={finishOnboarding}
+	/>
+{/if}
+
 {#if statusPopup?.kind === 'rejected'}
 	{@const popup = statusPopup}
-	<Modal label="Changes requested" onClose={() => (statusPopup = null)}>
+	<Modal label="Changes requested" onClose={closePopup}>
 		<RequestedChangesCard
 			reason={popup.reason}
 			subtitle="We reviewed your application and are unable to approve it at this time"
 		>
 			{#snippet actions()}
-				<ActionButton variant="outline-primary" onclick={() => (statusPopup = null)}>
-					Back
-				</ActionButton>
+				<ActionButton variant="outline-primary" onclick={closePopup}>Back</ActionButton>
 				<ActionButton variant="primary" href={`/farmer/farms/${popup.farm.id}/edit`}>
 					Edit Farm Details
 				</ActionButton>
@@ -172,9 +234,17 @@
 		</RequestedChangesCard>
 	</Modal>
 {:else if statusPopup?.kind === 'approved'}
-	{@const popup = statusPopup}
-	<Modal label="Application approved" onClose={() => closeApprovedPopup(popup.farm.id)}>
+	<Modal label="Application approved" onClose={closePopup}>
 		<ApprovedCard />
+	</Modal>
+{:else if statusPopup?.kind === 'deletion-approved'}
+	{@const popup = statusPopup}
+	<Modal label="Deletion request approved" onClose={closePopup}>
+		<DeletionApprovedCard farmName={popup.farm.farm_name}>
+			{#snippet actions()}
+				<ActionButton variant="primary" onclick={closePopup}>Close</ActionButton>
+			{/snippet}
+		</DeletionApprovedCard>
 	</Modal>
 {/if}
 

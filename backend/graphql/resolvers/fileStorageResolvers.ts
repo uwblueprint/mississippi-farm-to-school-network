@@ -5,14 +5,17 @@ import { UserInputError } from 'apollo-server';
 import { AuthContext } from '@/middlewares/auth';
 import FarmService from '@/services/implementations/farmService';
 import FileStorageService from '@/services/implementations/fileStorageService';
+import ImageService from '@/services/implementations/imageService';
 import LocalFileStorageService from '@/services/implementations/localFileStorageService';
 import StoredFileService from '@/services/implementations/storedFileService';
 import IFarmService from '@/services/interfaces/farmService';
 import IFileStorageService from '@/services/interfaces/fileStorageService';
+import IImageService from '@/services/interfaces/imageService';
 import IStoredFileService from '@/services/interfaces/storedFileService';
 import { FarmStatus, StoredFileDTO } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import { ALLOWED_IMAGE_TYPES, MAX_UPLOAD_BYTES } from '@/utilities/imageUploadLimits';
 
 type FarmImageDTO = {
   fileId: string;
@@ -22,12 +25,6 @@ type FarmImageDTO = {
 };
 
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || '';
-
-/** Mirror of IMAGE_ACCEPT in frontend/src/lib/fileDrop.ts; keep the two in sync. */
-const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
-
-/** Mirrors MAX_UPLOAD_BYTES in frontend/src/lib/fileDrop.ts; keep the two in sync. */
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 const JPEG_MAGIC = Buffer.from([0xff, 0xd8, 0xff]);
@@ -58,6 +55,7 @@ const fileStorageService: IFileStorageService = useLocalFileStorage
   ? new LocalFileStorageService(process.env.LOCAL_FILE_STORAGE_DIR || '/app/uploads')
   : new FileStorageService(defaultBucket);
 const storedFileService: IStoredFileService = new StoredFileService();
+const imageService: IImageService = new ImageService();
 const farmService: IFarmService = new FarmService();
 
 const toFarmImageDTO = async (record: StoredFileDTO): Promise<FarmImageDTO> => ({
@@ -242,16 +240,26 @@ const fileStorageResolvers = {
     /**
      * The farm's cover image, or null when it has none.
      *
-     * `cover_photo` holds the stored_files id of the cover image (an id, not a
-     * URL — storage URLs are short-lived signed URLs, so they are resolved
-     * fresh on every read). Farms from before the cover/carousel buckets
-     * existed fall back to their first (oldest) uploaded image.
+     * `cover_photo` holds the id of the cover image (an id, not a URL — storage
+     * URLs are short-lived signed URLs, so they are resolved fresh on every
+     * read). Photos uploaded through the farm forms live in `images`; older
+     * uploads live in `stored_files`. Without a matching cover, the first
+     * carousel photo, then the lowest-index / oldest image is used.
      */
     primary_image_url: async (farm: {
       id: string;
       cover_photo?: string | null;
+      carousel_photos?: string[] | null;
     }): Promise<string | null> => {
       try {
+        const images = await imageService.getImagesByFarm(farm.id);
+        if (images.length > 0) {
+          const byId = (id?: string | null) =>
+            id ? images.find((image) => image.id === id) : undefined;
+          const chosen = byId(farm.cover_photo) ?? byId(farm.carousel_photos?.[0]) ?? images[0];
+          return await fileStorageService.getFile(chosen.storage_key);
+        }
+
         const records = await storedFileService.getRecordsByFarm(farm.id);
         if (records.length === 0) {
           return null;

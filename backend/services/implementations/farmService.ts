@@ -95,6 +95,8 @@ type FarmDoc = {
   is_archived: boolean;
   rejection_reason?: string | null;
   rejection_snapshot?: Partial<FarmDTO> | null;
+  deletion_requested_at?: string | null;
+  deletion_approved_at?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -645,6 +647,8 @@ class FarmService implements IFarmService {
       status: data.status,
       is_archived: data.is_archived,
       was_previously_rejected: Boolean(data.rejection_reason),
+      deletion_requested_at: data.deletion_requested_at ? toIso(data.deletion_requested_at) : null,
+      deletion_approved_at: data.deletion_approved_at ? toIso(data.deletion_approved_at) : null,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -706,6 +710,8 @@ class FarmService implements IFarmService {
       status: data.status,
       is_archived: data.is_archived,
       was_previously_rejected: Boolean(data.rejection_reason),
+      deletion_requested_at: data.deletion_requested_at ? toIso(data.deletion_requested_at) : null,
+      deletion_approved_at: data.deletion_approved_at ? toIso(data.deletion_approved_at) : null,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -767,11 +773,92 @@ class FarmService implements IFarmService {
         Logger.warn(`Farm with id ${farmId} is not archived.`);
         return this.convertToFarmDTO(farmId, data);
       }
-      const next: FarmDoc = { ...data, is_archived: false, updatedAt: new Date().toISOString() };
+      const next: FarmDoc = {
+        ...data,
+        is_archived: false,
+        deletion_requested_at: null,
+        deletion_approved_at: null,
+        updatedAt: new Date().toISOString(),
+      };
       await this.farms().doc(farmId).set(next);
       return this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async requestFarmDeletion(farmId: string): Promise<FarmDTO> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (data.is_archived) {
+        throw new Error(`Farm with id ${farmId} has already been deleted.`);
+      }
+      if (data.deletion_requested_at) {
+        return this.convertToFarmDTO(farmId, data);
+      }
+      const now = new Date().toISOString();
+      const next: FarmDoc = { ...data, deletion_requested_at: now, updatedAt: now };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to request farm deletion. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async approveFarmDeletion(farmId: string): Promise<FarmDTO> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (!data.deletion_requested_at) {
+        throw new Error(`Farm with id ${farmId} has no pending deletion request.`);
+      }
+      const now = new Date().toISOString();
+      const next: FarmDoc = {
+        ...data,
+        is_archived: true,
+        deletion_requested_at: null,
+        deletion_approved_at: now,
+        updatedAt: now,
+      };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to approve farm deletion. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async denyFarmDeletion(farmId: string): Promise<FarmDTO> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (!data.deletion_requested_at) {
+        throw new Error(`Farm with id ${farmId} has no pending deletion request.`);
+      }
+      const next: FarmDoc = {
+        ...data,
+        deletion_requested_at: null,
+        updatedAt: new Date().toISOString(),
+      };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to deny farm deletion. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async getFarmDeletionRequests(): Promise<FarmDTO[]> {
+    try {
+      // A single-field range filter needs no composite index; archived farms
+      // never carry a deletion_requested_at, the in-memory check is a guard.
+      const snap = await this.farms().where('deletion_requested_at', '>', '').get();
+      return snap.docs
+        .map((doc) => ({ id: doc.id, data: doc.data() as FarmDoc }))
+        .filter(({ data }) => !data.is_archived)
+        .map(({ id, data }) => this.convertToFarmDTO(id, data));
+    } catch (error: unknown) {
+      Logger.error(`Failed to get farm deletion requests. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

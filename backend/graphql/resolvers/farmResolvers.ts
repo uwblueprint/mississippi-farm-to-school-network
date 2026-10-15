@@ -86,7 +86,25 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO[]> => {
       const user = await authHelper.requireAuth(context);
-      return farmService.getFarmsByOwner(user.id);
+      const farms = await farmService.getFarmsByOwner(user.id);
+      return farms.filter((farm) => !farm.is_archived);
+    },
+    myApprovedFarmDeletions: async (
+      _parent: undefined,
+      _args: undefined,
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      const user = await authHelper.requireAuth(context);
+      const farms = await farmService.getFarmsByOwner(user.id);
+      return farms.filter((farm) => farm.is_archived && farm.deletion_approved_at);
+    },
+    farmDeletionRequests: async (
+      _parent: undefined,
+      _args: undefined,
+      context: AuthContext
+    ): Promise<FarmDTO[]> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.getFarmDeletionRequests();
     },
     farmById: async (
       _parent: undefined,
@@ -116,6 +134,21 @@ const farmResolvers = {
       const farm = await farmService.getFarmById(farmId);
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
       return farmService.getLatestActiveRejection(farmId);
+    },
+    latestFarmRejection: async (
+      _parent: undefined,
+      { farmId }: { farmId: string },
+      context: AuthContext
+    ): Promise<ActiveFarmRejectionDTO | null> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      const rejection = await farmService.getLatestFarmRejectionByFarmId(farmId);
+      if (!rejection) return null;
+      return {
+        id: rejection.id,
+        farm_id: rejection.farm_id,
+        rejection_reason: rejection.rejection_reason,
+        created_at: rejection.created_at,
+      };
     },
   },
 
@@ -221,6 +254,53 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.unarchiveFarm(id);
+    },
+
+    requestFarmDeletion: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireEmailVerified(context);
+      const farm = await farmService.getFarmById(id);
+      await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
+      const updated = await farmService.requestFarmDeletion(id);
+
+      if (!farm.deletion_requested_at) {
+        const emailBody = {
+          title: 'Farm Deletion Requested',
+          previewText: 'A farm has asked to be deleted.',
+          body: `${farm.farm_name} has asked for its farm profile to be deleted. Please review the request and approve or deny it.`,
+          ctaText: 'Review request',
+          ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin`,
+          isFarmerEmail: false,
+        };
+        try {
+          await emailService.sendEmail(process.env.MAILER_USER!, 'Farm Deletion Requested', emailBody);
+        } catch {
+          // email failure should not fail the mutation
+        }
+      }
+
+      return updated;
+    },
+
+    approveFarmDeletion: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.approveFarmDeletion(id);
+    },
+
+    denyFarmDeletion: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.denyFarmDeletion(id);
     },
   },
 
