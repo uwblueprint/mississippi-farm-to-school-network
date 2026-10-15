@@ -9,10 +9,9 @@
 
 	const NAV_ITEMS = [
 		{ href: '/admin', label: 'Pending Requests' },
-		{ href: '/admin/archived', label: 'Archived farms and Pending Farms' },
 		{ href: '/admin/farms', label: 'Farms' },
-		{ href: '/admin/accounts', label: 'Accounts' },
-		{ href: '/admin/announcements', label: 'Manage Announcements' }
+		{ href: '/admin/announcements', label: 'Manage Announcements' },
+		{ href: '/admin/archived', label: 'Deleted & Archived Farms' }
 	];
 
 	function isCurrent(href: string): boolean {
