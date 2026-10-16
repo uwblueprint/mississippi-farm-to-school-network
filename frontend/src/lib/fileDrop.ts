@@ -3,13 +3,16 @@
 // drift apart — in particular the accept-filtering, which is the part that
 // actually matters for correctness (see isAccepted).
 
-/** The image formats the farm image uploader accepts. */
-export const IMAGE_ACCEPT = 'image/png,image/jpeg';
+/**
+ * The photo formats the pickers and drop targets let through. HEIC/HEIF (iPhone
+ * photos copied to a computer) are converted to JPEG before upload by
+ * preparePhoto; storage only ever receives JPG or PNG.
+ */
+export const IMAGE_ACCEPT = 'image/png,image/jpeg,image/heic,image/heif,.heic,.heif';
 
-// Base64 inflates bytes by ~4/3, so this caps a single request near 14MB — well
-// under apollo-server's 50mb body limit, past which the 413 comes back as plain
-// text and never parses as JSON. Mirrored by MAX_UPLOAD_BYTES in
-// backend/graphql/resolvers/fileStorageResolvers.ts; keep the two in sync.
+// Per-photo cap, checked before upload by preparePhoto and enforced again by the
+// backend on the stored object. Mirrored by MAX_UPLOAD_BYTES in
+// backend/utilities/imageUploadLimits.ts; keep the two in sync.
 export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 /** MAX_UPLOAD_BYTES in the form the rejection copy shows users. */
@@ -54,7 +57,11 @@ export interface DropResult {
 	error: string;
 }
 
-/** Pull the acceptable files out of a drop event, filtering the rest. */
+/**
+ * Pull the acceptable files out of a drop event, filtering the rest by type.
+ * Size and HEIC conversion are handled per file by preparePhoto at upload time,
+ * so every path reports them the same way.
+ */
 export function filesFromDrop(event: DragEvent, accept: string, multiple: boolean): DropResult {
 	const dropped = Array.from(event.dataTransfer?.files ?? []);
 	if (dropped.length === 0) {
@@ -62,25 +69,14 @@ export function filesFromDrop(event: DragEvent, accept: string, multiple: boolea
 	}
 
 	const accepted = dropped.filter((file) => isAccepted(file, accept));
-	const withinLimit = accepted.filter((file) => file.size <= MAX_UPLOAD_BYTES);
-	const valid = multiple ? withinLimit : withinLimit.slice(0, 1);
-
-	const wrongType = accepted.length < dropped.length;
-	const oversized = withinLimit.length < accepted.length;
+	const valid = multiple ? accepted : accepted.slice(0, 1);
 
 	if (valid.length === 0) {
-		return {
-			files: null,
-			error: oversized
-				? `Images must be under ${MAX_UPLOAD_LABEL}.`
-				: 'Only JPG or PNG images can be uploaded.'
-		};
+		return { files: null, error: 'Only JPG, PNG or HEIC photos can be uploaded.' };
 	}
 
-	let error = '';
-	if (oversized) error = `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.`;
-	else if (wrongType) error = 'Some files were skipped — JPG or PNG only.';
-
+	const error =
+		accepted.length < dropped.length ? 'Some files were skipped — JPG, PNG or HEIC only.' : '';
 	return { files: toFileList(valid), error };
 }
 

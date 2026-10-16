@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Map as MapboxMap } from 'mapbox-gl';
 
+	import AnnouncementLauncher from '$lib/components/map/AnnouncementLauncher.svelte';
 	import FarmDetailPanel from '$lib/components/map/FarmDetailPanel.svelte';
 	import FarmListItem from '$lib/components/map/FarmListItem.svelte';
 	import FarmSearch from '$lib/components/map/FarmSearch.svelte';
@@ -79,7 +80,10 @@
 		/>
 	{:else}
 		<div class="farm-map-sidebar__header">
-			<FarmSearch {map} />
+			<div class="farm-map-sidebar__search-row">
+				<AnnouncementLauncher />
+				<FarmSearch {map} />
+			</div>
 
 			<div class="farm-map-sidebar__title-row">
 				<div class="farm-map-sidebar__title-group">

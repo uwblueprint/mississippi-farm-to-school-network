@@ -33,6 +33,7 @@ const FARM_BY_ID = `
 			cover_photo
 			carousel_photos
 			status
+			deletion_requested_at
 		}
 	}
 `;
@@ -153,5 +154,14 @@ export const load: PageLoad = async ({ params }) => {
 		galleryIds = gallery.map((img) => img.fileId);
 	}
 
-	return { form, status: farm.status, rejection, cover, coverId, gallery, galleryIds };
+	return {
+		form,
+		status: farm.status,
+		deletionRequested: Boolean(farm.deletion_requested_at),
+		rejection,
+		cover,
+		coverId,
+		gallery,
+		galleryIds
+	};
 };

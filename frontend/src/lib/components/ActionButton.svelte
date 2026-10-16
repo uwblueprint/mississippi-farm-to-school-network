@@ -18,6 +18,8 @@
 		disabled?: boolean;
 		/** Stretch to fill the container width (e.g. the full-width Save). */
 		block?: boolean;
+		/** 'sm' is the compact header button (Settings Edit / Save Changes). */
+		size?: 'md' | 'sm';
 		/** Plain-text content; ignored when a children snippet is given. */
 		label?: string;
 		/** Leading icon (left of the label). */
@@ -36,6 +38,7 @@
 		type = 'button',
 		disabled = false,
 		block = false,
+		size = 'md',
 		label,
 		iconLeft,
 		iconRight,
@@ -46,7 +49,13 @@
 	}: Props = $props();
 
 	const classes = $derived(
-		['action-btn', `action-btn--${variant}`, block ? 'action-btn--block' : '', className]
+		[
+			'action-btn',
+			`action-btn--${variant}`,
+			block ? 'action-btn--block' : '',
+			size === 'sm' ? 'action-btn--sm' : '',
+			className
+		]
 			.filter(Boolean)
 			.join(' ')
 	);
@@ -152,6 +161,14 @@
 	.action-btn--primary:hover:not(:disabled) {
 		background: color-mix(in srgb, var(--color-primary-button, #587244) 88%, black);
 		border-color: color-mix(in srgb, var(--color-primary-button, #587244) 88%, black);
+	}
+
+	/* --- Compact header button (Settings) --- */
+	.action-btn--sm {
+		height: 40px;
+		padding: 8px 14px;
+		gap: 6px;
+		font-size: 14px;
 	}
 
 	/* --- Danger (Delete Farm) --- */

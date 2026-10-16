@@ -1,11 +1,11 @@
-import dotenv from 'dotenv';
+// Must stay the first import: the resolver modules imported below read process.env
+// (e.g. the storage bucket name) when they load.
+import 'dotenv/config';
 import { ApolloServer } from 'apollo-server';
 import * as admin from 'firebase-admin';
 
 import executableSchema from '@/graphql';
 import { initializeFirebaseAdmin } from '@/utilities/firebaseAdmin';
-
-dotenv.config();
 
 const PORT = process.env.PORT || 3000;
 

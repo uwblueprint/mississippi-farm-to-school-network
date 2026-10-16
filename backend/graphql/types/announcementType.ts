@@ -3,6 +3,7 @@ import { gql } from 'apollo-server';
 const announcementType = gql`
   type Query {
     liveAnnouncements: [AnnouncementDTO!]!
+    publicAnnouncements: [PublicAnnouncementDTO!]!
     liveAndUpcomingAnnouncements: [AnnouncementDTO!]!
     pastAnnouncements: [AnnouncementDTO!]!
   }
@@ -22,6 +23,14 @@ const announcementType = gql`
     created_by: ID!
     createdAt: String!
     updatedAt: String!
+  }
+
+  "Live announcement as shown to signed-out visitors on the public farm map."
+  type PublicAnnouncementDTO {
+    id: ID!
+    message: String!
+    start_date: String!
+    end_date: String
   }
 
   type OverlapWarning {

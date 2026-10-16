@@ -68,6 +68,11 @@ class LocalFileStorageService implements IFileStorageService {
     }
   }
 
+  async getFileSize(fileName: string): Promise<number> {
+    const stats = await fs.stat(this.resolveKey(fileName));
+    return stats.size;
+  }
+
   /**
    * Signed upload URLs are a cloud-storage concept; this local fallback has no
    * equivalent, so callers should use uploadBytes/createFile directly instead.

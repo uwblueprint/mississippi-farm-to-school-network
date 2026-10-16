@@ -29,6 +29,25 @@ const toStartOfDayCST = (dateStr: string): Date =>
 const toEndOfDayCST = (dateStr: string): Date =>
   DateTime.fromISO(dateStr, { zone: CST }).endOf('day').toJSDate();
 
+export const OVERLAP_LIMIT_MESSAGE = 'You have reached the limit for overlapping announcements.';
+
+const rangesOverlap = (a: AnnouncementDTO, b: AnnouncementDTO) => {
+  const aEnd = a.end_date ? new Date(a.end_date) : null;
+  const bEnd = b.end_date ? new Date(b.end_date) : null;
+  return (
+    (bEnd == null || new Date(a.start_date) <= bEnd) &&
+    (aEnd == null || new Date(b.start_date) <= aEnd)
+  );
+};
+
+/**
+ * At most 2 announcements may be live on the same day. Date ranges that overlap pairwise
+ * share a common day, so a new announcement makes 3 concurrent exactly when two of the
+ * announcements already in its range overlap each other.
+ */
+const exceedsOverlapLimit = (overlapping: AnnouncementDTO[]) =>
+  overlapping.some((a, i) => overlapping.slice(i + 1).some((b) => rangesOverlap(a, b)));
+
 const isPast = (date: Date) => {
   const todayCST = DateTime.now().setZone(CST).startOf('day').toJSDate();
   return date < todayCST;
@@ -56,8 +75,12 @@ class AnnouncementService implements IAnnouncementService {
       throw new Error('Start date cannot be after end date');
     }
 
+    const overlappingAnnouncements = await this.getOverlappingAnnouncements(startDate, endDate);
+    if (exceedsOverlapLimit(overlappingAnnouncements)) {
+      throw new Error(OVERLAP_LIMIT_MESSAGE);
+    }
+
     try {
-      const overlappingAnnouncements = await this.getOverlappingAnnouncements(startDate, endDate);
       const id = newId();
       const now = new Date().toISOString();
       const data: AnnouncementDoc = {
@@ -116,13 +139,12 @@ class AnnouncementService implements IAnnouncementService {
       throw new Error('End date cannot be before start date');
     }
 
-    try {
-      const overlappingAnnouncements = await this.getOverlappingAnnouncements(
-        startDate,
-        endDate,
-        id
-      );
+    const overlappingAnnouncements = await this.getOverlappingAnnouncements(startDate, endDate, id);
+    if (exceedsOverlapLimit(overlappingAnnouncements)) {
+      throw new Error(OVERLAP_LIMIT_MESSAGE);
+    }
 
+    try {
       const updated: AnnouncementDoc = {
         ...existing,
         message: newAnnouncement.message ?? existing.message,

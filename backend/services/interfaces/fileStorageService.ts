@@ -34,6 +34,14 @@ export interface IFileStorageService {
   fileExists(fileName: string): Promise<boolean>;
 
   /**
+   * Size of a stored file, as recorded by storage (not as claimed by a client)
+   * @param fileName name of file in storage
+   * @returns size in bytes
+   * @throws Error if the file does not exist
+   */
+  getFileSize(fileName: string): Promise<number>;
+
+  /**
    * Creates a new file in storage
    * @param fileName name of file in storage
    * @param filePath local path to file to upload

@@ -69,6 +69,12 @@ class FileStorageService implements IFileStorageService {
     return exists;
   }
 
+  async getFileSize(fileName: string): Promise<number> {
+    const bucket = storage().bucket(this.bucketName);
+    const [metadata] = await bucket.file(fileName).getMetadata();
+    return Number(metadata.size);
+  }
+
   async createFile(
     fileName: string,
     filePath: string,
