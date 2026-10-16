@@ -28,7 +28,7 @@
 
 	// The [id] segment is the farm's UUID — the same id used by the backend
 	// farmById(id) query and the updateFarm(id, input) / resubmitFarm(id, input) mutations.
-	const farmId = $derived($page.params.id);
+	const farmId = $derived($page.params.id ?? '');
 
 	/** Safe in-app path from `?returnTo=` (e.g. admin → edit → back to /admin). */
 	function safeReturnTo(value: string | null): string | null {

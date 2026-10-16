@@ -79,6 +79,15 @@ export const ARCHIVE_FARM_MUTATION = `
 	}
 `;
 
+export const DELETE_FARM_MUTATION = `
+	mutation DeleteFarm($id: ID!) {
+		deleteFarm(id: $id) {
+			id
+			status
+		}
+	}
+`;
+
 function isResubmission(farm: PendingFarmDto): boolean {
 	return farm.was_previously_rejected;
 }

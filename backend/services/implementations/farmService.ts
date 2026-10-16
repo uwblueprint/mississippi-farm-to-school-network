@@ -95,6 +95,10 @@ type FarmDoc = {
   is_archived: boolean;
   rejection_reason?: string | null;
   rejection_snapshot?: Partial<FarmDTO> | null;
+  // Optional because farms created before soft delete existed don't have them.
+  deleted_at?: string | null;
+  deletion_reason?: string | null;
+  status_before_deletion?: FarmStatus | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -388,6 +392,12 @@ class FarmService implements IFarmService {
         );
       }
 
+      if (farm.status === FarmStatus.DELETED && !isAdmin) {
+        throw new ForbiddenError(
+          'This farm has been deleted and cannot be edited. Please contact an administrator.'
+        );
+      }
+
       const farmBeforeUpdate = this.convertToFarmDTO(id, farm);
       const rejectionSnapshot = this.getRejectedSnapshot(farm, farmBeforeUpdate);
       const wasRejected = farm.status === FarmStatus.REJECTED;
@@ -464,6 +474,10 @@ class FarmService implements IFarmService {
         return this.convertToFarmDTO(farmId, data);
       }
 
+      if (data.status === FarmStatus.DELETED) {
+        throw new Error('Cannot approve a deleted farm. Restore it instead.');
+      }
+
       const next: FarmDoc = {
         ...data,
         status: FarmStatus.APPROVED,
@@ -527,6 +541,9 @@ class FarmService implements IFarmService {
 
         if (farmData.status === FarmStatus.APPROVED) {
           throw new Error('Cannot reject a farm that has already been approved.');
+        }
+        if (farmData.status === FarmStatus.DELETED) {
+          throw new Error('Cannot reject a deleted farm.');
         }
 
         const farmSnapshot = this.convertToFarmSnapshot(farmId, farmData);
@@ -645,6 +662,8 @@ class FarmService implements IFarmService {
       status: data.status,
       is_archived: data.is_archived,
       was_previously_rejected: Boolean(data.rejection_reason),
+      deleted_at: data.deleted_at ? toIso(data.deleted_at) : null,
+      deletion_reason: data.deletion_reason ?? null,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -706,6 +725,8 @@ class FarmService implements IFarmService {
       status: data.status,
       is_archived: data.is_archived,
       was_previously_rejected: Boolean(data.rejection_reason),
+      deleted_at: data.deleted_at ? toIso(data.deleted_at) : null,
+      deletion_reason: data.deletion_reason ?? null,
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -727,7 +748,9 @@ class FarmService implements IFarmService {
   async getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]> {
     try {
       const snap = await this.farms().where('owner_user_id', '==', ownerUserId).get();
-      return snap.docs.map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc));
+      return snap.docs
+        .map((doc) => this.convertToFarmDTO(doc.id, doc.data() as FarmDoc))
+        .filter((farm) => farm.status !== FarmStatus.DELETED);
     } catch (error: unknown) {
       Logger.error(`Failed to get farms by owner. Reason = ${getErrorMessage(error)}`);
       throw error;
@@ -772,6 +795,88 @@ class FarmService implements IFarmService {
       return this.convertToFarmDTO(farmId, next);
     } catch (error: unknown) {
       Logger.error(`Failed to unarchive farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async deleteFarm(farmId: string, reason?: string | null): Promise<FarmDTO> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (data.status === FarmStatus.DELETED) {
+        Logger.warn(`Farm with id ${farmId} is already deleted.`);
+        return this.convertToFarmDTO(farmId, data);
+      }
+      const now = new Date().toISOString();
+      const next: FarmDoc = {
+        ...data,
+        status: FarmStatus.DELETED,
+        status_before_deletion: data.status,
+        deleted_at: now,
+        deletion_reason: reason?.trim() || null,
+        updatedAt: now,
+      };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to delete farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async restoreFarm(farmId: string): Promise<FarmDTO> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (data.status !== FarmStatus.DELETED) {
+        Logger.warn(`Farm with id ${farmId} is not deleted.`);
+        return this.convertToFarmDTO(farmId, data);
+      }
+      const next: FarmDoc = {
+        ...data,
+        status: data.status_before_deletion ?? FarmStatus.APPROVED,
+        status_before_deletion: null,
+        is_archived: false,
+        deleted_at: null,
+        deletion_reason: null,
+        updatedAt: new Date().toISOString(),
+      };
+      await this.farms().doc(farmId).set(next);
+      return this.convertToFarmDTO(farmId, next);
+    } catch (error: unknown) {
+      Logger.error(`Failed to restore farm. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async permanentlyDeleteFarm(farmId: string): Promise<string[]> {
+    try {
+      const { data } = await this.getFarmDoc(farmId);
+      if (data.status !== FarmStatus.DELETED && !data.is_archived) {
+        throw new Error('Only deleted or archived farms can be permanently deleted.');
+      }
+
+      const db = getFirestore();
+      const [rejectionsSnap, imagesSnap, filesSnap] = await Promise.all([
+        this.rejections().where('farm_id', '==', farmId).get(),
+        db.collection(Collections.images).where('farm_id', '==', farmId).get(),
+        db.collection(Collections.storedFiles).where('farm_id', '==', farmId).get(),
+      ]);
+
+      const batch = db.batch();
+      batch.delete(this.farms().doc(farmId));
+      if (data.usda_farm_id) {
+        batch.delete(this.farmUsdaIds().doc(data.usda_farm_id));
+      }
+      for (const doc of [...rejectionsSnap.docs, ...imagesSnap.docs, ...filesSnap.docs]) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+
+      const storageKeys = [...imagesSnap.docs, ...filesSnap.docs]
+        .map((doc) => (doc.data() as { storage_key?: string }).storage_key)
+        .filter((key): key is string => Boolean(key));
+      return [...new Set(storageKeys)];
+    } catch (error: unknown) {
+      Logger.error(`Failed to permanently delete farm. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }
