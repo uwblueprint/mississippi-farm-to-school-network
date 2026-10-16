@@ -636,10 +636,7 @@ describe('farmResolvers.FarmDTO.owner', () => {
 describe('farm deletion requests', () => {
   const farmId = 'farm-uuid-1';
   const ownerUserId = 'owner-1';
-  const callResolver = (
-    resolver: unknown,
-    args: Record<string, unknown> = {}
-  ): Promise<unknown> =>
+  const callResolver = (resolver: unknown, args: Record<string, unknown> = {}): Promise<unknown> =>
     (resolver as (p: unknown, a: unknown, c: AuthContext) => Promise<unknown>)(
       undefined,
       args,

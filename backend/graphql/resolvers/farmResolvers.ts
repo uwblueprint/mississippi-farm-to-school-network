@@ -276,7 +276,11 @@ const farmResolvers = {
           isFarmerEmail: false,
         };
         try {
-          await emailService.sendEmail(process.env.MAILER_USER!, 'Farm Deletion Requested', emailBody);
+          await emailService.sendEmail(
+            process.env.MAILER_USER!,
+            'Farm Deletion Requested',
+            emailBody
+          );
         } catch {
           // email failure should not fail the mutation
         }
