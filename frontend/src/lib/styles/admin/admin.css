@@ -65,16 +65,103 @@
 	color: #455d32;
 }
 
+.admin-sidebar__user-wrap {
+	position: relative;
+}
+
+.admin-sidebar__user {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	width: 100%;
+	margin: 0 -0.5rem;
+	padding: 0.5rem;
+	box-sizing: content-box;
+	border: none;
+	border-radius: 0.5rem;
+	background: none;
+	font-family: inherit;
+	text-align: left;
+	cursor: pointer;
+}
+
+.admin-sidebar__user:hover,
+.admin-sidebar__user[aria-expanded='true'] {
+	background: var(--color-neutral-100, #f5f6f8);
+}
+
+.admin-sidebar__user-chevron {
+	width: 1rem;
+	height: 1rem;
+	transform: rotate(-90deg);
+}
+
+.admin-sidebar__menu {
+	position: absolute;
+	bottom: calc(100% + 0.5rem);
+	left: -0.5rem;
+	right: -0.5rem;
+	z-index: 10;
+	margin: 0;
+	padding: 0.375rem;
+	list-style: none;
+	background: var(--color-neutral-0, #fff);
+	border: 1px solid var(--color-neutral-200, #e5e7eb);
+	border-radius: 0.5rem;
+	box-shadow: 0 8px 24px rgba(19, 25, 39, 0.12);
+}
+
 .admin-sidebar__user-name {
+	display: block;
 	margin: 0;
 	font-size: 0.875rem; /* 14px */
 	color: var(--color-text-primary, #131927);
 }
 
 .admin-sidebar__user-role {
+	display: block;
 	margin: 0.25rem 0 0;
 	font-size: 0.75rem; /* 12px */
 	color: #939393;
+}
+
+.admin-profile {
+	width: 26rem;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 2.25rem 2rem;
+	border-radius: 20px;
+	background: var(--color-neutral-0, #ffffff);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.admin-profile__title {
+	margin: 0 0 1.5rem;
+	padding-right: 2.5rem;
+	font-size: 1.75rem;
+	font-weight: 500;
+	line-height: 1.2;
+	color: var(--color-text-primary, #131927);
+}
+
+.admin-profile__fields {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	margin: 0;
+}
+
+.admin-profile__field dt {
+	font-size: 0.875rem;
+	color: #939393;
+}
+
+.admin-profile__field dd {
+	margin: 0.25rem 0 0;
+	font-size: 1rem;
+	color: var(--color-text-primary, #131927);
+	overflow-wrap: anywhere;
 }
 
 /* Page layout */
@@ -214,6 +301,14 @@
 	outline-offset: 2px;
 }
 
+.request-card--static {
+	cursor: default;
+}
+
+.request-card--static:hover {
+	border-color: var(--color-neutral-300, #d3d5de);
+}
+
 .request-card__meta {
 	display: flex;
 	align-items: center;
@@ -340,6 +435,16 @@
 .request-pill--updated-application {
 	background: #feeed5;
 	color: #c07505;
+}
+
+.request-pill--archived {
+	background: #f5f6f8;
+	color: #61636d;
+}
+
+.request-pill--deleted {
+	background: #fce4e1;
+	color: #d9544c;
 }
 
 .request-pill--farmers-market {
@@ -857,7 +962,8 @@
 }
 
 .review-application-card__approve,
-.review-application-card__changes {
+.review-application-card__changes,
+.review-application-card__danger {
 	flex: 1 1 0;
 	display: inline-flex;
 	align-items: center;
@@ -876,7 +982,8 @@
 }
 
 .review-application-card__approve:disabled,
-.review-application-card__changes:disabled {
+.review-application-card__changes:disabled,
+.review-application-card__danger:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }
@@ -899,6 +1006,16 @@
 
 .review-application-card__changes:hover {
 	background: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
+}
+
+.review-application-card__danger {
+	border: none;
+	background: var(--mfsn-secondary-500, #d9544c);
+	color: #ffffff;
+}
+
+.review-application-card__danger:hover:not(:disabled) {
+	background: var(--mfsn-secondary-600, #b8443d);
 }
 
 .review-application-card__approve img,

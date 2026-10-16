@@ -4,8 +4,6 @@ import { UserInputError } from 'apollo-server';
 
 import { AuthContext } from '@/middlewares/auth';
 import FarmService from '@/services/implementations/farmService';
-import FileStorageService from '@/services/implementations/fileStorageService';
-import LocalFileStorageService from '@/services/implementations/localFileStorageService';
 import StoredFileService from '@/services/implementations/storedFileService';
 import IFarmService from '@/services/interfaces/farmService';
 import IFileStorageService from '@/services/interfaces/fileStorageService';
@@ -13,6 +11,7 @@ import IStoredFileService from '@/services/interfaces/storedFileService';
 import { FarmStatus, StoredFileDTO } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import { createFileStorageService } from '@/utilities/fileStorage';
 
 type FarmImageDTO = {
   fileId: string;
@@ -20,8 +19,6 @@ type FarmImageDTO = {
   contentType: string | null;
   url: string;
 };
-
-const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || '';
 
 /** Mirror of IMAGE_ACCEPT in frontend/src/lib/fileDrop.ts; keep the two in sync. */
 const ALLOWED_IMAGE_TYPES = ['image/png', 'image/jpeg'];
@@ -48,15 +45,7 @@ const sniffImageType = (buffer: Buffer): 'image/png' | 'image/jpeg' | null => {
   return null;
 };
 
-// LOCAL DEMO ESCAPE HATCH: Firebase Cloud Storage 403s on every write while the
-// project's billing account is disabled, which blocks image uploads entirely.
-// Setting USE_LOCAL_FILE_STORAGE=true swaps in a disk-backed implementation of
-// the same interface so uploads work locally. Leave it unset/false anywhere real
-// — the Firebase-backed FileStorageService below is the production path.
-const useLocalFileStorage = process.env.USE_LOCAL_FILE_STORAGE === 'true';
-const fileStorageService: IFileStorageService = useLocalFileStorage
-  ? new LocalFileStorageService(process.env.LOCAL_FILE_STORAGE_DIR || '/app/uploads')
-  : new FileStorageService(defaultBucket);
+const fileStorageService: IFileStorageService = createFileStorageService();
 const storedFileService: IStoredFileService = new StoredFileService();
 const farmService: IFarmService = new FarmService();
 

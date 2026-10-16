@@ -7,12 +7,13 @@
 	import ToastHost from '$lib/components/ToastHost.svelte';
 	import { getDisplayName, resolveUserRole } from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
+	import type { AdminProfile } from '$lib/types/admin';
 	import '$lib/styles/admin/admin.css';
 
 	let { children } = $props();
 
 	let isAdmin = $state(false);
-	let adminName = $state('');
+	let profile = $state<AdminProfile>({ name: '', email: '', role: 'ADMIN' });
 
 	// The parent (protected) layout already enforces sign-in and email verification; this
 	// layout narrows access to admins so farmers cannot reach the dashboard by URL.
@@ -25,12 +26,13 @@
 				return;
 			}
 
-			if ((await resolveUserRole(user)) !== 'ADMIN') {
+			const role = await resolveUserRole(user);
+			if (role !== 'ADMIN') {
 				goto('/farmer');
 				return;
 			}
 
-			adminName = getDisplayName(user);
+			profile = { name: getDisplayName(user), email: user.email ?? '', role };
 			isAdmin = true;
 		});
 	});
@@ -38,7 +40,7 @@
 
 {#if isAdmin}
 	<div class="admin-shell">
-		<AdminSidebar {adminName} />
+		<AdminSidebar {profile} />
 		{@render children()}
 	</div>
 	<ToastHost />

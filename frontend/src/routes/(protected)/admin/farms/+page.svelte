@@ -142,7 +142,7 @@
 		showExportModal = true;
 	}
 
-	function handleFarmArchived(farmId: string) {
+	function handleFarmDeleted(farmId: string) {
 		farms = farms.filter((f) => f.id !== farmId);
 		const next = new Set(selectedIds);
 		next.delete(farmId);
@@ -302,7 +302,7 @@
 	<FarmDetailsModal
 		farmId={selectedFarmId}
 		onClose={() => (selectedFarmId = null)}
-		onArchived={handleFarmArchived}
+		onDeleted={handleFarmDeleted}
 	/>
 {/if}
 

@@ -26,11 +26,11 @@
 	interface Props {
 		farmId: string;
 		onClose: () => void;
-		/** Called after the farm is archived so the parent can refresh its list. */
-		onArchived?: (farmId: string) => void;
+		/** Called after the farm is deleted so the parent can refresh its list. */
+		onDeleted?: (farmId: string) => void;
 	}
 
-	let { farmId, onClose, onArchived }: Props = $props();
+	let { farmId, onClose, onDeleted }: Props = $props();
 
 	let farm = $state<PendingFarmDto | null>(null);
 	let loading = $state(true);
@@ -72,7 +72,7 @@
 	menuDisabled={loading || Boolean(loadError)}
 	busy={loading}
 	{onClose}
-	{onArchived}
+	{onDeleted}
 >
 	{#snippet children()}
 		{#if loading}

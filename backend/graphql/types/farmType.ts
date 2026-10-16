@@ -7,6 +7,7 @@ const farmType = gql`
     PENDING_APPROVAL
     APPROVED
     REJECTED
+    DELETED
   }
 
   type Location {
@@ -57,6 +58,10 @@ const farmType = gql`
     or approval. Distinguishes a first-time application from a resubmitted one.
     """
     was_previously_rejected: Boolean!
+    "When the farm was soft-deleted; null unless status is DELETED."
+    deleted_at: String
+    "Why the farm was deleted, if a reason was given; null unless status is DELETED."
+    deletion_reason: String
     createdAt: String!
     updatedAt: String!
     """
@@ -165,6 +170,9 @@ const farmType = gql`
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     archiveFarm(id: ID!): FarmDTO!
     unarchiveFarm(id: ID!): FarmDTO!
+    deleteFarm(id: ID!, reason: String): FarmDTO!
+    restoreFarm(id: ID!): FarmDTO!
+    permanentlyDeleteFarm(id: ID!): ID!
   }
 
   type ActiveFarmRejectionDTO {

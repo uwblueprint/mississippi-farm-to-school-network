@@ -1,4 +1,9 @@
-import type { PendingRequestType, RequestSort } from '$lib/types/admin';
+import type {
+	PendingRequestType,
+	RemovedFarmFilter,
+	RemovedFarmKind,
+	RequestSort
+} from '$lib/types/admin';
 import type { FarmTag } from '$lib/types/farm';
 
 export const REQUEST_TYPE_LABEL: Record<PendingRequestType, string> = {
@@ -37,4 +42,15 @@ export const ADMIN_FILTER_LABELS: Record<'ALL' | PendingRequestType, string> = {
 	ALL: 'All Requests',
 	NEW_APPLICATION: 'New Applications',
 	UPDATED_APPLICATION: 'Updated Applications'
+};
+
+export const REMOVED_FARM_FILTER_LABELS: Record<RemovedFarmFilter, string> = {
+	ALL: 'All',
+	ARCHIVED: 'Archived Farms',
+	DELETED: 'Deleted Farms'
+};
+
+export const REMOVED_FARM_BADGE: Record<RemovedFarmKind, { label: string; modifier: string }> = {
+	ARCHIVED: { label: 'Archived Farm', modifier: 'archived' },
+	DELETED: { label: 'Deleted Farm', modifier: 'deleted' }
 };

@@ -189,4 +189,167 @@ describe('FarmService (Firestore)', () => {
       );
     });
   });
+
+  describe('deleteFarm / restoreFarm (soft delete)', () => {
+    const createApprovedFarm = async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.approveFarm(farm.id);
+      return farm;
+    };
+
+    test('deleteFarm sets status DELETED and records when and why', async () => {
+      const farm = await createApprovedFarm();
+
+      const deleted = await service.deleteFarm(farm.id, '  No longer participating  ');
+
+      expect(deleted.status).toBe(FarmStatus.DELETED);
+      expect(deleted.deletion_reason).toBe('No longer participating');
+      expect(deleted.deleted_at).not.toBeNull();
+    });
+
+    test('a blank deletion reason is stored as null', async () => {
+      const farm = await createApprovedFarm();
+
+      const deleted = await service.deleteFarm(farm.id, '   ');
+
+      expect(deleted.deletion_reason).toBeNull();
+    });
+
+    test('deleting an already-deleted farm keeps the original deletion', async () => {
+      const farm = await createApprovedFarm();
+      const first = await service.deleteFarm(farm.id, 'First reason');
+
+      const second = await service.deleteFarm(farm.id, 'Second reason');
+
+      expect(second.deleted_at).toBe(first.deleted_at);
+      expect(second.deletion_reason).toBe('First reason');
+    });
+
+    test('a deleted farm is hidden from public listings, proximity search, and its owner', async () => {
+      const farm = await createApprovedFarm();
+      await service.deleteFarm(farm.id);
+
+      await expect(
+        service.getFarms(undefined, undefined, { status: FarmStatus.APPROVED, is_archived: false })
+      ).resolves.toEqual([]);
+      await expect(service.getFarmsByProximity(32.3, -90.18, 50)).resolves.toEqual([]);
+      await expect(service.getFarmsByOwner('owner-1')).resolves.toEqual([]);
+    });
+
+    test('admins can list deleted farms by status', async () => {
+      const farm = await createApprovedFarm();
+      await service.deleteFarm(farm.id);
+
+      const deleted = await service.getFarms(undefined, undefined, { status: FarmStatus.DELETED });
+
+      expect(deleted.map((f) => f.id)).toEqual([farm.id]);
+    });
+
+    test('restoreFarm makes the farm active again and clears the deletion fields', async () => {
+      const farm = await createApprovedFarm();
+      await service.archiveFarm(farm.id);
+      await service.deleteFarm(farm.id, 'Reason');
+
+      const restored = await service.restoreFarm(farm.id);
+
+      expect(restored).toMatchObject({
+        status: FarmStatus.APPROVED,
+        is_archived: false,
+        deleted_at: null,
+        deletion_reason: null,
+      });
+      const publicFarms = await service.getFarms(undefined, undefined, {
+        status: FarmStatus.APPROVED,
+        is_archived: false,
+      });
+      expect(publicFarms.map((f) => f.id)).toEqual([farm.id]);
+    });
+
+    test('restoreFarm puts a deleted pending application back in the pending queue', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.deleteFarm(farm.id);
+
+      const restored = await service.restoreFarm(farm.id);
+
+      expect(restored.status).toBe(FarmStatus.PENDING_APPROVAL);
+    });
+
+    test('restoreFarm does not approve a farm that was never deleted', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+
+      const result = await service.restoreFarm(farm.id);
+
+      expect(result.status).toBe(FarmStatus.PENDING_APPROVAL);
+    });
+
+    test('a non-admin cannot edit a deleted farm; an admin can', async () => {
+      const farm = await createApprovedFarm();
+      await service.deleteFarm(farm.id);
+
+      await expect(service.updateFarm(farm.id, { farm_name: 'New Name' }, false)).rejects.toThrow(
+        'deleted'
+      );
+      await expect(
+        service.updateFarm(farm.id, { farm_name: 'Admin Rename' }, true)
+      ).resolves.toMatchObject({ farm_name: 'Admin Rename', status: FarmStatus.DELETED });
+    });
+
+    test('a deleted farm cannot be approved or rejected', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.deleteFarm(farm.id);
+
+      await expect(service.approveFarm(farm.id)).rejects.toThrow('deleted');
+      await expect(service.createFarmRejection(farm.id, 'admin-1', 'Reason')).rejects.toThrow(
+        'deleted'
+      );
+    });
+  });
+
+  describe('permanentlyDeleteFarm', () => {
+    test('removes a deleted farm, its rejections, and frees its usda_farm_id', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+      await service.deleteFarm(farm.id);
+      const storageKey = `farms/${farm.id}/img-1`;
+      await mockFirestoreInstance
+        .collection('images')
+        .doc('img-1')
+        .set({ farm_id: farm.id, storage_key: storageKey, index: 0 });
+      await mockFirestoreInstance
+        .collection('stored_files')
+        .doc('img-1')
+        .set({ farm_id: farm.id, storage_key: storageKey });
+
+      await expect(service.permanentlyDeleteFarm(farm.id)).resolves.toEqual([storageKey]);
+
+      await expect(service.getFarmById(farm.id)).rejects.toThrow('not found');
+      await expect(service.getLatestFarmRejectionByFarmId(farm.id)).resolves.toBeNull();
+      const images = await mockFirestoreInstance
+        .collection('images')
+        .where('farm_id', '==', farm.id)
+        .get();
+      expect(images.empty).toBe(true);
+      await expect(service.createFarm('owner-2', baseInput)).resolves.toMatchObject({
+        usda_farm_id: 'usda-1',
+      });
+    });
+
+    test('an archived farm can be permanently deleted', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.archiveFarm(farm.id);
+
+      await expect(service.permanentlyDeleteFarm(farm.id)).resolves.toEqual([]);
+      await expect(service.getFarmById(farm.id)).rejects.toThrow('not found');
+    });
+
+    test('an active farm cannot be permanently deleted', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.approveFarm(farm.id);
+
+      await expect(service.permanentlyDeleteFarm(farm.id)).rejects.toThrow(
+        'Only deleted or archived farms'
+      );
+      await expect(service.getFarmById(farm.id)).resolves.toMatchObject({ id: farm.id });
+    });
+  });
 });
