@@ -4,7 +4,7 @@
 
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
-	import { DELETE_FARM_MUTATION } from '$lib/utils/pending-request-adapter';
+	import { ARCHIVE_FARM_MUTATION, DELETE_FARM_MUTATION } from '$lib/utils/pending-request-adapter';
 
 	interface Props {
 		farmId: string;
@@ -26,8 +26,8 @@
 		/** Marks the dialog as busy while its content is still loading. */
 		busy?: boolean;
 		onClose: () => void;
-		/** Called after the farm is deleted so the parent can refresh its list. */
-		onDeleted?: (farmId: string) => void;
+		/** Called after the farm is archived or deleted so the parent can refresh its list. */
+		onRemoved?: (farmId: string) => void;
 		children: Snippet;
 	}
 
@@ -43,14 +43,36 @@
 		blockClose = false,
 		busy = false,
 		onClose,
-		onDeleted,
+		onRemoved,
 		children
 	}: Props = $props();
 
+	type RemovalAction = 'archive' | 'delete';
+
+	const REMOVAL_COPY: Record<
+		RemovalAction,
+		{ title: string; label: string; pending: string; error: string; mutation: string }
+	> = {
+		archive: {
+			title: 'Archive this farm?',
+			label: 'Archive',
+			pending: 'Archiving…',
+			error: 'Failed to archive farm.',
+			mutation: ARCHIVE_FARM_MUTATION
+		},
+		delete: {
+			title: 'Delete this farm?',
+			label: 'Delete',
+			pending: 'Deleting…',
+			error: 'Failed to delete farm.',
+			mutation: DELETE_FARM_MUTATION
+		}
+	};
+
 	let menuOpen = $state(false);
-	let confirmDeleteOpen = $state(false);
-	let deleting = $state(false);
-	let deleteError = $state<string | null>(null);
+	let confirmAction = $state<RemovalAction | null>(null);
+	let removing = $state(false);
+	let removeError = $state<string | null>(null);
 	let menuRoot = $state<HTMLDivElement | null>(null);
 
 	// Body scroll lock + Escape.
@@ -59,7 +81,7 @@
 		document.body.style.overflow = 'hidden';
 
 		function onKeydown(event: KeyboardEvent) {
-			if (event.key !== 'Escape' || blockClose || deleting || confirmDeleteOpen) return;
+			if (event.key !== 'Escape' || blockClose || removing || confirmAction) return;
 			if (menuOpen) {
 				menuOpen = false;
 				return;
@@ -75,7 +97,7 @@
 	});
 
 	function handleBackdropClick(event: MouseEvent) {
-		if (blockClose || deleting || confirmDeleteOpen) return;
+		if (blockClose || removing || confirmAction) return;
 		if (event.target === event.currentTarget) onClose();
 	}
 
@@ -97,26 +119,26 @@
 		void goto(`/farmer/farms/${farmId}/edit?returnTo=${encodeURIComponent(returnTo)}`);
 	}
 
-	function handleDeleteClick() {
+	function openConfirm(action: RemovalAction) {
 		menuOpen = false;
-		confirmDeleteOpen = true;
+		confirmAction = action;
 	}
 
-	async function handleConfirmDelete() {
-		if (deleting) return;
-		deleting = true;
-		deleteError = null;
+	async function handleConfirmRemoval(action: RemovalAction) {
+		if (removing) return;
+		removing = true;
+		removeError = null;
 
 		try {
-			await gqlClient(DELETE_FARM_MUTATION, { id: farmId });
-			confirmDeleteOpen = false;
-			onDeleted?.(farmId);
+			await gqlClient(REMOVAL_COPY[action].mutation, { id: farmId });
+			confirmAction = null;
+			onRemoved?.(farmId);
 			onClose();
 		} catch (error) {
-			confirmDeleteOpen = false;
-			deleteError = error instanceof Error ? error.message : 'Failed to delete farm.';
+			confirmAction = null;
+			removeError = error instanceof Error ? error.message : REMOVAL_COPY[action].error;
 		} finally {
-			deleting = false;
+			removing = false;
 		}
 	}
 </script>
@@ -162,9 +184,19 @@
 							<li role="presentation">
 								<button
 									type="button"
+									class="farm-request-modal__menu-item"
+									role="menuitem"
+									onclick={() => openConfirm('archive')}
+								>
+									Archive
+								</button>
+							</li>
+							<li role="presentation">
+								<button
+									type="button"
 									class="farm-request-modal__menu-item farm-request-modal__menu-item--danger"
 									role="menuitem"
-									onclick={handleDeleteClick}
+									onclick={() => openConfirm('delete')}
 								>
 									Delete
 								</button>
@@ -185,27 +217,34 @@
 			</button>
 		</div>
 
-		{#if deleteError}
-			<p class="review-application-card__error">{deleteError}</p>
+		{#if removeError}
+			<p class="review-application-card__error">{removeError}</p>
 		{/if}
 
 		{@render children()}
 	</div>
 </div>
 
-{#if confirmDeleteOpen}
+{#if confirmAction}
+	{@const action = confirmAction}
+	{@const copy = REMOVAL_COPY[action]}
 	<ConfirmDialog
-		title="Delete this farm?"
-		confirmLabel={deleting ? 'Deleting…' : 'Delete'}
-		tone="danger"
-		onconfirm={() => void handleConfirmDelete()}
+		title={copy.title}
+		confirmLabel={removing ? copy.pending : copy.label}
+		tone={action === 'delete' ? 'danger' : 'primary'}
+		onconfirm={() => void handleConfirmRemoval(action)}
 		oncancel={() => {
-			if (!deleting) confirmDeleteOpen = false;
+			if (!removing) confirmAction = null;
 		}}
 	>
 		{#snippet body()}
-			This will remove <strong>{farmName}</strong> from the Farm Fresh Map and {removalContext}. You
-			can restore it later from Deleted & Archived Farms.
+			{#if action === 'archive'}
+				This will hide <strong>{farmName}</strong> from the Farm Fresh Map and {removalContext}, and
+				stop its owner from editing it. You can unarchive it later from Deleted & Archived Farms.
+			{:else}
+				This will remove <strong>{farmName}</strong> from the Farm Fresh Map and {removalContext}.
+				You can restore it later from Deleted & Archived Farms.
+			{/if}
 		{/snippet}
 	</ConfirmDialog>
 {/if}

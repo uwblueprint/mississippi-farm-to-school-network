@@ -41,7 +41,7 @@
 		loadError = null;
 		try {
 			// The farms query is paginated server-side; fetch every page so search,
-			// filters, and CSV export cover all farms rather than just the first page.
+			// filters, and Excel export cover all farms rather than just the first page.
 			const all: AdminFarmRow[] = [];
 			for (let pageNumber = 1; ; pageNumber++) {
 				const data = await gqlClient<{ farms: AdminFarmRow[] }>(ADMIN_FARMS_QUERY, {
@@ -93,7 +93,12 @@
 
 	// Selected farms are exported even if the current search/filters hide them,
 	// so the file always matches the count shown in the export dialog.
-	const selectedFarms = $derived(farms.filter((f) => selectedIds.has(f.id)));
+	const selectedFarms = $derived(
+		sortFarms(
+			farms.filter((f) => selectedIds.has(f.id)),
+			sort
+		)
+	);
 	const exportCount = $derived(
 		selectedFarms.length > 0 ? selectedFarms.length : filteredFarms.length
 	);
@@ -142,7 +147,7 @@
 		showExportModal = true;
 	}
 
-	function handleFarmDeleted(farmId: string) {
+	function handleFarmRemoved(farmId: string) {
 		farms = farms.filter((f) => f.id !== farmId);
 		const next = new Set(selectedIds);
 		next.delete(farmId);
@@ -302,7 +307,7 @@
 	<FarmDetailsModal
 		farmId={selectedFarmId}
 		onClose={() => (selectedFarmId = null)}
-		onDeleted={handleFarmDeleted}
+		onRemoved={handleFarmRemoved}
 	/>
 {/if}
 

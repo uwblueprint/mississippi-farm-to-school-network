@@ -78,9 +78,17 @@ export async function buildFarmsXlsx(farms: AdminFarmRow[]): Promise<Blob> {
 	return new Blob([buffer], { type: XLSX_MIME_TYPE });
 }
 
+/** e.g. "farms-export-2026-10-15-2251.xlsx", in the admin's local time. */
+export function defaultExportFilename(now = new Date()): string {
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+	const time = `${pad(now.getHours())}${pad(now.getMinutes())}`;
+	return `farms-export-${date}-${time}.xlsx`;
+}
+
 export async function downloadFarmsXlsx(
 	farms: AdminFarmRow[],
-	filename = 'farms-export.xlsx'
+	filename = defaultExportFilename()
 ): Promise<void> {
 	const blob = await buildFarmsXlsx(farms);
 	const url = URL.createObjectURL(blob);

@@ -24,7 +24,7 @@
 	interface Props {
 		request: PendingRequest;
 		onClose: () => void;
-		/** Called after a successful approve, reject, or delete so the parent can refresh. */
+		/** Called after a successful approve, reject, archive, or delete so the parent can refresh. */
 		onResolved?: (request: PendingRequest) => void;
 	}
 
@@ -107,7 +107,7 @@
 		}
 	}
 
-	function handleDeleted() {
+	function handleRemoved() {
 		onResolved?.(request);
 	}
 </script>
@@ -122,7 +122,7 @@
 	closeDisabled={submitting}
 	blockClose={submitting}
 	{onClose}
-	onDeleted={handleDeleted}
+	onRemoved={handleRemoved}
 >
 	{#snippet children()}
 		<div class="farm-request-modal__columns">
