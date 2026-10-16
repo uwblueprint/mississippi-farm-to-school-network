@@ -21,7 +21,7 @@
 		type SortState,
 		type SortableColumn
 	} from '$lib/utils/admin-farms';
-	import { downloadFarmsCsv } from '$lib/utils/export-farms-csv';
+	import { downloadFarmsXlsx } from '$lib/utils/export-farms-xlsx';
 
 	let farms = $state<AdminFarmRow[]>([]);
 	let loading = $state(true);
@@ -149,21 +149,21 @@
 		selectedIds = next;
 	}
 
-	function confirmExport() {
+	async function confirmExport() {
 		showExportModal = false;
 		try {
 			const toExport = selectedFarms.length > 0 ? selectedFarms : filteredFarms;
-			downloadFarmsCsv(toExport);
+			await downloadFarmsXlsx(toExport);
 			showToast(
 				'success',
-				'Your farm data has been successfully exported as a CSV file.',
-				'CSV Export Complete'
+				'Your farm data has been successfully exported as an Excel file.',
+				'Excel Export Complete'
 			);
 		} catch {
 			showToast(
 				'error',
-				'There was an issue exporting your CSV file. Please try again.',
-				'CSV Export Failed'
+				'There was an issue exporting your Excel file. Please try again.',
+				'Excel Export Failed'
 			);
 		}
 	}
@@ -290,7 +290,7 @@
 
 {#if showExportModal}
 	<ConfirmDialog
-		title="Export to CSV"
+		title="Export to Excel"
 		confirmLabel={`Export ${exportCount} ${exportCount === 1 ? 'Farm' : 'Farms'}`}
 		body={exportBody}
 		onconfirm={confirmExport}
@@ -308,10 +308,10 @@
 
 {#snippet exportBody()}
 	{#if exportingAll}
-		Export all <strong>{exportCount}</strong> farms as a CSV file. The exported file will include all
+		Export all <strong>{exportCount}</strong> farms as an Excel file. The exported file will include all
 		visible table columns.
 	{:else}
-		Export the <strong>{exportCount}</strong> selected farms as a CSV file. The exported file will include
-		all visible table columns.
+		Export the <strong>{exportCount}</strong> selected farms as an Excel file. The exported file will
+		include all visible table columns.
 	{/if}
 {/snippet}
