@@ -394,6 +394,8 @@
 	}
 
 	async function handleSubmit() {
+		// The farm already exists; another submit would create a duplicate.
+		if (submitted) return;
 		for (const key of Object.keys(errors)) {
 			touched[key] = true;
 		}
@@ -441,7 +443,6 @@
 						photoError instanceof Error
 							? `${photoError.message} Your farm was created; you can add photos later.`
 							: 'Farm created, but photo upload failed. You can add photos later.';
-					return;
 				}
 			}
 
@@ -449,8 +450,8 @@
 		} catch (err) {
 			submitError =
 				err instanceof DOMException && err.name === 'TimeoutError'
-					? 'The server took too long to respond. Please try again.'
-					: 'Network error. Check your connection and try again.';
+					? 'The server took too long to respond. Check your dashboard before submitting again — the farm may already have been created.'
+					: 'Network error. Check your connection, then check your dashboard before submitting again.';
 		} finally {
 			submitting = false;
 		}
@@ -532,7 +533,7 @@
 			class="save-btn"
 			type="button"
 			onclick={handleSubmit}
-			disabled={submitting || preparingPhotos}
+			disabled={submitted || submitting || preparingPhotos}
 		>
 			{submitting ? 'Saving…' : 'Save Changes'}
 		</button>
@@ -1087,7 +1088,7 @@
 			class="submit"
 			type="button"
 			onclick={handleSubmit}
-			disabled={submitting || preparingPhotos}
+			disabled={submitted || submitting || preparingPhotos}
 		>
 			{submitting
 				? 'Submitting…'
