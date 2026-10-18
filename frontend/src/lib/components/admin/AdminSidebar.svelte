@@ -43,6 +43,6 @@
 
 	<div class="admin-sidebar__bottom">
 		<hr class="admin-sidebar__divider" />
-		<ProfileMenu name={adminName} role="Admin" profileHref="/admin/settings" showAvatar={false} />
+		<ProfileMenu name={adminName} role="Admin" profileHref="/admin/settings" />
 	</div>
 </aside>
