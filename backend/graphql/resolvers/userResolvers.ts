@@ -7,7 +7,14 @@ import IAuthService from '@/services/interfaces/authService';
 import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
 import { AuthContext } from '@/middlewares/auth';
-import { CompleteUserProfileInput, CreateUserDTO, Role, UpdateUserDTO, UserDTO } from '@/types';
+import {
+  CompleteUserProfileInput,
+  CreateUserDTO,
+  Role,
+  UpdateMyProfileInput,
+  UpdateUserDTO,
+  UserDTO,
+} from '@/types';
 import FarmService from '@/services/implementations/farmService';
 import IFarmService from '@/services/interfaces/farmService';
 import authHelper from '@/utilities/authHelpers';
@@ -21,6 +28,14 @@ const userResolvers = {
   Query: {
     me: async (_: unknown, __: unknown, context: AuthContext): Promise<UserDTO> => {
       return authHelper.requireAuth(context);
+    },
+    myProfile: async (_: unknown, __: unknown, context: AuthContext): Promise<UserDTO> => {
+      const authUser = await authHelper.requireAuth(context);
+      try {
+        return await userService.getUserByFirebaseUid(authUser.firebase_uid);
+      } catch {
+        return authUser;
+      }
     },
     userById: async (
       _parent: undefined,
@@ -103,6 +118,14 @@ const userResolvers = {
         throw new ForbiddenError('You do not have permission to access or modify this resource.');
       }
       return userService.completeUserProfile(input);
+    },
+    updateMyProfile: async (
+      _parent: undefined,
+      { input }: { input: UpdateMyProfileInput },
+      context: AuthContext
+    ): Promise<UserDTO> => {
+      const currentUser = await authHelper.requireEmailVerified(context);
+      return userService.updateMyProfile(currentUser, input);
     },
   },
   UserDTO: {

@@ -105,8 +105,8 @@ export async function getPostAuthDestination(user: User): Promise<string> {
 		return '/admin';
 	}
 
-	// Farmers see helper pop-ups on /onboarding first, then continue to /farmer.
-	return '/onboarding';
+	// New farmers get the onboarding tour on the farms dashboard.
+	return '/farmer';
 }
 
 /**
@@ -179,6 +179,17 @@ export async function syncAuthTokenCookie(user: User | null): Promise<void> {
 
 	const idToken = await user.getIdToken();
 	setAuthTokenCookie(idToken);
+}
+
+/**
+ * Re-sync the `token` cookie right before calling a cookie-authenticated server route
+ * (/api/create-farm, /api/farm-images/*, /api/update-farm). onIdTokenChanged only fires
+ * when Firebase refreshes on its own schedule, so a backgrounded tab can hold an expired
+ * cookie; getIdToken() refreshes the token first if it is near expiry.
+ */
+export async function refreshAuthTokenCookie(): Promise<void> {
+	const user = getFirebaseAuth().currentUser;
+	if (user) setAuthTokenCookie(await user.getIdToken());
 }
 
 export function subscribeAuthTokenCookie(): Unsubscribe {

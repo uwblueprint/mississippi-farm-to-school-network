@@ -5,8 +5,11 @@
 		REQUEST_TYPE_MODIFIER
 	} from '$lib/constants/admin-request';
 	import type { PendingRequest } from '$lib/types/admin';
-	import { pendingFarmMapTag, pendingFarmOwner } from '$lib/utils/pending-request-adapter';
-	import { formatRelativeTime } from '$lib/utils/relative-time';
+	import {
+		pendingFarmMapTag,
+		pendingFarmOwner,
+		requestTimeLabel
+	} from '$lib/utils/pending-request-adapter';
 
 	interface Props {
 		request: PendingRequest;
@@ -17,7 +20,7 @@
 
 	const owner = $derived(pendingFarmOwner(request.farm));
 	const mapTag = $derived(pendingFarmMapTag(request.farm));
-	const submittedLabel = $derived(`Submitted ${formatRelativeTime(request.farm.updatedAt)}`);
+	const submittedLabel = $derived(requestTimeLabel(request));
 </script>
 
 <button type="button" class="request-card" onclick={() => onSelect?.(request)}>

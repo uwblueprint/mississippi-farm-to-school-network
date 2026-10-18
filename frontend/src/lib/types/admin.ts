@@ -3,7 +3,7 @@ import type { FarmStatus } from '$lib/types/farm';
 /** Mirrors the `Role` enum on the backend (`backend/types.ts`). */
 export type UserRole = 'ADMIN' | 'FARMER';
 
-export type PendingRequestType = 'NEW_APPLICATION' | 'UPDATED_APPLICATION';
+export type PendingRequestType = 'NEW_APPLICATION' | 'UPDATED_APPLICATION' | 'DELETION_REQUEST';
 
 export type PendingFarmDto = {
 	id: string;
@@ -35,6 +35,8 @@ export type PendingFarmDto = {
 	carousel_photos: string[];
 	status: FarmStatus;
 	was_previously_rejected: boolean;
+	deletion_requested_at: string | null;
+	deletion_approved_at: string | null;
 	createdAt: string;
 	updatedAt: string;
 	owner: {
@@ -53,5 +55,15 @@ export type PendingRequest = {
 };
 
 export type RequestFilter = 'ALL' | PendingRequestType;
+
+/** Why a farm is off the map: archived by an admin, or sent back to the farmer for edits. */
+export type InactiveFarmKind = 'DELETED' | 'CHANGES_REQUESTED';
+
+export type InactiveFarm = {
+	kind: InactiveFarmKind;
+	farm: PendingFarmDto;
+};
+
+export type InactiveFarmFilter = 'ALL' | InactiveFarmKind;
 
 export type RequestSort = 'NEWEST' | 'OLDEST' | 'NAME_ASC';

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { invalidateAll } from '$app/navigation';
+	import { goto, invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
@@ -8,8 +8,10 @@
 	import UploadZone from '$lib/components/UploadZone.svelte';
 	import PhotoGallery from '$lib/components/PhotoGallery.svelte';
 	import RequestedChangesCard from '$lib/components/RequestedChangesCard.svelte';
+	import Modal from '$lib/components/Modal.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
-	import { IMAGE_ACCEPT, MAX_UPLOAD_BYTES, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
+	import { IMAGE_ACCEPT, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
+	import { preparePhotos } from '$lib/utils/prepare-photo';
 	import { formModelToUpdateInput } from '$lib/farmMapping';
 	import { uploadFarmPhoto } from '$lib/utils/farm-image-upload';
 	import {
@@ -51,6 +53,11 @@
 			resubmitFarm(id: $id, input: $input) { id status }
 		}
 	`;
+	const REQUEST_FARM_DELETION = `
+		mutation RequestFarmDeletion($id: ID!) {
+			requestFarmDeletion(id: $id) { id deletion_requested_at }
+		}
+	`;
 	const DELETE_IMAGE = `
 		mutation DeleteImage($imageId: String!) {
 			deleteImage(imageId: $imageId)
@@ -78,7 +85,7 @@
 	const galleryPhotos = $derived(data.gallery.map((img) => ({ id: img.fileId, url: img.url })));
 	const galleryIds = $derived(data.galleryIds);
 	const coverId = $derived(data.coverId);
-	const dashboardImageName = $derived(data.cover?.originalFileName ?? '');
+	const dashboardImage = $derived(data.cover);
 
 	const MAX_GALLERY_PHOTOS = 10;
 
@@ -86,6 +93,37 @@
 	let uploading = $state(false);
 	let actionError = $state('');
 	let galleryInput = $state<HTMLInputElement | null>(null);
+	let confirmingDelete = $state(false);
+	let deleting = $state(false);
+	let deleteError = $state('');
+
+	function openDeleteConfirm() {
+		deleteError = '';
+		confirmingDelete = true;
+	}
+
+	function closeDeleteConfirm() {
+		if (!deleting) confirmingDelete = false;
+	}
+
+	// Sends the deletion request to the admin queue; the farm stays live (and on
+	// the map) until an admin approves it, and the dashboard shows it as
+	// Deletion Pending meanwhile.
+	async function handleDeleteFarm() {
+		if (deleting) return;
+		deleting = true;
+		deleteError = '';
+		try {
+			await gqlClient(REQUEST_FARM_DELETION, { id: farmId });
+		} catch (err) {
+			deleteError = err instanceof Error ? err.message : 'Could not request deletion.';
+			deleting = false;
+			return;
+		}
+		deleting = false;
+		confirmingDelete = false;
+		await goto(backHref, { invalidateAll: true });
+	}
 
 	// Persist the clean editable fields. REJECTED farms resubmit (re-enters the
 	// approval queue); all others use updateFarm.
@@ -93,17 +131,19 @@
 		event.preventDefault();
 		saving = true;
 		actionError = '';
+		const resubmitting = data.status === 'REJECTED';
 		try {
 			const input = formModelToUpdateInput(farm);
-			const mutation = data.status === 'REJECTED' ? RESUBMIT_FARM : UPDATE_FARM;
-			await gqlClient(mutation, { id: farmId, input });
-			// Refresh status/rejection; the loader re-runs but the user's edits stay.
-			await invalidateAll();
+			await gqlClient(resubmitting ? RESUBMIT_FARM : UPDATE_FARM, { id: farmId, input });
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Save failed.';
+			return;
 		} finally {
 			saving = false;
 		}
+		// Saved: leave the form for where the user came from (the farm list, or the
+		// admin page via ?returnTo=), which reloads with the updated farm/status.
+		await goto(backHref, { invalidateAll: true });
 	}
 
 	// Persist a bucket assignment (cover_photo / carousel_photos hold `images`
@@ -121,21 +161,16 @@
 		await gqlClient(UPDATE_FARM, { id: farmId, input });
 	}
 
-	// Upload each valid file into the `images` collection (same path as
-	// new-farm). filesFromDrop caps the drop path; the file pickers reach here
-	// unfiltered, so re-apply the same limit for every upload surface.
+	// Upload each usable file into the `images` collection (same path as
+	// new-farm). Every upload surface (pickers and drops) reaches here, so the
+	// size limit and HEIC conversion are applied once, per file.
 	async function uploadImageFiles(files: File[]): Promise<string[]> {
-		const valid = files.filter((file) => file.size <= MAX_UPLOAD_BYTES);
-		const oversized = files.length - valid.length;
-		if (valid.length === 0) {
-			actionError = `Images must be under ${MAX_UPLOAD_LABEL}.`;
-			return [];
-		}
-		actionError =
-			oversized > 0 ? `Some files were skipped — images must be under ${MAX_UPLOAD_LABEL}.` : '';
+		const { photos, errors } = await preparePhotos(files);
+		actionError = errors.join(' ');
+		if (photos.length === 0) return [];
 
 		const imageIds: string[] = [];
-		for (const file of valid) {
+		for (const file of photos) {
 			imageIds.push(await uploadFarmPhoto(farmId, file));
 		}
 		return imageIds;
@@ -231,12 +266,12 @@
 
 {#snippet actionBar()}
 	<div class="action-bar">
-		<ActionButton variant="outline" href={backHref}>
+		<ActionButton variant="outline" size="sm" href={backHref}>
 			{#snippet iconLeft()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					width="24"
-					height="24"
+					width="16"
+					height="16"
 					viewBox="0 0 24 24"
 					fill="none"
 					aria-hidden="true"
@@ -253,13 +288,13 @@
 			Back
 		</ActionButton>
 
-		<ActionButton variant="primary" type="submit" disabled={saving}>
+		<ActionButton variant="primary" size="sm" type="submit" disabled={saving}>
 			{saving ? 'Saving…' : 'Save'}
 			{#snippet iconRight()}
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					width="24"
-					height="24"
+					width="16"
+					height="16"
 					viewBox="0 0 24 24"
 					fill="none"
 					aria-hidden="true"
@@ -308,13 +343,17 @@
 		<span class="section__subtitle">Dashboard Image</span>
 		<UploadZone
 			title="Upload new farm photo"
-			hint="JPG or PNG"
+			hint={`JPG, PNG or HEIC, up to ${MAX_UPLOAD_LABEL}`}
 			multiple={false}
 			onFiles={handleCoverFiles}
 			disabled={uploading}
 		/>
-		{#if dashboardImageName}
-			<span class="file-link">{dashboardImageName}</span>
+		{#if dashboardImage?.url}
+			<img
+				class="dashboard-image"
+				src={dashboardImage.url}
+				alt={dashboardImage.originalFileName || 'Current dashboard image'}
+			/>
 		{/if}
 	</section>
 
@@ -328,7 +367,7 @@
 		</p>
 		<UploadZone
 			title="Upload farm photos"
-			hint="JPG or PNG, up to 10 pics"
+			hint={`JPG, PNG or HEIC, up to 10 pics (${MAX_UPLOAD_LABEL} each)`}
 			onFiles={handleGalleryFiles}
 			disabled={uploading}
 		/>
@@ -422,25 +461,64 @@
 	</section>
 
 	<div class="footer-actions">
-		<ActionButton variant="primary" type="submit" block disabled={saving}
-			>{saving ? 'Saving…' : 'Save'}</ActionButton
-		>
-		<ActionButton variant="danger" disabled title="Farm deletion is coming soon">
-			Delete Farm (coming soon)
-		</ActionButton>
+		{#if data.deletionRequested}
+			<p class="deletion-pending" role="status">
+				Deletion requested — MFSN will review it shortly. Your farm stays on the map until then.
+			</p>
+		{:else}
+			<button type="button" class="delete-farm-btn" onclick={openDeleteConfirm}>
+				Delete Farm
+			</button>
+		{/if}
 	</div>
 
 	{@render actionBar()}
 </form>
 
+{#if confirmingDelete}
+	<Modal label="Delete farm" onClose={closeDeleteConfirm}>
+		<div class="delete-confirm">
+			<span class="delete-confirm__icon" aria-hidden="true">!</span>
+			<h2 class="delete-confirm__title">Are you sure you want to delete your farm?</h2>
+			<p class="delete-confirm__body">
+				This sends a deletion request for <strong>{farm.name}</strong> to MFSN. Your farm stays on the
+				Farm Fresh Map until the request is approved.
+			</p>
+			{#if deleteError}
+				<p class="form-error" role="alert">{deleteError}</p>
+			{/if}
+			<div class="delete-confirm__actions">
+				<ActionButton
+					variant="outline-primary"
+					size="sm"
+					disabled={deleting}
+					onclick={closeDeleteConfirm}
+				>
+					Cancel
+				</ActionButton>
+				<button
+					type="button"
+					class="delete-confirm__submit"
+					disabled={deleting}
+					onclick={handleDeleteFarm}
+				>
+					{deleting ? 'Deleting…' : 'Delete Farm'}
+				</button>
+			</div>
+		</div>
+	</Modal>
+{/if}
+
 <style>
+	/* Sized to match the Create a Farm form (/new-farm): 760px column, 26px
+	   title, 20px section headings, 15px labels, 14px inputs. */
 	.edit-page {
-		padding: 72px clamp(32px, 8cqi, 110px);
+		padding: 40px 24px 64px;
 		display: flex;
 		flex-direction: column;
-		gap: 28px;
+		gap: 18px;
 		width: 100%;
-		max-width: 1400px;
+		max-width: 760px;
 		margin: 0 auto;
 		box-sizing: border-box;
 		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
@@ -451,24 +529,23 @@
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: 16px;
+		gap: 12px;
 	}
 
-	/* Back/Save ↔ main content: 70px total (28px flex gap + 42px) */
 	.edit-page > .action-bar:first-child {
-		margin-bottom: 42px;
+		margin-bottom: 2px;
 	}
 
 	.edit-page > .action-bar:last-child {
-		margin-top: 42px;
+		margin-top: 12px;
 	}
 
 	.edit-title {
-		font-family: 'Figtree Variable', 'Figtree', sans-serif;
-		font-size: 32px;
+		margin: 0;
+		font-size: 26px;
 		font-weight: 500;
 		line-height: normal;
-		color: #000;
+		color: #131927;
 	}
 
 	/* Hidden file input driving the public gallery "Add Photos" tile. */
@@ -479,15 +556,15 @@
 	.form-error {
 		margin: 0;
 		color: #c4341f;
-		font-size: 17px;
+		font-size: 14px;
 		font-weight: 400;
 	}
 
-	/* Helper text under a field. Sits inside .section's 38px flex gap, so pull it
-	   back up to read as part of the field above rather than a separate row. */
+	/* Helper text under a field: pulled up into .section's gap so it reads as
+	   part of the field above. */
 	.field-note {
-		margin: -28px 0 0;
-		color: #858790;
+		margin: -12px 0 0;
+		color: #666;
 		font-size: 14px;
 		font-weight: 400;
 	}
@@ -495,57 +572,279 @@
 	.section {
 		display: flex;
 		flex-direction: column;
-		gap: 38px;
+		gap: 18px;
 	}
 
 	.section__heading {
-		color: #000;
-		font-size: 24px;
-		font-weight: 400;
-		line-height: 34px;
-		margin: 12px 0 4px;
+		color: #131927;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: normal;
+		margin: 10px 0 -2px;
 	}
 
 	.section__hint {
-		color: #000;
-		font-size: 21px;
-		font-weight: 300;
-		margin: 0;
+		margin: -10px 0 0;
+		color: #666;
+		font-size: 14px;
+		font-weight: 400;
+		line-height: 1.4;
 	}
 
-	/* Section subtitle (e.g. "Photo Gallery", "Dashboard Image") — H2 headline */
+	/* "Dashboard Image" / "Photo Gallery" — same weight as the form's field labels */
 	.section__subtitle {
-		color: #000;
-		font-size: 24px;
-		font-weight: 400;
-		line-height: 34px;
+		color: #131927;
+		font-size: 15px;
+		font-weight: 500;
+		line-height: normal;
 	}
 
 	.field-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 38px;
+		gap: 18px 20px;
 	}
 
-	.file-link {
-		color: #3742b4;
-		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
-		font-size: 21px;
-		font-weight: 300;
-		line-height: normal;
-		text-decoration-line: underline;
-		text-decoration-style: solid;
-		text-decoration-skip-ink: auto;
-		text-underline-position: from-font;
-		width: fit-content;
+	.dashboard-image {
+		width: 100%;
+		aspect-ratio: 482 / 225;
+		object-fit: cover;
+		border-radius: 12px;
+		border: 1px solid #d8d8d8;
+		background: #e6e6e6;
+		display: block;
 	}
 
 	.footer-actions {
 		display: flex;
 		flex-direction: column;
 		align-items: stretch;
-		gap: 48px;
-		/* end of questions ↔ Save: 48px total (28px flex gap + 20px) */
-		margin-top: 20px;
+		gap: 16px;
+		margin-top: 14px;
+	}
+
+	/* --- Shared components, scaled down to the Create a Farm form --- */
+	.edit-page :global(.field--lg) {
+		gap: 6px;
+	}
+
+	.edit-page :global(.field--lg .label) {
+		font-size: 15px;
+		font-weight: 500;
+	}
+
+	.edit-page :global(.field--lg .input) {
+		padding: 8px 16px;
+		border-width: 1px;
+		border-color: #d8d8d8;
+		border-radius: 8px;
+		font-family: inherit;
+		font-size: 14px;
+		color: #131927;
+	}
+
+	.edit-page :global(.field--lg .readonly-value) {
+		font-family: inherit;
+		font-size: 14px;
+	}
+
+	.edit-page :global(.choice-group) {
+		gap: 10px;
+	}
+
+	.edit-page :global(.choice-group__label) {
+		margin-bottom: 4px;
+		font-size: 15px;
+		font-weight: 500;
+	}
+
+	.edit-page :global(.choice) {
+		gap: 10px;
+		font-size: 15px;
+	}
+
+	.edit-page :global(.choice span) {
+		font-size: 15px;
+		font-weight: 400;
+	}
+
+	.edit-page :global(.choice input) {
+		width: 16px;
+		height: 16px;
+		background-size: 16px 16px;
+	}
+
+	.edit-page :global(.upload-zone) {
+		gap: 6px;
+		padding: 24px 16px 18px;
+	}
+
+	.edit-page :global(.upload-zone__icon) {
+		width: 44px;
+		height: 44px;
+	}
+
+	.edit-page :global(.upload-zone__icon svg) {
+		width: 22px;
+		height: 22px;
+	}
+
+	.edit-page :global(.upload-zone__title) {
+		font-size: 16px;
+		line-height: 24px;
+	}
+
+	.edit-page :global(.upload-zone__hint),
+	.edit-page :global(.upload-zone__error) {
+		font-size: 12px;
+	}
+
+	.edit-page :global(.upload-zone__error) {
+		margin-top: -10px;
+	}
+
+	.edit-page :global(.action-btn--block) {
+		height: 44px;
+		font-size: 15px;
+	}
+
+	.delete-farm-btn {
+		height: 44px;
+		border: 1px solid #c4341f;
+		border-radius: 8px;
+		background: #fff;
+		color: #c4341f;
+		font-family: inherit;
+		font-size: 15px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.delete-farm-btn:hover {
+		background: #fcefec;
+	}
+
+	.deletion-pending {
+		margin: 0;
+		padding: 12px 16px;
+		border-radius: 8px;
+		background: #eceef2;
+		color: #4f545e;
+		font-size: 14px;
+		text-align: center;
+	}
+
+	.delete-confirm {
+		display: flex;
+		flex-direction: column;
+		box-sizing: border-box;
+		width: 480px;
+		max-width: 100%;
+		padding: 28px 30px 24px;
+		border-radius: 12px;
+		background: #fff;
+		box-shadow: 0 8px 30px rgba(20, 28, 16, 0.08);
+		font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
+		color: #131927;
+	}
+
+	.delete-confirm__icon {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 36px;
+		height: 36px;
+		margin-bottom: 14px;
+		border-radius: 50%;
+		background: #fce4e1;
+		color: #c4341f;
+		font-size: 18px;
+		font-weight: 700;
+	}
+
+	.delete-confirm__title {
+		margin: 0;
+		/* clear the Modal's close button */
+		padding-right: 28px;
+		font-size: 20px;
+		font-weight: 500;
+		line-height: 1.25;
+	}
+
+	.delete-confirm__body {
+		margin: 10px 0 0;
+		color: #4f545e;
+		font-size: 14px;
+		line-height: 1.5;
+	}
+
+	.delete-confirm .form-error {
+		margin-top: 12px;
+	}
+
+	.delete-confirm__actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 10px;
+		margin-top: 22px;
+	}
+
+	.delete-confirm__submit {
+		height: 40px;
+		padding: 8px 16px;
+		border: none;
+		border-radius: 8px;
+		background: #c4341f;
+		color: #fff;
+		font-family: inherit;
+		font-size: 14px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.delete-confirm__submit:hover:not(:disabled) {
+		background: #a82b19;
+	}
+
+	.delete-confirm__submit:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	/* Requested-changes card */
+	.edit-page :global(.card[role='alert']) {
+		padding: 22px 24px 20px;
+		border-radius: 12px;
+	}
+
+	.edit-page :global(.card[role='alert'] .icon) {
+		width: 32px;
+		height: 32px;
+		margin-bottom: 12px;
+		font-size: 18px;
+	}
+
+	.edit-page :global(.card[role='alert'] .title) {
+		font-size: 20px;
+	}
+
+	.edit-page :global(.card[role='alert'] .divider) {
+		margin: 16px 0;
+	}
+
+	.edit-page :global(.card[role='alert'] .heading) {
+		margin-bottom: 10px;
+		font-size: 15px;
+	}
+
+	.edit-page :global(.card[role='alert'] .reason) {
+		padding: 14px 18px;
+		border-radius: 8px;
+		font-size: 14px;
+	}
+
+	.edit-page :global(.card[role='alert'] .note) {
+		margin-top: 14px;
+		font-size: 14px;
 	}
 </style>

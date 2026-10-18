@@ -73,7 +73,9 @@ export function buildFarmsCsv(farms: AdminFarmRow[]): string {
 
 export function downloadFarmsCsv(farms: AdminFarmRow[], filename = 'farms-export.csv'): void {
 	const csv = buildFarmsCsv(farms);
-	const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+	// Without a byte-order mark, Excel decodes CSVs as the legacy system encoding and
+	// garbles non-ASCII text (e.g. "—" renders as ",Äî" on macOS).
+	const blob = new Blob(['\uFEFF', csv], { type: 'text/csv;charset=utf-8;' });
 	const url = URL.createObjectURL(blob);
 	const link = document.createElement('a');
 	link.href = url;

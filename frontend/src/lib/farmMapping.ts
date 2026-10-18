@@ -48,6 +48,7 @@ export interface FarmDTO {
 	/** stored_files ids of the Photo Gallery images, in display order. */
 	carousel_photos: string[];
 	status: FarmStatus;
+	deletion_requested_at?: string | null;
 }
 
 /** Loose shape of the social_media JSON blob. All keys optional. */

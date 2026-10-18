@@ -7,7 +7,10 @@ export type FarmImageDto = {
 	contentType?: string;
 };
 
-const FALLBACK_THUMBNAIL = '/images/mfsnLogo.svg';
+/** Shown wherever a farm has no uploaded photos; a real upload replaces it. */
+export const DEFAULT_FARM_COVER = '/images/default-farm-cover.jpg';
+
+const FALLBACK_THUMBNAIL = DEFAULT_FARM_COVER;
 
 /**
  * Order image IDs: cover first, then carousel_photos, then any remaining by index.

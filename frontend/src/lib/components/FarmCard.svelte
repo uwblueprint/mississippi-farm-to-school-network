@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import { FARM_STATUS_STYLES, type FarmStatus } from '$lib/farmStatus';
+	import { FARM_STATUS_STYLES, type FarmDisplayStatus } from '$lib/farmStatus';
+	import { DEFAULT_FARM_COVER } from '$lib/utils/farm-images';
 
 	interface Props {
 		/** Farm id (used by callers to build hrefs / mutation targets). */
 		id?: string;
 		/**
 		 * Farm image source (e.g. a signed URL from getFile()). When absent/null
-		 * the card shows an empty grey block instead.
+		 * the card shows the default farm cover.
 		 */
 		imageUrl?: string | null;
 		/** Accessibility label for the image. */
@@ -19,7 +20,7 @@
 		/** Secondary subtitle line (owner / county). */
 		subtitle2?: string;
 		/** Farm status; drives the badge label + colors. Badge hidden when omitted. */
-		status?: FarmStatus;
+		status?: FarmDisplayStatus;
 		/** When set, the whole card becomes a link to this href (e.g. the edit page). */
 		href?: string;
 		/** Extra classes passed through to the card shell. */
@@ -63,17 +64,12 @@
 			{statusStyle.label}
 		</div>
 	{/if}
-	{#if imageUrl}
-		<div
-			class="farm-card__image"
-			role="img"
-			aria-label={imageAlt}
-			style="background-image: url('{imageUrl}')"
-		></div>
-	{:else}
-		<!-- Farm has no uploaded image: plain grey block, not announced to AT. -->
-		<div class="farm-card__image" aria-hidden="true"></div>
-	{/if}
+	<div
+		class="farm-card__image"
+		role="img"
+		aria-label={imageAlt}
+		style="background-image: url('{imageUrl || DEFAULT_FARM_COVER}')"
+	></div>
 	<div class="farm-card__body">
 		<div class="farm-card__text">
 			{#if title}<span class="farm-card__title">{title}</span>{/if}
