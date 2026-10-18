@@ -4,6 +4,7 @@
 	import AdminFarmCard from '$lib/components/admin/AdminFarmCard.svelte';
 	import AdminSearchInput from '$lib/components/admin/AdminSearchInput.svelte';
 	import RemovedFarmModal from '$lib/components/admin/RemovedFarmModal.svelte';
+	import FarmDetailsModal from '$lib/components/admin/farms/FarmDetailsModal.svelte';
 	import FilterPills from '$lib/components/FilterPills.svelte';
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
 	import {
@@ -44,7 +45,8 @@
 	const counts = $derived({
 		ALL: farms.length,
 		ARCHIVED: farms.filter((f) => f.kind === 'ARCHIVED').length,
-		DELETED: farms.filter((f) => f.kind === 'DELETED').length
+		DELETED: farms.filter((f) => f.kind === 'DELETED').length,
+		CHANGES_REQUESTED: farms.filter((f) => f.kind === 'CHANGES_REQUESTED').length
 	});
 
 	const filterItems = $derived(
@@ -71,8 +73,8 @@
 
 	const emptyMessage = $derived(
 		farms.length === 0
-			? 'No deleted or archived farms.'
-			: 'No deleted or archived farms match your search.'
+			? 'No deleted, archived, or changes-requested farms.'
+			: 'No farms match your search.'
 	);
 </script>
 
@@ -121,7 +123,16 @@
 	</div>
 </main>
 
-{#if selected}
+{#if selected?.kind === 'CHANGES_REQUESTED'}
+	<!-- A rejected farm isn't removed, so it gets the regular admin details modal. -->
+	<FarmDetailsModal
+		farmId={selected.farm.id}
+		returnTo="/admin/archived"
+		removalContext="the changes-requested list"
+		onClose={() => (selected = null)}
+		onRemoved={() => void loadFarms()}
+	/>
+{:else if selected}
 	<RemovedFarmModal
 		item={selected}
 		onClose={() => (selected = null)}

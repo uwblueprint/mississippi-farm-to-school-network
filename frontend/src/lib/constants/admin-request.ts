@@ -8,12 +8,14 @@ import type { FarmTag } from '$lib/types/farm';
 
 export const REQUEST_TYPE_LABEL: Record<PendingRequestType, string> = {
 	NEW_APPLICATION: 'New Application',
-	UPDATED_APPLICATION: 'Updated Application'
+	UPDATED_APPLICATION: 'Updated Application',
+	DELETION_REQUEST: 'Deletion Request'
 };
 
 export const REQUEST_TYPE_MODIFIER: Record<PendingRequestType, string> = {
 	NEW_APPLICATION: 'new-application',
-	UPDATED_APPLICATION: 'updated-application'
+	UPDATED_APPLICATION: 'updated-application',
+	DELETION_REQUEST: 'deletion-request'
 };
 
 export const MAP_TAG_MODIFIER: Record<FarmTag, string> = {
@@ -41,16 +43,19 @@ export const ADMIN_SORT_ITEMS: { value: RequestSort; label: string }[] = [
 export const ADMIN_FILTER_LABELS: Record<'ALL' | PendingRequestType, string> = {
 	ALL: 'All Requests',
 	NEW_APPLICATION: 'New Applications',
-	UPDATED_APPLICATION: 'Updated Applications'
+	UPDATED_APPLICATION: 'Updated Applications',
+	DELETION_REQUEST: 'Deletion Requests'
 };
 
 export const REMOVED_FARM_FILTER_LABELS: Record<RemovedFarmFilter, string> = {
 	ALL: 'All',
 	ARCHIVED: 'Archived Farms',
-	DELETED: 'Deleted Farms'
+	DELETED: 'Deleted Farms',
+	CHANGES_REQUESTED: 'Changes Requested'
 };
 
 export const REMOVED_FARM_BADGE: Record<RemovedFarmKind, { label: string; modifier: string }> = {
 	ARCHIVED: { label: 'Archived Farm', modifier: 'archived' },
-	DELETED: { label: 'Deleted Farm', modifier: 'deleted' }
+	DELETED: { label: 'Deleted Farm', modifier: 'deleted' },
+	CHANGES_REQUESTED: { label: 'Changes Requested', modifier: 'changes-requested' }
 };

@@ -37,10 +37,10 @@
 }
 
 .admin-sidebar__divider {
-	height: 1px;
+	height: 0;
 	border: 0;
+	border-top: 1.5px solid var(--color-neutral-200, #f5f6f8);
 	margin: 0;
-	background: var(--color-neutral-300, #d3d5de);
 }
 
 .admin-sidebar__nav {
@@ -50,8 +50,12 @@
 }
 
 .admin-sidebar__link {
+	display: flex;
+	align-items: center;
+	height: 1.9375rem; /* 31px */
+	font-family: 'DM Sans Variable', 'DM Sans', sans-serif;
 	font-size: 1rem;
-	line-height: 1.3;
+	font-weight: 400;
 	color: var(--color-text-primary, #131927);
 	text-decoration: none;
 }
@@ -62,106 +66,7 @@
 
 .admin-sidebar__link[aria-current='page'] {
 	font-weight: 700;
-	color: #455d32;
-}
-
-.admin-sidebar__user-wrap {
-	position: relative;
-}
-
-.admin-sidebar__user {
-	display: flex;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0.5rem;
-	width: 100%;
-	margin: 0 -0.5rem;
-	padding: 0.5rem;
-	box-sizing: content-box;
-	border: none;
-	border-radius: 0.5rem;
-	background: none;
-	font-family: inherit;
-	text-align: left;
-	cursor: pointer;
-}
-
-.admin-sidebar__user:hover,
-.admin-sidebar__user[aria-expanded='true'] {
-	background: var(--color-neutral-100, #f5f6f8);
-}
-
-.admin-sidebar__user-chevron {
-	width: 1rem;
-	height: 1rem;
-	transform: rotate(-90deg);
-}
-
-.admin-sidebar__menu {
-	position: absolute;
-	bottom: calc(100% + 0.5rem);
-	left: -0.5rem;
-	right: -0.5rem;
-	z-index: 10;
-	margin: 0;
-	padding: 0.375rem;
-	list-style: none;
-	background: var(--color-neutral-0, #fff);
-	border: 1px solid var(--color-neutral-200, #e5e7eb);
-	border-radius: 0.5rem;
-	box-shadow: 0 8px 24px rgba(19, 25, 39, 0.12);
-}
-
-.admin-sidebar__user-name {
-	display: block;
-	margin: 0;
-	font-size: 0.875rem; /* 14px */
 	color: var(--color-text-primary, #131927);
-}
-
-.admin-sidebar__user-role {
-	display: block;
-	margin: 0.25rem 0 0;
-	font-size: 0.75rem; /* 12px */
-	color: #939393;
-}
-
-.admin-profile {
-	width: 26rem;
-	max-width: 100%;
-	box-sizing: border-box;
-	padding: 2.25rem 2rem;
-	border-radius: 20px;
-	background: var(--color-neutral-0, #ffffff);
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-
-.admin-profile__title {
-	margin: 0 0 1.5rem;
-	padding-right: 2.5rem;
-	font-size: 1.75rem;
-	font-weight: 500;
-	line-height: 1.2;
-	color: var(--color-text-primary, #131927);
-}
-
-.admin-profile__fields {
-	display: flex;
-	flex-direction: column;
-	gap: 1rem;
-	margin: 0;
-}
-
-.admin-profile__field dt {
-	font-size: 0.875rem;
-	color: #939393;
-}
-
-.admin-profile__field dd {
-	margin: 0.25rem 0 0;
-	font-size: 1rem;
-	color: var(--color-text-primary, #131927);
-	overflow-wrap: anywhere;
 }
 
 /* Page layout */
@@ -442,9 +347,80 @@
 	color: #61636d;
 }
 
-.request-pill--deleted {
+.request-pill--deleted,
+.request-pill--deletion-request {
+	background: #eceef2;
+	color: #4f545e;
+}
+
+.request-pill--changes-requested {
 	background: #fce4e1;
 	color: #d9544c;
+}
+
+/* Last rejection, shown when an admin re-reviews a resubmitted application */
+
+.previous-rejection {
+	display: flex;
+	flex-direction: column;
+	gap: 0.875rem;
+	padding: 1rem 1.25rem;
+	border: 1px solid #f6c9c3;
+	border-left: 4px solid #d9544c;
+	border-radius: 0.75rem;
+	background: #fff7f6;
+}
+
+.previous-rejection__header {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	gap: 1rem;
+	flex-wrap: wrap;
+}
+
+.previous-rejection__title {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 600;
+	color: #a62b19;
+}
+
+.previous-rejection__date {
+	font-size: 0.8125rem;
+	color: #717171;
+}
+
+.previous-rejection__group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.375rem;
+}
+
+.previous-rejection__label {
+	margin: 0;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: #4f545e;
+}
+
+.previous-rejection__reasons {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.375rem;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.previous-rejection__comments {
+	margin: 0;
+	font-size: 0.875rem;
+	line-height: 1.45;
+	color: var(--color-text-primary, #131927);
+	white-space: pre-wrap;
 }
 
 .request-pill--farmers-market {
@@ -781,7 +757,74 @@
 }
 
 .farm-request-modal__photo {
+	display: block;
 	object-fit: cover;
+}
+
+.farm-request-modal__photo-frame {
+	position: relative;
+	width: 100%;
+}
+
+.farm-request-modal__photo-arrow {
+	position: absolute;
+	top: 50%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	padding: 0;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.92);
+	box-shadow: 0 2px 8px rgba(19, 25, 39, 0.18);
+	color: #131927;
+	cursor: pointer;
+	transform: translateY(-50%);
+	transition:
+		background 0.15s ease,
+		transform 0.15s ease;
+}
+
+.farm-request-modal__photo-arrow:hover {
+	background: #ffffff;
+	transform: translateY(-50%) scale(1.06);
+}
+
+.farm-request-modal__photo-arrow:focus-visible {
+	outline: 2px solid #587244;
+	outline-offset: 2px;
+}
+
+.farm-request-modal__photo-arrow--prev {
+	left: 0.75rem;
+}
+
+.farm-request-modal__photo-arrow--next {
+	right: 0.75rem;
+}
+
+.farm-request-modal__photo-arrow svg {
+	width: 1.25rem;
+	height: 1.25rem;
+	fill: none;
+	stroke: currentColor;
+	stroke-width: 2.25;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
+.farm-request-modal__photo-count {
+	position: absolute;
+	right: 0.75rem;
+	bottom: 0.75rem;
+	padding: 0.25rem 0.625rem;
+	border-radius: 999px;
+	background: rgba(19, 25, 39, 0.6);
+	color: #ffffff;
+	font-size: 0.75rem;
+	font-weight: 500;
 }
 
 .farm-request-modal__photo-status {
@@ -1659,4 +1702,49 @@
 	.farms-btn {
 		flex: 1;
 	}
+}
+
+/* Deleted & Archived Farms: Restore sits on the card, left of the chevron. */
+.inactive-card {
+	position: relative;
+}
+
+.request-card--restorable .request-card__details {
+	margin-right: 8rem;
+}
+
+/* Centered on the body row (below the meta row), not the whole card. */
+.inactive-card__restore {
+	position: absolute;
+	top: calc(50% + 1.1rem);
+	right: 3.25rem;
+	transform: translateY(-50%);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.375rem;
+	height: 2.5rem;
+	padding: 0 1rem;
+	border: 1.5px solid #455d32;
+	border-radius: 0.5rem;
+	background: #ffffff;
+	color: #455d32;
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.inactive-card__restore:hover:not(:disabled) {
+	background: #455d32;
+	color: #ffffff;
+}
+
+.inactive-card__restore:focus-visible {
+	outline: 2px solid #455d32;
+	outline-offset: 2px;
+}
+
+.inactive-card__restore:disabled {
+	opacity: 0.7;
+	cursor: default;
 }

@@ -106,6 +106,12 @@ export type CompleteUserProfileInput = {
   phone: string;
 };
 
+export type UpdateMyProfileInput = {
+  firstName: string;
+  lastName?: string | null;
+  phone?: string | null;
+};
+
 export type RegisterUserDTO = {
   email: string;
   password: string;
@@ -160,6 +166,11 @@ export type FarmDTO = {
   // Set when the farm is soft-deleted (status DELETED); cleared on restore.
   deleted_at: string | null;
   deletion_reason: string | null;
+  // Set while the owner's deletion request awaits admin review. The farm keeps
+  // its status (and its map listing) until an admin approves the deletion.
+  deletion_requested_at: string | null;
+  // Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) at the same time.
+  deletion_approved_at: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -279,6 +290,11 @@ export type AnnouncementDTO = {
   createdAt: string;
   updatedAt: string;
 };
+
+export type PublicAnnouncementDTO = Pick<
+  AnnouncementDTO,
+  'id' | 'message' | 'start_date' | 'end_date'
+>;
 
 export type CreateAnnouncementDTO = {
   message: string;

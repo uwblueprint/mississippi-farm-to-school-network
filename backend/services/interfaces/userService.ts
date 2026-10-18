@@ -2,6 +2,7 @@ import {
   CompleteUserProfileInput,
   CreateUserDTO,
   Role,
+  UpdateMyProfileInput,
   UpdateUserDTO,
   UserDTO,
   SignUpMethod,
@@ -117,6 +118,17 @@ interface IUserService {
    * @throws Error if user not found or improper/missing inputs
    */
   completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO>;
+
+  /**
+   * Update the signed-in user's own editable profile fields (name and phone). Email and
+   * role are intentionally not accepted here. Creates the profile doc from `authUser` if
+   * the account has none yet.
+   * @param authUser the signed-in user, as resolved from Firebase Auth
+   * @param input firstName (required), lastName and phone (blank clears them)
+   * @returns updated UserDTO
+   * @throws Error if inputs are improper
+   */
+  updateMyProfile(authUser: UserDTO, input: UpdateMyProfileInput): Promise<UserDTO>;
 }
 
 export default IUserService;

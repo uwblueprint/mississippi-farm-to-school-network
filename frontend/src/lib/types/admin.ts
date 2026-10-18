@@ -3,14 +3,7 @@ import type { FarmStatus } from '$lib/types/farm';
 /** Mirrors the `Role` enum on the backend (`backend/types.ts`). */
 export type UserRole = 'ADMIN' | 'FARMER';
 
-/** The signed-in admin, as shown in the sidebar and profile modal. */
-export type AdminProfile = {
-	name: string;
-	email: string;
-	role: UserRole;
-};
-
-export type PendingRequestType = 'NEW_APPLICATION' | 'UPDATED_APPLICATION';
+export type PendingRequestType = 'NEW_APPLICATION' | 'UPDATED_APPLICATION' | 'DELETION_REQUEST';
 
 export type PendingFarmDto = {
 	id: string;
@@ -42,6 +35,8 @@ export type PendingFarmDto = {
 	carousel_photos: string[];
 	status: FarmStatus;
 	was_previously_rejected: boolean;
+	deletion_requested_at: string | null;
+	deletion_approved_at: string | null;
 	createdAt: string;
 	updatedAt: string;
 	owner: {
@@ -63,7 +58,7 @@ export type RequestFilter = 'ALL' | PendingRequestType;
 
 export type RequestSort = 'NEWEST' | 'OLDEST' | 'NAME_ASC';
 
-export type RemovedFarmKind = 'ARCHIVED' | 'DELETED';
+export type RemovedFarmKind = 'ARCHIVED' | 'DELETED' | 'CHANGES_REQUESTED';
 
 export type RemovedFarmDto = PendingFarmDto & {
 	is_archived: boolean;
@@ -71,7 +66,10 @@ export type RemovedFarmDto = PendingFarmDto & {
 	deletion_reason: string | null;
 };
 
-/** A farm shown on the Deleted & Archived page. A farm that is both counts as DELETED. */
+/**
+ * A farm shown on the Deleted & Archived page. A farm that is both deleted and archived
+ * counts as DELETED; CHANGES_REQUESTED is a rejected farm awaiting resubmission.
+ */
 export type RemovedFarm = {
 	kind: RemovedFarmKind;
 	farm: RemovedFarmDto;

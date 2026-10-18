@@ -5,6 +5,7 @@ import type { CreateFarmInput } from '@/types';
 
 const mockGetFarmsByProximity = jest.fn();
 const mockGetLatestActiveRejection = jest.fn();
+const mockGetLatestFarmRejectionByFarmId = jest.fn();
 const mockCreateFarm = jest.fn();
 const mockGetFarms = jest.fn();
 const mockArchiveFarm = jest.fn();
@@ -15,6 +16,11 @@ const mockPermanentlyDeleteFarm = jest.fn();
 const mockUpdateFarm = jest.fn();
 const mockResubmitFarm = jest.fn();
 const mockGetFarmById = jest.fn();
+const mockGetFarmsByOwner = jest.fn();
+const mockRequestFarmDeletion = jest.fn();
+const mockApproveFarmDeletion = jest.fn();
+const mockDenyFarmDeletion = jest.fn();
+const mockRequireAuth = jest.fn();
 const mockRequireEmailVerified = jest.fn();
 const mockRequireRole = jest.fn();
 const mockRequireOwnerOrAdmin = jest.fn();
@@ -34,6 +40,7 @@ jest.mock('@/services/implementations/farmService', () => ({
   default: jest.fn().mockImplementation(() => ({
     getFarmsByProximity: mockGetFarmsByProximity,
     getLatestActiveRejection: mockGetLatestActiveRejection,
+    getLatestFarmRejectionByFarmId: mockGetLatestFarmRejectionByFarmId,
     createFarm: mockCreateFarm,
     getFarms: mockGetFarms,
     archiveFarm: mockArchiveFarm,
@@ -44,6 +51,10 @@ jest.mock('@/services/implementations/farmService', () => ({
     updateFarm: mockUpdateFarm,
     resubmitFarm: mockResubmitFarm,
     getFarmById: mockGetFarmById,
+    getFarmsByOwner: mockGetFarmsByOwner,
+    requestFarmDeletion: mockRequestFarmDeletion,
+    approveFarmDeletion: mockApproveFarmDeletion,
+    denyFarmDeletion: mockDenyFarmDeletion,
   })),
 }));
 
@@ -64,6 +75,7 @@ jest.mock('@/services/implementations/emailService', () => ({
 jest.mock('@/utilities/authHelpers', () => ({
   __esModule: true,
   default: {
+    requireAuth: mockRequireAuth,
     requireEmailVerified: mockRequireEmailVerified,
     requireRole: mockRequireRole,
     requireOwnerOrAdmin: mockRequireOwnerOrAdmin,
@@ -78,6 +90,12 @@ const farmsByProximity = farmResolvers.Query.farmsByProximity as (
 ) => Promise<unknown>;
 
 const latestActiveFarmRejection = farmResolvers.Query.latestActiveFarmRejection as (
+  parent: unknown,
+  args: { farmId: string },
+  context: AuthContext
+) => Promise<unknown>;
+
+const latestFarmRejection = farmResolvers.Query.latestFarmRejection as (
   parent: unknown,
   args: { farmId: string },
   context: AuthContext
@@ -595,6 +613,54 @@ describe('farmResolvers.Query.latestActiveFarmRejection', () => {
   });
 });
 
+describe('farmResolvers.Query.latestFarmRejection', () => {
+  const farmId = 'farm-uuid-1';
+
+  beforeEach(() => {
+    mockGetLatestFarmRejectionByFarmId.mockReset();
+    mockRequireRole.mockReset();
+    mockRequireRole.mockResolvedValue({ id: 'admin-1', role: Role.ADMIN });
+  });
+
+  test('is admin only', async () => {
+    mockRequireRole.mockRejectedValue(new ForbiddenError('You do not have permission'));
+
+    await expect(latestFarmRejection(null, { farmId }, authContext)).rejects.toThrow(
+      'You do not have permission'
+    );
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.ADMIN]);
+    expect(mockGetLatestFarmRejectionByFarmId).not.toHaveBeenCalled();
+  });
+
+  test('returns null when the farm was never rejected', async () => {
+    mockGetLatestFarmRejectionByFarmId.mockResolvedValue(null);
+
+    await expect(latestFarmRejection(null, { farmId }, authContext)).resolves.toBeNull();
+  });
+
+  test('returns a resolved rejection (e.g. after resubmission) without the farm snapshot', async () => {
+    mockGetLatestFarmRejectionByFarmId.mockResolvedValue({
+      id: 'rejection-uuid-1',
+      farm_id: farmId,
+      rejected_by_user_id: 'admin-1',
+      rejection_reason: 'Inaccurate information - Phone number is wrong',
+      farm_snapshot: { farm_name: 'Old Name' },
+      farm_snapshot_updated_at: '2026-06-01T00:00:00.000Z',
+      created_at: '2026-06-01T00:00:00.000Z',
+      resolved_at: '2026-06-03T00:00:00.000Z',
+      resolution_type: 'RESUBMITTED',
+    });
+
+    await expect(latestFarmRejection(null, { farmId }, authContext)).resolves.toEqual({
+      id: 'rejection-uuid-1',
+      farm_id: farmId,
+      rejection_reason: 'Inaccurate information - Phone number is wrong',
+      created_at: '2026-06-01T00:00:00.000Z',
+    });
+    expect(mockGetLatestFarmRejectionByFarmId).toHaveBeenCalledWith(farmId);
+  });
+});
+
 describe('farmResolvers.Mutation.createFarm', () => {
   const verifiedFarmer = {
     id: 'farmer-user-1',
@@ -706,5 +772,106 @@ describe('farmResolvers.FarmDTO.owner', () => {
     mockGetUserByFirebaseUid.mockRejectedValue(new Error('User not found.'));
 
     await expect(owner(farm, {}, authContext)).resolves.toBeNull();
+  });
+});
+
+describe('farm deletion requests', () => {
+  const farmId = 'farm-uuid-1';
+  const ownerUserId = 'owner-1';
+  const callResolver = (resolver: unknown, args: Record<string, unknown> = {}): Promise<unknown> =>
+    (resolver as (p: unknown, a: unknown, c: AuthContext) => Promise<unknown>)(
+      undefined,
+      args,
+      authContext
+    );
+
+  beforeEach(() => {
+    [
+      mockGetFarmById,
+      mockGetFarmsByOwner,
+      mockRequestFarmDeletion,
+      mockApproveFarmDeletion,
+      mockDenyFarmDeletion,
+      mockRequireAuth,
+      mockRequireEmailVerified,
+      mockRequireOwnerOrAdmin,
+      mockRequireRole,
+      mockSendEmail,
+    ].forEach((mock) => mock.mockReset());
+  });
+
+  test('owner requests deletion and admins are emailed once', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: ownerUserId, role: Role.FARMER });
+    mockGetFarmById.mockResolvedValue({
+      id: farmId,
+      owner_user_id: ownerUserId,
+      farm_name: 'Two Brooks',
+      deletion_requested_at: null,
+    });
+    mockRequireOwnerOrAdmin.mockResolvedValue({ id: ownerUserId });
+    mockRequestFarmDeletion.mockResolvedValue({ id: farmId, deletion_requested_at: 'now' });
+
+    const result = await callResolver(farmResolvers.Mutation.requestFarmDeletion, { id: farmId });
+
+    expect(mockRequireOwnerOrAdmin).toHaveBeenCalledWith(authContext, ownerUserId);
+    expect(mockRequestFarmDeletion).toHaveBeenCalledWith(farmId);
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ id: farmId, deletion_requested_at: 'now' });
+  });
+
+  test('a non-owner cannot request deletion', async () => {
+    mockRequireEmailVerified.mockResolvedValue({ id: 'someone-else', role: Role.FARMER });
+    mockGetFarmById.mockResolvedValue({ id: farmId, owner_user_id: ownerUserId });
+    mockRequireOwnerOrAdmin.mockRejectedValue(new ForbiddenError('Forbidden'));
+
+    await expect(
+      callResolver(farmResolvers.Mutation.requestFarmDeletion, { id: farmId })
+    ).rejects.toThrow('Forbidden');
+    expect(mockRequestFarmDeletion).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    ['approveFarmDeletion', mockApproveFarmDeletion],
+    ['denyFarmDeletion', mockDenyFarmDeletion],
+  ] as const)('%s is admin only', async (name, serviceMock) => {
+    mockRequireRole.mockRejectedValue(new ForbiddenError('Forbidden'));
+    await expect(callResolver(farmResolvers.Mutation[name], { id: farmId })).rejects.toThrow(
+      'Forbidden'
+    );
+    expect(serviceMock).not.toHaveBeenCalled();
+
+    mockRequireRole.mockResolvedValue({ id: 'admin-1' });
+    serviceMock.mockResolvedValue({ id: farmId });
+    await callResolver(farmResolvers.Mutation[name], { id: farmId });
+    expect(mockRequireRole).toHaveBeenCalledWith(authContext, [Role.ADMIN]);
+    expect(serviceMock).toHaveBeenCalledWith(farmId);
+  });
+
+  test('myFarms hides archived farms; myApprovedFarmDeletions returns approved deletions', async () => {
+    mockRequireAuth.mockResolvedValue({ id: ownerUserId });
+    const farms = [
+      { id: 'active', status: 'APPROVED', is_archived: false, deletion_approved_at: null },
+      {
+        id: 'deleted',
+        status: 'DELETED',
+        is_archived: false,
+        deletion_approved_at: '2026-10-14T00:00:00.000Z',
+      },
+      { id: 'admin-deleted', status: 'DELETED', is_archived: false, deletion_approved_at: null },
+      { id: 'admin-archived', status: 'APPROVED', is_archived: true, deletion_approved_at: null },
+    ];
+    // Mirrors the real service: DELETED farms only come back with includeDeleted.
+    mockGetFarmsByOwner.mockImplementation(
+      async (_owner: string, options?: { includeDeleted?: boolean }) =>
+        options?.includeDeleted ? farms : farms.filter((farm) => farm.status !== 'DELETED')
+    );
+
+    const mine = (await callResolver(farmResolvers.Query.myFarms)) as { id: string }[];
+    const approved = (await callResolver(farmResolvers.Query.myApprovedFarmDeletions)) as {
+      id: string;
+    }[];
+
+    expect(mine.map((farm) => farm.id)).toEqual(['active']);
+    expect(approved.map((farm) => farm.id)).toEqual(['deleted']);
   });
 });

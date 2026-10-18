@@ -5,6 +5,7 @@
 	import FarmRequestReviewPanel from '$lib/components/admin/FarmRequestReviewPanel.svelte';
 	import type { ReviewCardView } from '$lib/components/admin/FarmRequestReviewPanel.svelte';
 	import FarmRequestSections from '$lib/components/admin/FarmRequestSections.svelte';
+	import PreviousRejectionCard from '$lib/components/admin/PreviousRejectionCard.svelte';
 	import {
 		MAP_TAG_MODIFIER,
 		REQUEST_TYPE_LABEL,
@@ -13,13 +14,16 @@
 	import { gqlClient } from '$lib/graphqlClient';
 	import type { PendingRequest } from '$lib/types/admin';
 	import {
+		APPROVE_FARM_DELETION_MUTATION,
 		APPROVE_FARM_MUTATION,
+		DENY_FARM_DELETION_MUTATION,
 		REJECT_FARM_MUTATION,
 		pendingFarmMapTag,
-		pendingFarmOwner
+		pendingFarmOwner,
+		requestTimeLabel
 	} from '$lib/utils/pending-request-adapter';
 	import { buildReviewSections } from '$lib/utils/farm-request-sections';
-	import { formatRelativeTime } from '$lib/utils/relative-time';
+	import { buildRejectionReason } from '$lib/utils/rejection-reason';
 
 	interface Props {
 		request: PendingRequest;
@@ -40,7 +44,8 @@
 	const sections = $derived(buildReviewSections(farm));
 	const owner = $derived(pendingFarmOwner(farm));
 	const mapTag = $derived(pendingFarmMapTag(farm));
-	const submittedLabel = $derived(`Submitted ${formatRelativeTime(farm.updatedAt)}`);
+	const submittedLabel = $derived(requestTimeLabel(request));
+	const isDeletion = $derived(request.requestType === 'DELETION_REQUEST');
 	const contactHref = $derived(`mailto:${owner.email}`);
 	const canSubmitChanges = $derived(selectedReasons.size > 0 || changeDetails.trim().length > 0);
 
@@ -62,14 +67,6 @@
 			next.add(reason);
 		}
 		selectedReasons = next;
-	}
-
-	function buildRejectionReason(): string {
-		const reasons = [...selectedReasons];
-		const details = changeDetails.trim();
-		if (reasons.length && details) return `${reasons.join('; ')} - ${details}`;
-		if (reasons.length) return reasons.join('; ');
-		return details;
 	}
 
 	async function handleConfirmApprove() {
@@ -96,12 +93,28 @@
 		try {
 			await gqlClient(REJECT_FARM_MUTATION, {
 				id: request.farm.id,
-				rejectionReason: buildRejectionReason()
+				rejectionReason: buildRejectionReason([...selectedReasons], changeDetails)
 			});
 			onResolved?.(request);
 			onClose();
 		} catch (error) {
 			actionError = error instanceof Error ? error.message : 'Failed to request changes.';
+		} finally {
+			submitting = false;
+		}
+	}
+
+	async function runDeletionDecision(mutation: string, failure: string) {
+		if (submitting) return;
+		submitting = true;
+		actionError = null;
+
+		try {
+			await gqlClient(mutation, { id: request.farm.id });
+			onResolved?.(request);
+			onClose();
+		} catch (error) {
+			actionError = error instanceof Error ? error.message : failure;
 		} finally {
 			submitting = false;
 		}
@@ -146,6 +159,10 @@
 					{/if}
 				</div>
 
+				{#if request.requestType === 'UPDATED_APPLICATION'}
+					<PreviousRejectionCard farmId={farm.id} />
+				{/if}
+
 				<FarmRequestContact {farm} />
 				<FarmRequestSections {sections} />
 			</div>
@@ -159,6 +176,7 @@
 				/>
 				<FarmRequestReviewPanel
 					{cardView}
+					{isDeletion}
 					{submitting}
 					{actionError}
 					{selectedReasons}
@@ -170,6 +188,10 @@
 					onChangeDetails={(value) => (changeDetails = value)}
 					onConfirmApprove={handleConfirmApprove}
 					onSubmitChanges={handleSubmitChanges}
+					onConfirmApproveDeletion={() =>
+						runDeletionDecision(APPROVE_FARM_DELETION_MUTATION, 'Failed to approve deletion.')}
+					onConfirmDenyDeletion={() =>
+						runDeletionDecision(DENY_FARM_DELETION_MUTATION, 'Failed to deny deletion.')}
 				/>
 			</aside>
 		</div>

@@ -1,10 +1,14 @@
 <script lang="ts">
-	import { onDestroy, onMount, untrack } from 'svelte';
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
 	import { beforeNavigate, goto } from '$app/navigation';
 	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
 	import leftArrow from '$lib/assets/left-arrow.svg';
 	import { getFirebaseAuth } from '$lib/firebase';
 	import { attachFarmPhotos } from '$lib/utils/farm-image-upload';
+	import { preparePhotos } from '$lib/utils/prepare-photo';
+	import { IMAGE_ACCEPT, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
+	import { refreshAuthTokenCookie } from '$lib/auth';
+	import { showToast } from '$lib/state/toast.svelte';
 	import { COUNTIES } from '$lib/data/msCounties';
 	import {
 		NONE_OF_THE_ABOVE,
@@ -21,12 +25,9 @@
 	let { data } = $props();
 
 	interface AddressSuggestion {
-		formatted: string;
+		placeId: string;
 		primary: string;
 		secondary: string;
-		lat: number | null;
-		lon: number | null;
-		placeId: string;
 	}
 
 	let usdaFarmId = $state('');
@@ -38,11 +39,19 @@
 	let addressLat = $state<number | null>(null);
 	let addressLng = $state<number | null>(null);
 	let addressTimer: ReturnType<typeof setTimeout> | undefined;
+	let addressSearched = $state(false);
+	let addressActiveIndex = $state(-1);
+	let addressSelectError = $state('');
+	// Mapbox bills suggest+retrieve per session; a new one starts after each selection.
+	let addressSession = crypto.randomUUID();
+	let addressRequestSeq = 0;
 	let county = $state('');
 	let countyFocused = $state(false);
 
 	let phone = $state(untrack(() => data.user?.phone ?? ''));
 	let email = $state(untrack(() => data.user?.email ?? ''));
+	/** The pre-filled email, so filling it in doesn't count as an unsaved edit. */
+	let prefilledEmail = $state(untrack(() => data.user?.email ?? ''));
 	let instagram = $state('');
 	let facebook = $state('');
 	let website = $state('');
@@ -64,6 +73,13 @@
 	let deliveryDetails = $state('');
 
 	let farmPhotos = $state<File[]>([]);
+	// Kept apart: the picker reports rejections in a separate change event that
+	// can land while an earlier batch is still being prepared.
+	let photoRejectMessages = $state<string[]>([]);
+	let photoPrepareMessages = $state<string[]>([]);
+	const photoMessages = $derived([...photoRejectMessages, ...photoPrepareMessages]);
+	let preparingPhotos = $state(false);
+	const MAX_PHOTOS = 10;
 	let coverIndex = $state(0);
 
 	let submitted = $state(false);
@@ -77,7 +93,7 @@
 		// When the layout auth bypass is active, still prefill from the Firebase session.
 		if (!email) {
 			const currentEmail = getFirebaseAuth().currentUser?.email;
-			if (currentEmail) email = currentEmail;
+			if (currentEmail) email = prefilledEmail = currentEmail;
 		}
 	});
 
@@ -140,7 +156,7 @@
 			farmAddress !== '' ||
 			county !== '' ||
 			phone !== (data.user?.phone ?? '') ||
-			email !== (data.user?.email ?? '') ||
+			email !== prefilledEmail ||
 			instagram !== '' ||
 			facebook !== '' ||
 			website !== '' ||
@@ -200,43 +216,84 @@
 			clearTimeout(addressTimer);
 		}
 
+		addressSelectError = '';
+		addressActiveIndex = -1;
 		const query = farmAddress.trim();
 
-		if (query.length < 3) {
+		if (query.length < 2) {
+			addressRequestSeq++;
 			addressSuggestions = [];
+			addressSearched = false;
 			addressLoading = false;
 			return;
 		}
 
 		addressLoading = true;
-		addressTimer = setTimeout(() => fetchAddressSuggestions(query), 300);
+		addressTimer = setTimeout(() => fetchAddressSuggestions(query), 200);
 	}
 
 	async function fetchAddressSuggestions(query: string) {
+		const seq = ++addressRequestSeq;
+		let results: AddressSuggestion[] = [];
 		try {
-			const res = await fetch(`/api/address-autocomplete?text=${encodeURIComponent(query)}`);
-
-			if (!res.ok) {
-				addressSuggestions = [];
-				return;
-			}
-
-			const data = await res.json();
-			addressSuggestions = data.results ?? [];
+			const params = new URLSearchParams({ text: query, session: addressSession });
+			const res = await fetch(`/api/address-autocomplete?${params}`);
+			if (res.ok) results = (await res.json()).results ?? [];
 		} catch {
-			addressSuggestions = [];
+			// treated as no results
+		}
+
+		// a slower, older request must not overwrite results for newer input
+		if (seq !== addressRequestSeq) return;
+		addressSuggestions = results;
+		addressSearched = true;
+		addressLoading = false;
+	}
+
+	async function selectAddress(suggestion: AddressSuggestion) {
+		addressRequestSeq++;
+		farmAddress = [suggestion.primary, suggestion.secondary].filter(Boolean).join(', ');
+		addressSuggestions = [];
+		addressSearched = false;
+		addressLoading = false;
+		addressFocused = false;
+		addressActiveIndex = -1;
+		touched.farmAddress = true;
+
+		try {
+			const params = new URLSearchParams({ id: suggestion.placeId, session: addressSession });
+			const res = await fetch(`/api/address-autocomplete/retrieve?${params}`);
+			if (!res.ok) throw new Error();
+			const place: { formatted: string; lat: number; lon: number } = await res.json();
+			farmAddress = place.formatted;
+			addressLat = place.lat;
+			addressLng = place.lon;
+		} catch {
+			addressSelectError = "Couldn't load that address. Please pick it again.";
 		} finally {
-			addressLoading = false;
+			addressSession = crypto.randomUUID();
 		}
 	}
 
-	function selectAddress(suggestion: AddressSuggestion) {
-		farmAddress = suggestion.formatted;
-		addressLat = suggestion.lat;
-		addressLng = suggestion.lon;
-		addressSuggestions = [];
-		addressFocused = false;
-		touched.farmAddress = true;
+	function handleAddressKeydown(event: KeyboardEvent) {
+		const count = addressSuggestions.length;
+		if (event.key === 'Escape') {
+			addressFocused = false;
+			return;
+		}
+		if (!count) return;
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			addressFocused = true;
+			addressActiveIndex = (addressActiveIndex + 1) % count;
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			addressActiveIndex = addressActiveIndex <= 0 ? count - 1 : addressActiveIndex - 1;
+		} else if (event.key === 'Enter' && addressActiveIndex >= 0) {
+			event.preventDefault();
+			void selectAddress(addressSuggestions[addressActiveIndex]);
+		}
 	}
 
 	function selectCounty(name: string) {
@@ -262,17 +319,44 @@
 		}
 	});
 
-	function handlePhotosChange(details: { acceptedFiles: File[] }) {
+	function setFarmPhotos(next: File[]) {
 		for (const [file, url] of photoUrls) {
-			if (!details.acceptedFiles.includes(file)) {
+			if (!next.includes(file)) {
 				URL.revokeObjectURL(url);
 				photoUrls.delete(file);
 			}
 		}
 		const previousCover = farmPhotos[coverIndex];
-		farmPhotos = details.acceptedFiles;
+		farmPhotos = next;
 		const nextIndex = previousCover ? farmPhotos.indexOf(previousCover) : -1;
 		coverIndex = nextIndex === -1 ? 0 : nextIndex;
+	}
+
+	function rejectionMessage({ file, errors }: { file: File; errors: string[] }): string {
+		if (errors.includes('TOO_MANY_FILES')) {
+			return `“${file.name}” was skipped — you can add up to ${MAX_PHOTOS} photos.`;
+		}
+		if (errors.includes('FILE_EXISTS')) return `“${file.name}” is already added.`;
+		return `“${file.name}” isn't a JPG, PNG or HEIC photo.`;
+	}
+
+	// New picks are checked (size limit) and HEIC-converted before they join the
+	// list, so thumbnails render and the upload only ever sends JPG/PNG.
+	async function handlePhotosChange(details: {
+		acceptedFiles: File[];
+		rejectedFiles: { file: File; errors: string[] }[];
+	}) {
+		photoRejectMessages = details.rejectedFiles.map(rejectionMessage);
+		const incoming = details.acceptedFiles.filter((file) => !farmPhotos.includes(file));
+		setFarmPhotos(farmPhotos.filter((file) => details.acceptedFiles.includes(file)));
+		if (incoming.length === 0) return;
+
+		photoPrepareMessages = [];
+		preparingPhotos = true;
+		const { photos, errors } = await preparePhotos(incoming);
+		preparingPhotos = false;
+		setFarmPhotos([...farmPhotos, ...photos].slice(0, MAX_PHOTOS));
+		photoPrepareMessages = errors;
 	}
 
 	function buildFarmPayload() {
@@ -311,10 +395,19 @@
 	}
 
 	async function handleSubmit() {
+		// The farm already exists; another submit would create a duplicate.
+		if (submitted) return;
 		for (const key of Object.keys(errors)) {
 			touched[key] = true;
 		}
-		if (!isValid || submitting) return;
+		if (submitting || preparingPhotos) return;
+		if (!isValid) {
+			await tick();
+			document
+				.querySelector('.input-error, .error-text')
+				?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			return;
+		}
 
 		submitting = true;
 		submitError = null;
@@ -322,12 +415,14 @@
 		const payload = buildFarmPayload();
 
 		try {
+			await refreshAuthTokenCookie();
 			const res = await fetch('/api/create-farm', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(payload)
+				body: JSON.stringify(payload),
+				signal: AbortSignal.timeout(30_000)
 			});
-			const result = await res.json();
+			const result = await res.json().catch(() => ({ ok: false }));
 
 			if (!result.ok) {
 				submitError = result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
@@ -345,21 +440,31 @@
 					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
 				} catch (photoError) {
 					submitted = true;
-					submitError =
+					// Toast rather than submitError: we navigate away right after, and the
+					// farmer layout's ToastHost survives the redirect.
+					showToast(
+						'error',
 						photoError instanceof Error
-							? `${photoError.message} Your farm was created; you can add photos later.`
-							: 'Farm created, but photo upload failed. You can add photos later.';
-					return;
+							? `${photoError.message} You can add photos from the farm's edit page.`
+							: "Photo upload failed. You can add photos from the farm's edit page.",
+						'Farm created'
+					);
 				}
 			}
 
 			submitted = true;
-			await goto('/farmer');
-		} catch {
-			submitError = 'Network error. Check your connection and try again.';
+		} catch (err) {
+			submitError =
+				err instanceof DOMException && err.name === 'TimeoutError'
+					? 'The server took too long to respond. Check your dashboard before submitting again — the farm may already have been created.'
+					: 'Network error. Check your connection, then check your dashboard before submitting again.';
 		} finally {
 			submitting = false;
 		}
+
+		// Once the farm exists, always leave: re-submitting would create a duplicate,
+		// and missing photos can be added from the farm's edit page.
+		if (submitted) await goto('/farmer');
 	}
 
 	beforeNavigate((navigation) => {
@@ -430,7 +535,14 @@
 			<img class="back-icon" src={leftArrow} alt="" />
 			Back
 		</button>
-		<button class="save-btn" type="button">Save Changes</button>
+		<button
+			class="save-btn"
+			type="button"
+			onclick={handleSubmit}
+			disabled={submitted || submitting || preparingPhotos}
+		>
+			{submitting ? 'Saving…' : 'Save Changes'}
+		</button>
 	</div>
 
 	<h1 class="page-title">Create a Farm</h1>
@@ -490,8 +602,16 @@
 					class:input-error={touched.farmAddress && errors.farmAddress}
 					placeholder="Search Farm Address"
 					autocomplete="off"
+					role="combobox"
+					aria-autocomplete="list"
+					aria-controls="farm-address-options"
+					aria-expanded={addressFocused && addressSuggestions.length > 0}
+					aria-activedescendant={addressActiveIndex >= 0
+						? `farm-address-option-${addressActiveIndex}`
+						: undefined}
 					bind:value={farmAddress}
 					oninput={handleAddressInput}
+					onkeydown={handleAddressKeydown}
 					onfocus={() => (addressFocused = true)}
 					onblur={() => {
 						touched.farmAddress = true;
@@ -499,19 +619,28 @@
 					}}
 				/>
 			</div>
-			{#if addressFocused && (addressLoading || addressSuggestions.length > 0)}
-				<ul class="combobox-list">
+			{#if addressFocused && (addressLoading || addressSearched)}
+				<ul class="combobox-list" id="farm-address-options" role="listbox">
 					{#if addressLoading && addressSuggestions.length === 0}
 						<li class="combobox-empty">Searching…</li>
+					{:else if addressSuggestions.length === 0}
+						<li class="combobox-empty">No matching Mississippi addresses</li>
 					{/if}
-					{#each addressSuggestions as suggestion (suggestion.placeId)}
-						<li>
+					{#each addressSuggestions as suggestion, i (suggestion.placeId)}
+						<li
+							id={`farm-address-option-${i}`}
+							role="option"
+							aria-selected={i === addressActiveIndex}
+						>
 							<button
 								type="button"
+								tabindex="-1"
 								class="combobox-option"
+								class:combobox-option--active={i === addressActiveIndex}
+								onmouseenter={() => (addressActiveIndex = i)}
 								onmousedown={(e) => {
 									e.preventDefault();
-									selectAddress(suggestion);
+									void selectAddress(suggestion);
 								}}
 							>
 								<span class="addr-primary">{suggestion.primary}</span>
@@ -524,7 +653,9 @@
 				</ul>
 			{/if}
 		</div>
-		{#if touched.farmAddress && errors.farmAddress}
+		{#if addressSelectError}
+			<span class="error-text">{addressSelectError}</span>
+		{:else if touched.farmAddress && errors.farmAddress}
 			<span class="error-text">{errors.farmAddress}</span>
 		{/if}
 	</div>
@@ -876,8 +1007,8 @@
 		</p>
 
 		<FileUpload
-			accept="image/*"
-			maxFiles={10}
+			accept={IMAGE_ACCEPT}
+			maxFiles={MAX_PHOTOS}
 			acceptedFiles={farmPhotos}
 			onFileChange={handlePhotosChange}
 		>
@@ -904,9 +1035,18 @@
 				>
 					Upload farm photos
 				</FileUpload.Trigger>
-				<span class="text-xs text-[#9aa0a6]">JPG or PNG up to 10 pics</span>
+				<span class="text-xs text-[#9aa0a6]">
+					JPG, PNG or HEIC, up to {MAX_PHOTOS} pics ({MAX_UPLOAD_LABEL} each)
+				</span>
 				<FileUpload.HiddenInput />
 			</FileUpload.Dropzone>
+
+			{#if preparingPhotos}
+				<p class="photo-status" role="status">Preparing photos…</p>
+			{/if}
+			{#each photoMessages as message (message)}
+				<p class="error-text photo-error" role="alert">{message}</p>
+			{/each}
 
 			{#if farmPhotos.length > 0}
 				<FileUpload.ItemGroup class="file-list">
@@ -950,8 +1090,17 @@
 		{#if submitError}
 			<p class="submit-error" role="alert">{submitError}</p>
 		{/if}
-		<button class="submit" type="button" onclick={handleSubmit} disabled={submitting}>
-			{submitting ? 'Submitting…' : 'Submit Farm Information'}
+		<button
+			class="submit"
+			type="button"
+			onclick={handleSubmit}
+			disabled={submitted || submitting || preparingPhotos}
+		>
+			{submitting
+				? 'Submitting…'
+				: preparingPhotos
+					? 'Preparing photos…'
+					: 'Submit Farm Information'}
 		</button>
 	</div>
 </div>
@@ -1137,6 +1286,18 @@
 		color: #d23b3b;
 	}
 
+	.photo-error {
+		display: block;
+		margin: 8px 0 0;
+		font-size: 13px;
+	}
+
+	.photo-status {
+		margin: 8px 0 0;
+		font-size: 13px;
+		color: #666;
+	}
+
 	.search-field {
 		position: relative;
 	}
@@ -1198,7 +1359,8 @@
 		color: #9aa0a6;
 	}
 
-	.combobox-option:hover {
+	.combobox-option:hover,
+	.combobox-option--active {
 		background: var(--mfsn-primary-tint, #f0f5ec);
 	}
 

@@ -5,6 +5,7 @@ import {
   AnnouncementDTO,
   CreateAnnouncementDTO,
   CreateAnnouncementResult,
+  PublicAnnouncementDTO,
   Role,
   UpdateAnnouncementDTO,
 } from '@/types';
@@ -21,6 +22,15 @@ const announcementResolvers = {
     ): Promise<AnnouncementDTO[]> => {
       await authHelper.requireRole(context, [Role.ADMIN, Role.FARMER]);
       return announcementService.getLiveAnnouncements();
+    },
+    publicAnnouncements: async (): Promise<PublicAnnouncementDTO[]> => {
+      const live = await announcementService.getLiveAnnouncements();
+      return live.map(({ id, message, start_date, end_date }) => ({
+        id,
+        message,
+        start_date,
+        end_date,
+      }));
     },
     liveAndUpcomingAnnouncements: async (
       _parent: undefined,

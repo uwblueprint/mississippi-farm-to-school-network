@@ -8,6 +8,8 @@
 </script>
 
 <script lang="ts">
+	import FilterPill from '$lib/components/FilterPill.svelte';
+
 	interface Props {
 		items: FilterPillItem[];
 		/** Two-way bound active value. Only meaningful when `selectable` is true. */
@@ -44,21 +46,14 @@
 
 {#snippet pillButtons()}
 	{#each items as item (item.value)}
-		<button
-			type="button"
-			class="filter-pill"
-			class:filter-pill--active={selectable && selected === item.value}
+		<FilterPill
+			label={item.label}
+			count={item.count}
+			active={selectable && selected === item.value}
+			{showChevron}
 			aria-pressed={selectable ? selected === item.value : undefined}
 			onclick={() => handleClick(item.value)}
-		>
-			{#if item.count !== undefined}
-				<span class="filter-pill__count">{item.count}</span>
-			{/if}
-			<span class="filter-pill__label">{item.label}</span>
-			{#if showChevron}
-				<span class="filter-pill__chevron" aria-hidden="true">›</span>
-			{/if}
-		</button>
+		/>
 	{/each}
 {/snippet}
 
@@ -94,52 +89,5 @@
 		align-items: center;
 		flex-wrap: wrap;
 		gap: 0.5rem;
-	}
-
-	.filter-pill {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.25rem;
-		height: 2.125rem;
-		padding: 0.3125rem 0.75rem;
-		border: 1px solid var(--color-neutral-300, #d3d5de);
-		border-radius: 1rem;
-		background: var(--color-neutral-0, #ffffff);
-		font-family: inherit;
-		font-size: 0.875rem;
-		line-height: 1rem;
-		color: var(--color-text-secondary, #4f545e);
-		white-space: nowrap;
-		cursor: pointer;
-		transition: background-color 0.15s ease;
-	}
-
-	.filter-pill:hover {
-		background: #f9fafb;
-	}
-
-	.filter-pill__count {
-		font-weight: 600;
-	}
-
-	.filter-pill--active {
-		border: 1.5px solid #93a883;
-		color: #455d32;
-	}
-
-	.filter-pill--active .filter-pill__count {
-		font-weight: 800;
-	}
-
-	.filter-pill--active .filter-pill__label {
-		font-weight: 600;
-	}
-
-	.filter-pill__chevron {
-		display: inline-block;
-		transform: rotate(90deg);
-		font-size: 0.85rem;
-		line-height: 1;
 	}
 </style>

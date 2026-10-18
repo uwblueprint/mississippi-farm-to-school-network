@@ -2,7 +2,7 @@
 	import AdminFarmCard from '$lib/components/admin/AdminFarmCard.svelte';
 	import { REQUEST_TYPE_LABEL, REQUEST_TYPE_MODIFIER } from '$lib/constants/admin-request';
 	import type { PendingRequest } from '$lib/types/admin';
-	import { formatRelativeTime } from '$lib/utils/relative-time';
+	import { requestTimeLabel } from '$lib/utils/pending-request-adapter';
 
 	interface Props {
 		request: PendingRequest;
@@ -18,6 +18,6 @@
 		label: REQUEST_TYPE_LABEL[request.requestType],
 		modifier: REQUEST_TYPE_MODIFIER[request.requestType]
 	}}
-	timestamp={`Submitted ${formatRelativeTime(request.farm.updatedAt)}`}
+	timestamp={requestTimeLabel(request)}
 	onSelect={() => onSelect?.(request)}
 />

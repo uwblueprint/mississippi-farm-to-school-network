@@ -1,10 +1,17 @@
 <script lang="ts">
 	import { CHANGE_REASONS } from '$lib/constants/admin-request';
 
-	export type ReviewCardView = 'review' | 'approve-confirm' | 'request-changes';
+	export type ReviewCardView =
+		| 'review'
+		| 'approve-confirm'
+		| 'request-changes'
+		| 'approve-deletion'
+		| 'deny-deletion';
 
 	interface Props {
 		cardView: ReviewCardView;
+		/** Review a farmer's deletion request instead of an application. */
+		isDeletion?: boolean;
 		submitting: boolean;
 		actionError: string | null;
 		selectedReasons: Set<string>;
@@ -16,10 +23,13 @@
 		onChangeDetails: (value: string) => void;
 		onConfirmApprove: () => void;
 		onSubmitChanges: () => void;
+		onConfirmApproveDeletion?: () => void;
+		onConfirmDenyDeletion?: () => void;
 	}
 
 	let {
 		cardView,
+		isDeletion = false,
 		submitting,
 		actionError,
 		selectedReasons,
@@ -30,12 +40,110 @@
 		onToggleReason,
 		onChangeDetails,
 		onConfirmApprove,
-		onSubmitChanges
+		onSubmitChanges,
+		onConfirmApproveDeletion,
+		onConfirmDenyDeletion
 	}: Props = $props();
 </script>
 
 <div class="review-application-card">
-	{#if cardView === 'review'}
+	{#if isDeletion && cardView === 'review'}
+		<div class="review-application-card__copy">
+			<h3 class="review-application-card__title">Review Deletion Request</h3>
+			<p class="review-application-card__body">The farm has asked for its profile to be deleted.</p>
+			<p class="review-application-card__body">
+				Choose <strong>Approve Deletion</strong> to remove the farm from the map and the farmer's
+				dashboard, or <strong>Deny</strong> if the request was a mistake.
+			</p>
+		</div>
+
+		<div class="review-application-card__actions">
+			<button
+				type="button"
+				class="review-application-card__approve"
+				onclick={() => onCardViewChange('approve-deletion')}
+			>
+				Approve Deletion
+				<img src="/images/admin/checkWhiteIcon.svg" alt="" />
+			</button>
+			<button
+				type="button"
+				class="review-application-card__changes"
+				onclick={() => onCardViewChange('deny-deletion')}
+			>
+				Deny
+				<img src="/images/admin/requestChangesXIcon.svg" alt="" />
+			</button>
+		</div>
+	{:else if cardView === 'approve-deletion'}
+		<div class="review-application-card__copy">
+			<span class="review-application-card__icon review-application-card__icon--success">
+				<img src="/images/admin/approveCheckIcon.svg" alt="" />
+			</span>
+			<h3 class="review-application-card__title">Approve Deletion?</h3>
+			<p class="review-application-card__body">
+				The farm will be removed from the Farm Fresh Map and the farmer's dashboard, and the farmer
+				will be told the request was approved. You can restore it later from Deleted &amp; Pending
+				Farms.
+			</p>
+			{#if actionError}
+				<p class="review-application-card__error">{actionError}</p>
+			{/if}
+		</div>
+
+		<div class="review-application-card__actions">
+			<button
+				type="button"
+				class="review-application-card__changes"
+				disabled={submitting}
+				onclick={() => onCardViewChange('review')}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="review-application-card__approve"
+				disabled={submitting}
+				onclick={onConfirmApproveDeletion}
+			>
+				{submitting ? 'Approving…' : 'Confirm'}
+			</button>
+		</div>
+	{:else if cardView === 'deny-deletion'}
+		<div class="review-application-card__copy">
+			<span class="review-application-card__icon review-application-card__icon--alert">!</span>
+			<h3 class="review-application-card__title">Deny Deletion?</h3>
+			<p class="review-application-card__body">
+				The farm stays as it is and its status returns to what it was before the request. The farmer
+				is not notified, so reach out to them directly if you need to explain why.
+			</p>
+			{#if actionError}
+				<p class="review-application-card__error">{actionError}</p>
+			{/if}
+			<p class="review-application-card__body">
+				<a href={contactHref}>Contact Farmer</a>
+			</p>
+		</div>
+
+		<div class="review-application-card__actions">
+			<button
+				type="button"
+				class="review-application-card__changes"
+				disabled={submitting}
+				onclick={() => onCardViewChange('review')}
+			>
+				Cancel
+			</button>
+			<button
+				type="button"
+				class="review-application-card__approve"
+				disabled={submitting}
+				onclick={onConfirmDenyDeletion}
+			>
+				{submitting ? 'Denying…' : 'Confirm'}
+			</button>
+		</div>
+	{:else if cardView === 'review'}
 		<div class="review-application-card__copy">
 			<h3 class="review-application-card__title">Review Application</h3>
 			<p class="review-application-card__body">Review the information submitted by the farm.</p>

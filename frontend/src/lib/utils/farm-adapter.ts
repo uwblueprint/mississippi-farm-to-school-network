@@ -1,5 +1,6 @@
 import type { MapFarm } from '$lib/types/farm';
 import { getMarkerType } from '$lib/utils/farm-tags';
+import { DEFAULT_FARM_COVER } from '$lib/utils/farm-images';
 
 /** Subset of FarmDTO fields returned by `/api/farms`. */
 export type FarmDto = Omit<
@@ -8,8 +9,6 @@ export type FarmDto = Omit<
 > & {
 	cities_served: string[] | null;
 };
-
-const FALLBACK_THUMBNAIL = '/images/mfsnLogo.svg';
 
 /**
  * Normalize API FarmDTO JSON into MapFarm (adds marker + empty display images).
@@ -50,7 +49,7 @@ export function farmDtoToMapFarm(dto: FarmDto): MapFarm {
 		updatedAt: dto.updatedAt,
 		markerType: 'farm',
 		imageUrls: [],
-		thumbnailUrl: FALLBACK_THUMBNAIL
+		thumbnailUrl: DEFAULT_FARM_COVER
 	};
 
 	farm.markerType = getMarkerType(farm);

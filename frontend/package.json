@@ -45,6 +45,7 @@
 		"@mapbox/mapbox-gl-geocoder": "^5.1.2",
 		"exceljs": "^4.4.0",
 		"firebase": "^12.14.0",
+		"heic2any": "^0.0.4",
 		"mapbox-gl": "^3.25.0",
 		"sanitize-html": "^2.17.5"
 	}

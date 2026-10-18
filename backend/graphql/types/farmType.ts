@@ -62,6 +62,13 @@ const farmType = gql`
     deleted_at: String
     "Why the farm was deleted, if a reason was given; null unless status is DELETED."
     deletion_reason: String
+    """
+    Set while the owner's deletion request awaits admin review. The farm keeps
+    its status (and its map listing) until the deletion is approved.
+    """
+    deletion_requested_at: String
+    "Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) then."
+    deletion_approved_at: String
     createdAt: String!
     updatedAt: String!
     """
@@ -160,6 +167,15 @@ const farmType = gql`
     farmById(id: ID!): FarmDTO!
     farmsByStatus(status: FarmStatus!): [FarmDTO!]!
     latestActiveFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
+    """
+    Admin only. The farm's most recent rejection even after the farmer resubmitted
+    (which resolves it), so reviewers can see what was asked for last time.
+    """
+    latestFarmRejection(farmId: ID!): ActiveFarmRejectionDTO
+    "Admin only. Farms whose owners have asked for them to be deleted."
+    farmDeletionRequests: [FarmDTO!]!
+    "The signed-in user's farms whose deletion an admin has approved."
+    myApprovedFarmDeletions: [FarmDTO!]!
   }
 
   type Mutation {
@@ -173,6 +189,9 @@ const farmType = gql`
     deleteFarm(id: ID!, reason: String): FarmDTO!
     restoreFarm(id: ID!): FarmDTO!
     permanentlyDeleteFarm(id: ID!): ID!
+    requestFarmDeletion(id: ID!): FarmDTO!
+    approveFarmDeletion(id: ID!): FarmDTO!
+    denyFarmDeletion(id: ID!): FarmDTO!
   }
 
   type ActiveFarmRejectionDTO {

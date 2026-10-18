@@ -61,12 +61,13 @@ interface IFarmService {
   getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]>;
 
   /**
-   * Get all farms owned by a user, across every status except DELETED
+   * Get all farms owned by a user, across every status except DELETED (unless
+   * includeDeleted is set)
    * @param ownerUserId the owner's user id
    * @returns array of FarmDTOs
    * @throws Error if farm retrieval fails
    */
-  getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]>;
+  getFarmsByOwner(ownerUserId: string, options?: { includeDeleted?: boolean }): Promise<FarmDTO[]>;
 
   /**
    * Update a farm's status to APPROVED & attempt to email farm owner
@@ -126,6 +127,37 @@ interface IFarmService {
    * @throws Error if the farm does not exist or is neither deleted nor archived
    */
   permanentlyDeleteFarm(farmId: string): Promise<string[]>;
+
+  /**
+   * Flag a farm for deletion at its owner's request. The farm keeps its status
+   * (and stays on the map) until an admin approves the deletion.
+   * @param farmId farm's id
+   * @returns the updated FarmDTO with deletion_requested_at set
+   * @throws Error if the farm does not exist, is already archived, or the update fails
+   */
+  requestFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Approve a pending deletion request: soft-deletes the farm (as deleteFarm does) and
+   * stamps deletion_approved_at.
+   * @param farmId farm's id
+   * @throws Error if the farm has no pending deletion request or the update fails
+   */
+  approveFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Deny a pending deletion request, leaving the farm as it was before the request.
+   * @param farmId farm's id
+   * @throws Error if the farm has no pending deletion request or the update fails
+   */
+  denyFarmDeletion(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Get every non-archived farm with a pending deletion request
+   * @returns array of FarmDTOs
+   * @throws Error if farm retrieval fails
+   */
+  getFarmDeletionRequests(): Promise<FarmDTO[]>;
 
   /**
    * Get the latest unresolved rejection for a farm

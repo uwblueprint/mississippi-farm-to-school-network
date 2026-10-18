@@ -4,6 +4,7 @@
 	import FarmRequestGallery from '$lib/components/admin/FarmRequestGallery.svelte';
 	import FarmRequestSections from '$lib/components/admin/FarmRequestSections.svelte';
 	import FarmDetailsModalSkeleton from '$lib/components/admin/farms/FarmDetailsModalSkeleton.svelte';
+	import PreviousRejectionCard from '$lib/components/admin/PreviousRejectionCard.svelte';
 	import { FARM_DETAILS_QUERY } from '$lib/utils/admin-farms';
 	import { gqlClient } from '$lib/graphqlClient';
 	import type { PendingFarmDto } from '$lib/types/admin';
@@ -28,9 +29,19 @@
 		onClose: () => void;
 		/** Called after the farm is archived or deleted so the parent can refresh its list. */
 		onRemoved?: (farmId: string) => void;
+		/** Path to return to after editing the farm. */
+		returnTo?: string;
+		/** Where the farm is removed from when deleted, shown in the confirmation. */
+		removalContext?: string;
 	}
 
-	let { farmId, onClose, onRemoved }: Props = $props();
+	let {
+		farmId,
+		onClose,
+		onRemoved,
+		returnTo = '/admin/farms',
+		removalContext = 'the farms list'
+	}: Props = $props();
 
 	let farm = $state<PendingFarmDto | null>(null);
 	let loading = $state(true);
@@ -38,7 +49,11 @@
 
 	const sections = $derived(farm ? buildReviewSections(farm) : []);
 	const { details: detailSections, aside: asideSections } = $derived(splitReviewSections(sections));
-	const activeSinceLabel = $derived(farm ? `Active since ${formatFullDate(farm.createdAt)}` : '');
+	const statusLabel = $derived.by(() => {
+		if (!farm) return '';
+		if (farm.status === 'REJECTED') return `Changes requested ${formatFullDate(farm.updatedAt)}`;
+		return `Active since ${formatFullDate(farm.createdAt)}`;
+	});
 	const titleId = $derived(loading ? 'farm-details-modal-loading' : 'farm-details-modal-title');
 
 	async function loadFarm() {
@@ -67,8 +82,8 @@
 	{farmId}
 	farmName={farm?.farm_name ?? ''}
 	{titleId}
-	returnTo="/admin/farms"
-	removalContext="the farms list"
+	{returnTo}
+	{removalContext}
 	menuDisabled={loading || Boolean(loadError)}
 	busy={loading}
 	{onClose}
@@ -84,7 +99,7 @@
 			<div class="farm-request-modal__columns">
 				<div class="farm-request-modal__details">
 					<div class="farm-request-modal__meta">
-						<span class="farm-request-modal__submitted">{activeSinceLabel}</span>
+						<span class="farm-request-modal__submitted">{statusLabel}</span>
 					</div>
 
 					<div class="farm-request-modal__title-row">
@@ -93,6 +108,13 @@
 						</h2>
 						<span class="request-pill request-pill--mississippi-farm">Mississippi Farm</span>
 					</div>
+
+					{#if farm.status === 'REJECTED' || farm.was_previously_rejected}
+						<PreviousRejectionCard
+							farmId={farm.id}
+							title={farm.status === 'REJECTED' ? 'Requested Changes' : 'Last Requested Changes'}
+						/>
+					{/if}
 
 					<FarmRequestContact {farm} />
 					<FarmRequestSections sections={detailSections} />

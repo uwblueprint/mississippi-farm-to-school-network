@@ -12,6 +12,12 @@ import IImageService from '@/services/interfaces/imageService';
 import { FarmStatus, ImageDTO, ImageDimensionsDTO } from '@/types';
 import authHelper from '@/utilities/authHelpers';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_UPLOAD_BYTES,
+  UNSUPPORTED_IMAGE_TYPE_MESSAGE,
+  oversizedImageMessage,
+} from '@/utilities/imageUploadLimits';
 
 const defaultBucket = process.env.FIREBASE_STORAGE_DEFAULT_BUCKET || '';
 const fileStorageService: IFileStorageService = new FileStorageService(defaultBucket);
@@ -58,6 +64,10 @@ const imageResolvers = {
       const farm = await farmService.getFarmById(farmId);
       await authHelper.requireOwnerOrAdmin(context, farm.owner_user_id);
 
+      if (!ALLOWED_IMAGE_TYPES.includes(contentType)) {
+        throw new UserInputError(UNSUPPORTED_IMAGE_TYPE_MESSAGE);
+      }
+
       const imageId = randomUUID();
       const storageKey = buildStorageKey(farmId, imageId);
       const uploadUrl = await fileStorageService.getUploadUrl(storageKey, contentType);
@@ -89,6 +99,17 @@ const imageResolvers = {
       if (!exists) {
         throw new UserInputError('Uploaded file was not found in storage.');
       }
+      if (!ALLOWED_IMAGE_TYPES.includes(input.contentType)) {
+        await fileStorageService.deleteFile(storageKey).catch(() => {});
+        throw new UserInputError(UNSUPPORTED_IMAGE_TYPE_MESSAGE);
+      }
+      // The signed upload URL can't cap the body size, so check what actually
+      // landed in storage rather than the size the client claims.
+      const size = await fileStorageService.getFileSize(storageKey);
+      if (size > MAX_UPLOAD_BYTES) {
+        await fileStorageService.deleteFile(storageKey).catch(() => {});
+        throw new UserInputError(oversizedImageMessage(size));
+      }
 
       const index =
         input.index === undefined || input.index === null
@@ -100,7 +121,7 @@ const imageResolvers = {
         input.farmId,
         storageKey,
         input.contentType,
-        input.size,
+        size,
         input.dimensions,
         index
       );

@@ -6,6 +6,7 @@ import {
   CreateUserDTO,
   Role,
   SignUpMethod,
+  UpdateMyProfileInput,
   UpdateUserDTO,
   UserDTO,
 } from '@/types';
@@ -318,6 +319,48 @@ class UserService implements IUserService {
       return toUserDTO(found.id, updated);
     } catch (error: unknown) {
       Logger.error(`Failed to complete user profile. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  async updateMyProfile(authUser: UserDTO, input: UpdateMyProfileInput): Promise<UserDTO> {
+    try {
+      const firstName = input.firstName?.trim() ?? '';
+      if (!firstName) {
+        throw new Error('Name must not be empty.');
+      }
+      const lastName = input.lastName?.trim() || null;
+
+      let phone: string | null = null;
+      if (input.phone?.trim()) {
+        phone = input.phone.replace(/\D/g, '');
+        if (phone.length !== 10) {
+          throw new Error('Phone number must contain exactly 10 digits.');
+        }
+      }
+
+      const now = new Date().toISOString();
+      const found = await this.findByFirebaseUid(authUser.firebase_uid);
+      // Accounts created before the Firestore profile doc existed only live in Firebase Auth;
+      // create their doc (keyed by uid, see createUser) from the authenticated identity.
+      const base: UserDoc = found?.data ?? {
+        firebase_uid: authUser.firebase_uid,
+        email: authUser.email,
+        role: authUser.role,
+        is_verified: authUser.is_verified,
+        firstName: null,
+        lastName: null,
+        phone: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const id = found?.id ?? authUser.firebase_uid;
+
+      const updated: UserDoc = { ...base, firstName, lastName, phone, updatedAt: now };
+      await this.users().doc(id).set(updated);
+      return toUserDTO(id, updated);
+    } catch (error: unknown) {
+      Logger.error(`Failed to update own profile. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
   }

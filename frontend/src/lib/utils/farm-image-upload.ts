@@ -1,3 +1,6 @@
+import { refreshAuthTokenCookie } from '$lib/auth';
+import { preparePhoto } from '$lib/utils/prepare-photo';
+
 type ImageDimensions = {
 	width: number;
 	height: number;
@@ -12,6 +15,16 @@ function apiErrorMessage(body: ApiErrorBody, fallback: string): string {
 	return body.errors?.[0]?.message ?? fallback;
 }
 
+/** POST to a cookie-authenticated server route, failing instead of hanging if it stalls. */
+function postJson(url: string, body: unknown): Promise<Response> {
+	return fetch(url, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify(body),
+		signal: AbortSignal.timeout(30_000)
+	});
+}
+
 async function getImageDimensions(file: File): Promise<ImageDimensions> {
 	const bitmap = await createImageBitmap(file);
 	const dimensions = { width: bitmap.width, height: bitmap.height };
@@ -24,15 +37,13 @@ async function getImageDimensions(file: File): Promise<ImageDimensions> {
  * collection. Returns the new image id (also used as cover_photo /
  * carousel_photos entries).
  */
-export async function uploadFarmPhoto(farmId: string, file: File): Promise<string> {
-	const contentType = file.type || 'image/jpeg';
+export async function uploadFarmPhoto(farmId: string, original: File): Promise<string> {
+	const file = await preparePhoto(original);
+	const contentType = file.type;
 	const dimensions = await getImageDimensions(file);
+	await refreshAuthTokenCookie();
 
-	const requestRes = await fetch('/api/farm-images/request-upload', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ farmId, contentType })
-	});
+	const requestRes = await postJson('/api/farm-images/request-upload', { farmId, contentType });
 	const requestBody = await requestRes.json();
 	if (!requestRes.ok || !requestBody.ok) {
 		throw new Error(apiErrorMessage(requestBody, 'Failed to request image upload URL.'));
@@ -47,16 +58,12 @@ export async function uploadFarmPhoto(farmId: string, file: File): Promise<strin
 		throw new Error(`Failed to upload ${file.name} to storage.`);
 	}
 
-	const confirmRes = await fetch('/api/farm-images/confirm-upload', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			imageId: requestBody.imageId,
-			farmId,
-			contentType,
-			size: file.size,
-			dimensions
-		})
+	const confirmRes = await postJson('/api/farm-images/confirm-upload', {
+		imageId: requestBody.imageId,
+		farmId,
+		contentType,
+		size: file.size,
+		dimensions
 	});
 	const confirmBody = await confirmRes.json();
 	if (!confirmRes.ok || !confirmBody.ok) {
@@ -87,13 +94,10 @@ export async function attachFarmPhotos(
 	const cover_photo = imageIds[safeCoverIndex];
 	const carousel_photos = imageIds.filter((_, index) => index !== safeCoverIndex);
 
-	const updateRes = await fetch('/api/update-farm', {
-		method: 'POST',
-		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({
-			id: farmId,
-			input: { cover_photo, carousel_photos }
-		})
+	await refreshAuthTokenCookie();
+	const updateRes = await postJson('/api/update-farm', {
+		id: farmId,
+		input: { cover_photo, carousel_photos }
 	});
 	const updateBody = await updateRes.json();
 	if (!updateRes.ok || !updateBody.ok) {

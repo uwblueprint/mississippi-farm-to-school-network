@@ -1,7 +1,8 @@
 // Loads the farms shown on the admin Deleted & Archived page: soft-deleted farms
-// (status DELETED) and archived farms, merged into one list.
+// (status DELETED), archived farms, and rejected farms awaiting changes, merged into one list.
 import { gqlClient } from '$lib/graphqlClient';
-import type { RemovedFarm, RemovedFarmDto } from '$lib/types/admin';
+import type { PendingFarmDto, RemovedFarm, RemovedFarmDto } from '$lib/types/admin';
+import { CHANGES_REQUESTED_FARMS_QUERY } from '$lib/utils/pending-request-adapter';
 import { formatRelativeTime } from '$lib/utils/relative-time';
 
 /** The farms resolver caps pageSize at 100. */
@@ -96,16 +97,25 @@ async function fetchAllFarms(filter: Record<string, unknown>): Promise<RemovedFa
 }
 
 export async function loadRemovedFarms(): Promise<RemovedFarm[]> {
-	const [deleted, archived] = await Promise.all([
+	const [deleted, archived, changesRequested] = await Promise.all([
 		fetchAllFarms({ status: 'DELETED' }),
-		fetchAllFarms({ is_archived: true })
+		fetchAllFarms({ is_archived: true }),
+		gqlClient<{ farmsByStatus: PendingFarmDto[] }>(CHANGES_REQUESTED_FARMS_QUERY)
 	]);
+	const removedIds = new Set([...deleted, ...archived].map((farm) => farm.id));
 
 	return [
 		...deleted.map((farm) => ({ kind: 'DELETED' as const, farm })),
 		...archived
 			.filter((farm) => farm.status !== 'DELETED')
-			.map((farm) => ({ kind: 'ARCHIVED' as const, farm }))
+			.map((farm) => ({ kind: 'ARCHIVED' as const, farm })),
+		// The queue query has no archive/deletion fields; skip farms already listed above.
+		...changesRequested.farmsByStatus
+			.filter((farm) => !removedIds.has(farm.id))
+			.map((farm) => ({
+				kind: 'CHANGES_REQUESTED' as const,
+				farm: { ...farm, is_archived: false, deleted_at: null, deletion_reason: null }
+			}))
 	];
 }
 

@@ -4,6 +4,7 @@ import type { AuthContext } from '@/middlewares/auth';
 const mockGetFarmById = jest.fn();
 const mockGetUploadUrl = jest.fn();
 const mockFileExists = jest.fn();
+const mockGetFileSize = jest.fn();
 const mockGetFile = jest.fn();
 const mockDeleteFile = jest.fn();
 const mockCreateImageRecord = jest.fn();
@@ -31,6 +32,7 @@ jest.mock('@/services/implementations/fileStorageService', () => ({
   default: jest.fn().mockImplementation(() => ({
     getUploadUrl: mockGetUploadUrl,
     fileExists: mockFileExists,
+    getFileSize: mockGetFileSize,
     getFile: mockGetFile,
     deleteFile: mockDeleteFile,
   })),
@@ -102,6 +104,8 @@ beforeEach(() => {
   mockRandomUUID.mockReturnValue('img-uuid');
   mockGetUploadUrl.mockResolvedValue('https://upload.example/signed');
   mockFileExists.mockResolvedValue(true);
+  mockGetFileSize.mockResolvedValue(2048);
+  mockDeleteFile.mockResolvedValue(undefined);
   mockGetNextIndex.mockResolvedValue(7);
   mockGetImagesByFarm.mockResolvedValue([]);
   mockGetFile.mockResolvedValue('https://read.example/signed');
@@ -141,6 +145,15 @@ describe('imageResolvers.Mutation.requestImageUploadUrl', () => {
     });
     expect(mockGetUploadUrl).toHaveBeenCalledWith('farms/farm-1/img-uuid', 'image/jpeg');
     expect(mockRequireOwnerOrAdmin).toHaveBeenCalledWith(authContext, 'owner-1');
+  });
+});
+
+describe('imageResolvers.Mutation.requestImageUploadUrl type check', () => {
+  test.each(['image/heic', 'image/gif', 'text/html'])('rejects %s', async (contentType) => {
+    await expect(
+      mutation.requestImageUploadUrl(undefined, { farmId: 'farm-1', contentType }, authContext)
+    ).rejects.toThrow('Only JPG or PNG photos can be uploaded.');
+    expect(mockGetUploadUrl).not.toHaveBeenCalled();
   });
 });
 
@@ -191,6 +204,44 @@ describe('imageResolvers.Mutation.uploadImageToFarm', () => {
       mutation.uploadImageToFarm(undefined, { input: baseInput }, authContext)
     ).rejects.toThrow('Uploaded file was not found in storage.');
     expect(mockCreateImageRecord).not.toHaveBeenCalled();
+  });
+
+  test('rejects and deletes an upload over the size limit, using the stored size', async () => {
+    mockGetFileSize.mockResolvedValue(15 * 1024 * 1024);
+
+    await expect(
+      mutation.uploadImageToFarm(undefined, { input: baseInput }, authContext)
+    ).rejects.toThrow('Photos must be 10MB or smaller — this one is 15.0MB.');
+    expect(mockDeleteFile).toHaveBeenCalledWith('farms/farm-1/img-uuid');
+    expect(mockCreateImageRecord).not.toHaveBeenCalled();
+  });
+
+  test('rejects and deletes an upload with an unsupported content type', async () => {
+    await expect(
+      mutation.uploadImageToFarm(
+        undefined,
+        { input: { ...baseInput, contentType: 'image/heic' } },
+        authContext
+      )
+    ).rejects.toThrow('Only JPG or PNG photos can be uploaded.');
+    expect(mockDeleteFile).toHaveBeenCalledWith('farms/farm-1/img-uuid');
+    expect(mockCreateImageRecord).not.toHaveBeenCalled();
+  });
+
+  test('records the size storage reports, not the size the client claims', async () => {
+    mockGetFileSize.mockResolvedValue(4096);
+
+    await mutation.uploadImageToFarm(undefined, { input: baseInput }, authContext);
+
+    expect(mockCreateImageRecord).toHaveBeenCalledWith(
+      'img-uuid',
+      'farm-1',
+      'farms/farm-1/img-uuid',
+      'image/jpeg',
+      4096,
+      { width: 100, height: 200 },
+      7
+    );
   });
 });
 
