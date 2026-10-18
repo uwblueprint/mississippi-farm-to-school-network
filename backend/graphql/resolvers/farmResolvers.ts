@@ -19,9 +19,12 @@ import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
 import logger from '@/utilities/logger';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import { createFileStorageService } from '@/utilities/fileStorage';
+import IFileStorageService from '@/services/interfaces/fileStorageService';
 
 const Logger = logger(__filename);
 const farmService: IFarmService = new FarmService();
+const fileStorageService: IFileStorageService = createFileStorageService();
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
@@ -78,8 +81,8 @@ const farmResolvers = {
 
       return farmService.getFarms(pageNumber, pageSize, filter);
     },
-    // The authenticated user's own farms across ALL statuses (the public `farms`
-    // query clamps non-admins to APPROVED, so it can't back a farmer dashboard).
+    // The authenticated user's own farms across every status except DELETED (the public
+    // `farms` query clamps non-admins to APPROVED, so it can't back a farmer dashboard).
     myFarms: async (
       _parent: undefined,
       _args: undefined,
@@ -95,8 +98,11 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO[]> => {
       const user = await authHelper.requireAuth(context);
-      const farms = await farmService.getFarmsByOwner(user.id);
-      return farms.filter((farm) => farm.is_archived && farm.deletion_approved_at);
+      // Approved deletions are soft-deleted, which getFarmsByOwner hides by default.
+      const farms = await farmService.getFarmsByOwner(user.id, { includeDeleted: true });
+      return farms.filter(
+        (farm) => farm.status === FarmStatus.DELETED && Boolean(farm.deletion_approved_at)
+      );
     },
     farmDeletionRequests: async (
       _parent: undefined,
@@ -254,6 +260,39 @@ const farmResolvers = {
     ): Promise<FarmDTO> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
       return farmService.unarchiveFarm(id);
+    },
+
+    deleteFarm: async (
+      _parent: undefined,
+      { id, reason }: { id: string; reason?: string | null },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.deleteFarm(id, reason);
+    },
+
+    restoreFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      return farmService.restoreFarm(id);
+    },
+
+    permanentlyDeleteFarm: async (
+      _parent: undefined,
+      { id }: { id: string },
+      context: AuthContext
+    ): Promise<string> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+      const storageKeys = await farmService.permanentlyDeleteFarm(id);
+
+      // The records are already gone, so a blob that fails to delete is only an
+      // orphaned file; the storage layer logs the reason.
+      await Promise.allSettled(storageKeys.map((key) => fileStorageService.deleteFile(key)));
+
+      return id;
     },
 
     requestFarmDeletion: async (

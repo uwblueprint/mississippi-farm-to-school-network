@@ -1,4 +1,9 @@
-import type { InactiveFarmKind, PendingRequestType, RequestSort } from '$lib/types/admin';
+import type {
+	PendingRequestType,
+	RemovedFarmFilter,
+	RemovedFarmKind,
+	RequestSort
+} from '$lib/types/admin';
 import type { FarmTag } from '$lib/types/farm';
 
 export const REQUEST_TYPE_LABEL: Record<PendingRequestType, string> = {
@@ -42,18 +47,15 @@ export const ADMIN_FILTER_LABELS: Record<'ALL' | PendingRequestType, string> = {
 	DELETION_REQUEST: 'Deletion Requests'
 };
 
-export const INACTIVE_KIND_LABEL: Record<InactiveFarmKind, string> = {
-	DELETED: 'Deleted',
+export const REMOVED_FARM_FILTER_LABELS: Record<RemovedFarmFilter, string> = {
+	ALL: 'All',
+	ARCHIVED: 'Archived Farms',
+	DELETED: 'Deleted Farms',
 	CHANGES_REQUESTED: 'Changes Requested'
 };
 
-export const INACTIVE_KIND_MODIFIER: Record<InactiveFarmKind, string> = {
-	DELETED: 'deleted',
-	CHANGES_REQUESTED: 'changes-requested'
-};
-
-export const INACTIVE_FILTER_LABELS: Record<'ALL' | InactiveFarmKind, string> = {
-	ALL: 'All Farms',
-	DELETED: 'Deleted',
-	CHANGES_REQUESTED: 'Changes Requested'
+export const REMOVED_FARM_BADGE: Record<RemovedFarmKind, { label: string; modifier: string }> = {
+	ARCHIVED: { label: 'Archived Farm', modifier: 'archived' },
+	DELETED: { label: 'Deleted Farm', modifier: 'deleted' },
+	CHANGES_REQUESTED: { label: 'Changes Requested', modifier: 'changes-requested' }
 };

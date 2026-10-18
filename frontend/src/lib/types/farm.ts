@@ -1,4 +1,4 @@
-export type FarmStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+export type FarmStatus = 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED' | 'DELETED';
 
 export type FarmMarkerType = 'farm' | 'market' | 'processing' | 'csa' | 'pickup';
 

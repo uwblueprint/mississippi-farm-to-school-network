@@ -7,6 +7,7 @@ const farmType = gql`
     PENDING_APPROVAL
     APPROVED
     REJECTED
+    DELETED
   }
 
   type Location {
@@ -57,12 +58,16 @@ const farmType = gql`
     or approval. Distinguishes a first-time application from a resubmitted one.
     """
     was_previously_rejected: Boolean!
+    "When the farm was soft-deleted; null unless status is DELETED."
+    deleted_at: String
+    "Why the farm was deleted, if a reason was given; null unless status is DELETED."
+    deletion_reason: String
     """
     Set while the owner's deletion request awaits admin review. The farm keeps
     its status (and its map listing) until the deletion is approved.
     """
     deletion_requested_at: String
-    "Set when an admin approves the deletion; the farm is archived at the same time."
+    "Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) then."
     deletion_approved_at: String
     createdAt: String!
     updatedAt: String!
@@ -181,6 +186,9 @@ const farmType = gql`
     resubmitFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     archiveFarm(id: ID!): FarmDTO!
     unarchiveFarm(id: ID!): FarmDTO!
+    deleteFarm(id: ID!, reason: String): FarmDTO!
+    restoreFarm(id: ID!): FarmDTO!
+    permanentlyDeleteFarm(id: ID!): ID!
     requestFarmDeletion(id: ID!): FarmDTO!
     approveFarmDeletion(id: ID!): FarmDTO!
     denyFarmDeletion(id: ID!): FarmDTO!

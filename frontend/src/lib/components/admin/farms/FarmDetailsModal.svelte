@@ -27,12 +27,8 @@
 	interface Props {
 		farmId: string;
 		onClose: () => void;
-		/** Called after the farm is archived so the parent can refresh its list. */
-		onArchived?: (farmId: string) => void;
-		/** The farm is archived: offer "Restore" instead of "Delete". */
-		archived?: boolean;
-		/** Called after an archived farm is restored so the parent can refresh its list. */
-		onRestored?: (farmId: string) => void;
+		/** Called after the farm is archived or deleted so the parent can refresh its list. */
+		onRemoved?: (farmId: string) => void;
 		/** Path to return to after editing the farm. */
 		returnTo?: string;
 		/** Where the farm is removed from when deleted, shown in the confirmation. */
@@ -42,9 +38,7 @@
 	let {
 		farmId,
 		onClose,
-		onArchived,
-		archived = false,
-		onRestored,
+		onRemoved,
 		returnTo = '/admin/farms',
 		removalContext = 'the farms list'
 	}: Props = $props();
@@ -57,7 +51,6 @@
 	const { details: detailSections, aside: asideSections } = $derived(splitReviewSections(sections));
 	const statusLabel = $derived.by(() => {
 		if (!farm) return '';
-		if (archived) return `Deleted ${formatFullDate(farm.updatedAt)}`;
 		if (farm.status === 'REJECTED') return `Changes requested ${formatFullDate(farm.updatedAt)}`;
 		return `Active since ${formatFullDate(farm.createdAt)}`;
 	});
@@ -94,9 +87,7 @@
 	menuDisabled={loading || Boolean(loadError)}
 	busy={loading}
 	{onClose}
-	{onArchived}
-	{archived}
-	{onRestored}
+	{onRemoved}
 >
 	{#snippet children()}
 		{#if loading}

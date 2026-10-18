@@ -206,6 +206,14 @@
 	outline-offset: 2px;
 }
 
+.request-card--static {
+	cursor: default;
+}
+
+.request-card--static:hover {
+	border-color: var(--color-neutral-300, #d3d5de);
+}
+
 .request-card__meta {
 	display: flex;
 	align-items: center;
@@ -332,6 +340,11 @@
 .request-pill--updated-application {
 	background: #feeed5;
 	color: #c07505;
+}
+
+.request-pill--archived {
+	background: #f5f6f8;
+	color: #61636d;
 }
 
 .request-pill--deleted,
@@ -992,7 +1005,8 @@
 }
 
 .review-application-card__approve,
-.review-application-card__changes {
+.review-application-card__changes,
+.review-application-card__danger {
 	flex: 1 1 0;
 	display: inline-flex;
 	align-items: center;
@@ -1011,7 +1025,8 @@
 }
 
 .review-application-card__approve:disabled,
-.review-application-card__changes:disabled {
+.review-application-card__changes:disabled,
+.review-application-card__danger:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }
@@ -1034,6 +1049,16 @@
 
 .review-application-card__changes:hover {
 	background: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
+}
+
+.review-application-card__danger {
+	border: none;
+	background: var(--mfsn-secondary-500, #d9544c);
+	color: #ffffff;
+}
+
+.review-application-card__danger:hover:not(:disabled) {
+	background: var(--mfsn-secondary-600, #b8443d);
 }
 
 .review-application-card__approve img,
@@ -1679,7 +1704,7 @@
 	}
 }
 
-/* Deleted & Pending Farms: Restore sits on the card, left of the chevron. */
+/* Deleted & Archived Farms: Restore sits on the card, left of the chevron. */
 .inactive-card {
 	position: relative;
 }

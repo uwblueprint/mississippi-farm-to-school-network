@@ -56,14 +56,23 @@ export type PendingRequest = {
 
 export type RequestFilter = 'ALL' | PendingRequestType;
 
-/** Why a farm is off the map: archived by an admin, or sent back to the farmer for edits. */
-export type InactiveFarmKind = 'DELETED' | 'CHANGES_REQUESTED';
+export type RequestSort = 'NEWEST' | 'OLDEST' | 'NAME_ASC';
 
-export type InactiveFarm = {
-	kind: InactiveFarmKind;
-	farm: PendingFarmDto;
+export type RemovedFarmKind = 'ARCHIVED' | 'DELETED' | 'CHANGES_REQUESTED';
+
+export type RemovedFarmDto = PendingFarmDto & {
+	is_archived: boolean;
+	deleted_at: string | null;
+	deletion_reason: string | null;
 };
 
-export type InactiveFarmFilter = 'ALL' | InactiveFarmKind;
+/**
+ * A farm shown on the Deleted & Archived page. A farm that is both deleted and archived
+ * counts as DELETED; CHANGES_REQUESTED is a rejected farm awaiting resubmission.
+ */
+export type RemovedFarm = {
+	kind: RemovedFarmKind;
+	farm: RemovedFarmDto;
+};
 
-export type RequestSort = 'NEWEST' | 'OLDEST' | 'NAME_ASC';
+export type RemovedFarmFilter = 'ALL' | RemovedFarmKind;

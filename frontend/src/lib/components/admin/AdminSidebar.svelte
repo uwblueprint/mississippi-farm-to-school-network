@@ -12,7 +12,7 @@
 		{ href: '/admin', label: 'Pending Requests' },
 		{ href: '/admin/farms', label: 'Farms' },
 		{ href: '/admin/announcements', label: 'Manage Announcements' },
-		{ href: '/admin/archived', label: 'Deleted & Pending Farms' }
+		{ href: '/admin/archived', label: 'Deleted & Archived Farms' }
 	];
 
 	function isCurrent(href: string): boolean {
@@ -43,6 +43,6 @@
 
 	<div class="admin-sidebar__bottom">
 		<hr class="admin-sidebar__divider" />
-		<ProfileMenu name={adminName} role="Admin" profileHref="/admin/settings" showAvatar={false} />
+		<ProfileMenu name={adminName} role="Admin" profileHref="/admin/settings" />
 	</div>
 </aside>

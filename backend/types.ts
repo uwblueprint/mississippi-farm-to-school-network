@@ -57,6 +57,7 @@ export enum FarmStatus {
   PENDING_APPROVAL = 'PENDING_APPROVAL',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
+  DELETED = 'DELETED',
 }
 
 export enum Role {
@@ -162,10 +163,13 @@ export type FarmDTO = {
   // or approval. Used to distinguish a first-time application from a resubmitted
   // one — createdAt/updatedAt differ on any edit, not just a post-rejection one.
   was_previously_rejected: boolean;
+  // Set when the farm is soft-deleted (status DELETED); cleared on restore.
+  deleted_at: string | null;
+  deletion_reason: string | null;
   // Set while the owner's deletion request awaits admin review. The farm keeps
   // its status (and its map listing) until an admin approves the deletion.
   deletion_requested_at: string | null;
-  // Set when an admin approves the deletion; the farm is archived at the same time.
+  // Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) at the same time.
   deletion_approved_at: string | null;
   createdAt: string;
   updatedAt: string;

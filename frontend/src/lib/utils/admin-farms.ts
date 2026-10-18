@@ -178,38 +178,41 @@ export function shortCharacteristic(label: string): string {
 		.replace(/^Young Farmer \(.*\)$/, 'Young Farmer');
 }
 
-export function formatInterest(sales: string[]): string {
+/** Placeholder the admin table shows for a column with no value. */
+const EMPTY_CELL = '—';
+
+export function formatInterest(sales: string[], empty = EMPTY_CELL): string {
 	const k12 = hasOption(sales, INTEREST_K12);
 	const ece = hasOption(sales, INTEREST_ECE);
 	if (k12 && ece) return 'Schools & ECE';
 	if (k12) return 'K-12 Schools';
 	if (ece) return 'ECE Programs';
-	return '—';
+	return empty;
 }
 
-export function formatSeasonalProduce(farm: AdminFarmRow): string {
+export function formatSeasonalProduce(farm: AdminFarmRow, empty = EMPTY_CELL): string {
 	const detail = farm.seasonal_products_detail?.trim();
 	if (detail) return detail;
 	const products = farm.seasonal_products.filter((p) => p !== NONE_OF_THE_ABOVE);
-	return products.length ? products.join(', ') : '—';
+	return products.length ? products.join(', ') : empty;
 }
 
-export function formatAgritourism(farm: AdminFarmRow): string {
+export function formatAgritourism(farm: AdminFarmRow, empty = EMPTY_CELL): string {
 	const agritourism = AGRITOURISM_EXPERIENCES.filter((opt) =>
 		hasOption(farm.farm_experiences, opt)
 	);
-	return agritourism.length ? agritourism.join(', ') : '—';
+	return agritourism.length ? agritourism.join(', ') : empty;
 }
 
-export function formatFarmersMarkets(farm: AdminFarmRow): string {
+export function formatFarmersMarkets(farm: AdminFarmRow, empty = EMPTY_CELL): string {
 	const markets = (farm.market_sales_data ?? []).map((m) => m.market).filter(Boolean);
 	if (markets.length) return markets.join(', ');
 	if (hasOption(farm.farm_experiences, FARM_STAND)) return FARM_STAND;
-	return '—';
+	return empty;
 }
 
-export function formatExperience(farm: AdminFarmRow): string {
-	return farm.f2s_experience?.trim() || '—';
+export function formatExperience(farm: AdminFarmRow, empty = EMPTY_CELL): string {
+	return farm.f2s_experience?.trim() || empty;
 }
 
 export function farmMatchesSearch(farm: AdminFarmRow, search: string): boolean {

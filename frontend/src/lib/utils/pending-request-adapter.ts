@@ -110,6 +110,15 @@ export const ARCHIVE_FARM_MUTATION = `
 	}
 `;
 
+export const DELETE_FARM_MUTATION = `
+	mutation DeleteFarm($id: ID!) {
+		deleteFarm(id: $id) {
+			id
+			status
+		}
+	}
+`;
+
 export const UNARCHIVE_FARM_MUTATION = `
 	mutation UnarchiveFarm($id: ID!) {
 		unarchiveFarm(id: $id) {
@@ -123,7 +132,7 @@ export const APPROVE_FARM_DELETION_MUTATION = `
 	mutation ApproveFarmDeletion($id: ID!) {
 		approveFarmDeletion(id: $id) {
 			id
-			is_archived
+			status
 		}
 	}
 `;

@@ -12,11 +12,9 @@
 		profileHref: string;
 		/** Headshot URL; omitted -> initial-letter avatar. */
 		avatarUrl?: string;
-		/** The admin sidebar's design has no avatar. */
-		showAvatar?: boolean;
 	}
 
-	let { name, role, profileHref, avatarUrl, showAvatar = true }: Props = $props();
+	let { name, role, profileHref, avatarUrl }: Props = $props();
 
 	let open = $state(false);
 	let loggingOut = $state(false);
@@ -74,14 +72,12 @@
 		aria-expanded={open}
 		onclick={() => (open = !open)}
 	>
-		{#if showAvatar}
-			{#if avatarUrl}
-				<span class="profile-menu__avatar" style="background-image: url('{avatarUrl}')"></span>
-			{:else}
-				<span class="profile-menu__avatar profile-menu__avatar--initial" aria-hidden="true">
-					{name.charAt(0).toUpperCase()}
-				</span>
-			{/if}
+		{#if avatarUrl}
+			<span class="profile-menu__avatar" style="background-image: url('{avatarUrl}')"></span>
+		{:else}
+			<span class="profile-menu__avatar profile-menu__avatar--initial" aria-hidden="true">
+				{name.charAt(0).toUpperCase()}
+			</span>
 		{/if}
 		<span class="profile-menu__text">
 			<span class="profile-menu__name">{name}</span>

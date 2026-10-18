@@ -61,12 +61,13 @@ interface IFarmService {
   getFarmsByStatus(status: FarmStatus): Promise<FarmDTO[]>;
 
   /**
-   * Get all farms owned by a user, across every status
+   * Get all farms owned by a user, across every status except DELETED (unless
+   * includeDeleted is set)
    * @param ownerUserId the owner's user id
    * @returns array of FarmDTOs
    * @throws Error if farm retrieval fails
    */
-  getFarmsByOwner(ownerUserId: string): Promise<FarmDTO[]>;
+  getFarmsByOwner(ownerUserId: string, options?: { includeDeleted?: boolean }): Promise<FarmDTO[]>;
 
   /**
    * Update a farm's status to APPROVED & attempt to email farm owner
@@ -96,6 +97,38 @@ interface IFarmService {
   unarchiveFarm(farmId: string): Promise<FarmDTO>;
 
   /**
+   * Soft-delete a farm by setting its status to DELETED, so it drops out of every
+   * public listing (they only return APPROVED farms) while staying restorable.
+   * A no-op if the farm is already deleted.
+   * @param farmId farm's id
+   * @param reason optional reason for the deletion, shown to admins
+   * @returns the updated FarmDTO with status DELETED and deleted_at set
+   * @throws Error if the farm does not exist or the update fails
+   */
+  deleteFarm(farmId: string, reason?: string | null): Promise<FarmDTO>;
+
+  /**
+   * Restore a soft-deleted farm to the status it had before it was deleted (APPROVED
+   * for farms deleted before that was recorded), not archived, and the deletion
+   * fields cleared. A no-op if the farm is not deleted.
+   * @param farmId farm's id
+   * @returns the updated FarmDTO
+   * @throws Error if the farm does not exist or the update fails
+   */
+  restoreFarm(farmId: string): Promise<FarmDTO>;
+
+  /**
+   * Permanently remove a farm along with its USDA ID reservation, rejection history,
+   * and image/file records. Only farms that are already deleted or archived can be
+   * removed, so an active farm can't be wiped in one step. Not reversible.
+   * Does not touch Cloud Storage; the caller deletes the returned blobs.
+   * @param farmId farm's id
+   * @returns the storage keys of the removed image and file records
+   * @throws Error if the farm does not exist or is neither deleted nor archived
+   */
+  permanentlyDeleteFarm(farmId: string): Promise<string[]>;
+
+  /**
    * Flag a farm for deletion at its owner's request. The farm keeps its status
    * (and stays on the map) until an admin approves the deletion.
    * @param farmId farm's id
@@ -105,7 +138,8 @@ interface IFarmService {
   requestFarmDeletion(farmId: string): Promise<FarmDTO>;
 
   /**
-   * Approve a pending deletion request: archives the farm and stamps deletion_approved_at.
+   * Approve a pending deletion request: soft-deletes the farm (as deleteFarm does) and
+   * stamps deletion_approved_at.
    * @param farmId farm's id
    * @throws Error if the farm has no pending deletion request or the update fails
    */
