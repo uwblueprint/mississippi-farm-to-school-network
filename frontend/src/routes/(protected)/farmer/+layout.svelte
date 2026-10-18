@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import ToastHost from '$lib/components/ToastHost.svelte';
 	import { resolveUserRole } from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
 	import { loadProfile, profile, profileFullName, roleLabel } from '$lib/state/profile.svelte';
@@ -37,6 +38,7 @@
 		{@render children()}
 	</main>
 </div>
+<ToastHost />
 
 <style>
 	.dashboard {

@@ -8,6 +8,7 @@
 	import { preparePhotos } from '$lib/utils/prepare-photo';
 	import { IMAGE_ACCEPT, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
 	import { refreshAuthTokenCookie } from '$lib/auth';
+	import { showToast } from '$lib/state/toast.svelte';
 	import { COUNTIES } from '$lib/data/msCounties';
 	import {
 		NONE_OF_THE_ABOVE,
@@ -439,10 +440,15 @@
 					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
 				} catch (photoError) {
 					submitted = true;
-					submitError =
+					// Toast rather than submitError: we navigate away right after, and the
+					// farmer layout's ToastHost survives the redirect.
+					showToast(
+						'error',
 						photoError instanceof Error
-							? `${photoError.message} Your farm was created; you can add photos later.`
-							: 'Farm created, but photo upload failed. You can add photos later.';
+							? `${photoError.message} You can add photos from the farm's edit page.`
+							: "Photo upload failed. You can add photos from the farm's edit page.",
+						'Farm created'
+					);
 				}
 			}
 
