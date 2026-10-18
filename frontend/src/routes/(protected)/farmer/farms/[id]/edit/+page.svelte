@@ -85,7 +85,7 @@
 	const galleryPhotos = $derived(data.gallery.map((img) => ({ id: img.fileId, url: img.url })));
 	const galleryIds = $derived(data.galleryIds);
 	const coverId = $derived(data.coverId);
-	const dashboardImageName = $derived(data.cover?.originalFileName ?? '');
+	const dashboardImage = $derived(data.cover);
 
 	const MAX_GALLERY_PHOTOS = 10;
 
@@ -348,8 +348,12 @@
 			onFiles={handleCoverFiles}
 			disabled={uploading}
 		/>
-		{#if dashboardImageName}
-			<span class="file-link">{dashboardImageName}</span>
+		{#if dashboardImage?.url}
+			<img
+				class="dashboard-image"
+				src={dashboardImage.url}
+				alt={dashboardImage.originalFileName || 'Current dashboard image'}
+			/>
 		{/if}
 	</section>
 
@@ -601,15 +605,14 @@
 		gap: 18px 20px;
 	}
 
-	.file-link {
-		margin-top: -10px;
-		color: #3742b4;
-		font-size: 14px;
-		font-weight: 400;
-		line-height: normal;
-		text-decoration-line: underline;
-		text-underline-position: from-font;
-		width: fit-content;
+	.dashboard-image {
+		width: 100%;
+		aspect-ratio: 482 / 225;
+		object-fit: cover;
+		border-radius: 12px;
+		border: 1px solid #d8d8d8;
+		background: #e6e6e6;
+		display: block;
 	}
 
 	.footer-actions {
