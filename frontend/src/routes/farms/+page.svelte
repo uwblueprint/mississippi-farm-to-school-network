@@ -6,8 +6,15 @@
 	import FarmMap from '$lib/components/map/FarmMap.svelte';
 	import AnnouncementBar from '$lib/components/map/AnnouncementBar.svelte';
 	import { setAnnouncements } from '$lib/state/announcementBar.svelte';
-	import { requestUserLocation } from '$lib/state/geolocation.svelte';
+	import { requestUserLocation, userLocation } from '$lib/state/geolocation.svelte';
 	import { farmDtoToMapFarm, type FarmDto } from '$lib/utils/farm-adapter';
+	import {
+		EMPTY_FARM_FILTERS,
+		filterFarms,
+		sortFarms,
+		type FarmFilters,
+		type FarmSortKey
+	} from '$lib/utils/farm-filters';
 	import { resolveFarmDisplayImages } from '$lib/utils/farm-images';
 	import type { MapFarm } from '$lib/types/farm';
 	import '$lib/styles/map/farm-map.css';
@@ -17,6 +24,13 @@
 	let farms = $state<MapFarm[]>([]);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
+	let filters = $state<FarmFilters>({ ...EMPTY_FARM_FILTERS });
+	let sortBy = $state<FarmSortKey | null>(null);
+
+	// Filter first, then sort; both the list and the map show this subset.
+	const visibleFarms = $derived(
+		sortFarms(filterFarms(farms, filters, userLocation.coords), sortBy, userLocation.coords)
+	);
 
 	async function loadAnnouncements() {
 		try {
@@ -71,9 +85,22 @@
 <div class="farm-map-shell">
 	<AnnouncementBar onLayoutChange={() => map?.resize()} />
 	<div class="farm-map-page">
-		<FarmListSidebar {farms} bind:selectedFarmId {map} {loading} error={loadError} />
+		<FarmListSidebar
+			farms={visibleFarms}
+			totalCount={farms.length}
+			bind:filters
+			bind:sortBy
+			bind:selectedFarmId
+			{map}
+			{loading}
+			error={loadError}
+		/>
 		<div class="farm-map-panel">
-			<FarmMap {farms} bind:selectedFarmId onMapReady={(instance) => (map = instance)} />
+			<FarmMap
+				farms={visibleFarms}
+				bind:selectedFarmId
+				onMapReady={(instance) => (map = instance)}
+			/>
 		</div>
 	</div>
 </div>

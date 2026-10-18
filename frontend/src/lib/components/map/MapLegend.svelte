@@ -3,23 +3,51 @@
 
 	const LEGEND_ITEMS = MARKER_TYPE_ORDER.map((type) => ({ type, ...MARKER_META[type] }));
 
+	const CLOSE_DELAY_MS = 150;
+
 	let open = $state(false);
+	let closeTimer: ReturnType<typeof setTimeout> | undefined;
+
+	function show() {
+		clearTimeout(closeTimer);
+		open = true;
+	}
+
+	function scheduleClose() {
+		clearTimeout(closeTimer);
+		closeTimer = setTimeout(() => (open = false), CLOSE_DELAY_MS);
+	}
+
+	function handleFocusOut(event: FocusEvent) {
+		const container = event.currentTarget as HTMLElement;
+		if (!container.contains(event.relatedTarget as Node | null)) {
+			open = false;
+		}
+	}
+
+	function handleWindowKeydown(event: KeyboardEvent) {
+		if (event.key === 'Escape') open = false;
+	}
+
+	$effect(() => () => clearTimeout(closeTimer));
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
 	class="farm-map-legend"
 	role="group"
-	onmouseenter={() => (open = true)}
-	onmouseleave={() => (open = false)}
+	onmouseenter={show}
+	onmouseleave={scheduleClose}
+	onfocusin={show}
+	onfocusout={handleFocusOut}
 >
 	<button
 		type="button"
 		class="farm-map-legend__trigger"
 		aria-label="Show map legend"
 		aria-expanded={open}
-		onfocus={() => (open = true)}
-		onblur={() => (open = false)}
-		onclick={() => (open = !open)}
+		onclick={show}
 	>
 		i
 	</button>

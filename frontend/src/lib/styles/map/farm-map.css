@@ -51,6 +51,26 @@
 	min-width: 0;
 }
 
+.farm-map-sidebar__back {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+	width: 2.25rem;
+	height: 2.25rem;
+	margin-right: -1rem;
+	border-radius: 50%;
+	font-size: 1.75rem;
+	line-height: 1;
+	color: #111;
+	text-decoration: none;
+}
+
+.farm-map-sidebar__back:hover {
+	color: #587244;
+	background: #f3f6f0;
+}
+
 .farm-map-sidebar__title {
 	margin: 0;
 	font-family: 'Figtree', 'DM Sans', sans-serif;
@@ -80,6 +100,47 @@
 	font-size: 0.9375rem;
 	color: #5c6370;
 	line-height: 1.4;
+}
+
+.farm-map-sidebar__filters {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.5rem;
+}
+
+.farm-map-sidebar__filters-label {
+	margin-right: 0.125rem;
+	font-size: 1rem;
+	color: #9ea0ad;
+	white-space: nowrap;
+}
+
+.farm-map-sidebar__clear {
+	padding: 0.25rem 0.5rem;
+	border: none;
+	background: none;
+	font-family: inherit;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #587244;
+	text-decoration: underline;
+	cursor: pointer;
+}
+
+.farm-map-sidebar__status .farm-map-sidebar__clear {
+	margin-top: 0.5rem;
+	padding: 0;
+}
+
+.farm-map-sidebar__status p {
+	margin: 0;
+}
+
+.farm-map-sidebar__hint {
+	margin: -0.75rem 0 0;
+	font-size: 0.8125rem;
+	color: #6b5a2e;
 }
 
 .farm-map-sidebar__status--error {
@@ -174,6 +235,15 @@
 	display: flex;
 	flex-direction: column;
 	gap: 16px;
+}
+
+.farm-map-legend__popup::before {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 100%;
+	height: 12px;
 }
 
 .farm-map-legend__title {
