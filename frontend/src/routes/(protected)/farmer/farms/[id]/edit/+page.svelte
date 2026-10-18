@@ -457,9 +457,6 @@
 	</section>
 
 	<div class="footer-actions">
-		<ActionButton variant="primary" type="submit" block disabled={saving}
-			>{saving ? 'Saving…' : 'Save'}</ActionButton
-		>
 		{#if data.deletionRequested}
 			<p class="deletion-pending" role="status">
 				Deletion requested — MFSN will review it shortly. Your farm stays on the map until then.
