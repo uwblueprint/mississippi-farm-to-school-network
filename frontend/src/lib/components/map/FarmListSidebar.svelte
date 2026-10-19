@@ -3,7 +3,7 @@
 
 	import AnnouncementLauncher from '$lib/components/map/AnnouncementLauncher.svelte';
 	import FarmDetailPanel from '$lib/components/map/FarmDetailPanel.svelte';
-	import FarmListItem from '$lib/components/map/FarmListItem.svelte';
+	import FarmResultsList from '$lib/components/map/FarmResultsList.svelte';
 	import FarmSearch from '$lib/components/map/FarmSearch.svelte';
 	import FilterMenu from '$lib/components/map/FilterMenu.svelte';
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
@@ -13,18 +13,14 @@
 		EMPTY_FARM_FILTERS,
 		INSTITUTION_TYPE_OPTIONS,
 		PRODUCT_OPTIONS,
+		SORT_OPTIONS,
 		TAG_OPTIONS,
+		getLocationNote,
 		hasActiveFilters,
 		type FarmFilters,
 		type FarmSortKey
 	} from '$lib/utils/farm-filters';
 	import type { MapFarm } from '$lib/types/farm';
-
-	const MAP_SORT_ITEMS = [
-		{ value: 'distance', label: 'Distance' },
-		{ value: 'name-asc', label: 'Name (A–Z)' },
-		{ value: 'name-desc', label: 'Name (Z–A)' }
-	];
 
 	interface Props {
 		farms: MapFarm[];
@@ -50,18 +46,7 @@
 		error = null
 	}: Props = $props();
 
-	const locationNote = $derived.by(() => {
-		switch (userLocation.status) {
-			case 'granted':
-				return undefined;
-			case 'denied':
-				return 'Allow location access in your browser to filter and sort by distance.';
-			case 'unavailable':
-				return "Your browser doesn't support location, so distance can't be used.";
-			default:
-				return 'Waiting for your location…';
-		}
-	});
+	const locationNote = $derived(getLocationNote(userLocation.status));
 
 	const getDistanceSelection = () => (filters.maxDistance === null ? [] : [filters.maxDistance]);
 	const setDistanceSelection = (next: number[]) => (filters.maxDistance = next[0] ?? null);
@@ -129,7 +114,7 @@
 				</div>
 
 				<SortDropdown
-					items={MAP_SORT_ITEMS}
+					items={SORT_OPTIONS}
 					bind:selected={getSortBy, setSortBy}
 					showSelectedLabel
 					ariaLabel="Sort farms by"
@@ -164,24 +149,15 @@
 		</div>
 
 		<div class="farm-map-sidebar__list">
-			{#if loading}
-				<p class="farm-map-sidebar__status">Loading farms…</p>
-			{:else if error}
-				<p class="farm-map-sidebar__status farm-map-sidebar__status--error">{error}</p>
-			{:else if totalCount === 0}
-				<p class="farm-map-sidebar__status">No approved farms to show yet.</p>
-			{:else if farms.length === 0}
-				<div class="farm-map-sidebar__status">
-					<p>No farms match these filters.</p>
-					<button type="button" class="farm-map-sidebar__clear" onclick={clearFilters}>
-						Clear filters
-					</button>
-				</div>
-			{:else}
-				{#each farms as farm (farm.id)}
-					<FarmListItem {farm} selected={selectedFarmId === farm.id} onSelect={handleSelect} />
-				{/each}
-			{/if}
+			<FarmResultsList
+				{farms}
+				{totalCount}
+				{selectedFarmId}
+				{loading}
+				{error}
+				onSelect={handleSelect}
+				onClearFilters={clearFilters}
+			/>
 		</div>
 	{/if}
 </aside>
