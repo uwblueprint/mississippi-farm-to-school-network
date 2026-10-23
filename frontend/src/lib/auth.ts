@@ -15,8 +15,11 @@ import {
 import { getFirebaseAuth } from '$lib/firebase';
 import type { UserRole } from '$lib/types/admin';
 
-// Domain only, no "@" (must match the backend's ADMIN_EMAIL_DOMAIN).
-const ADMIN_EMAIL_DOMAIN = import.meta.env.VITE_PUBLIC_ADMIN_EMAIL_DOMAIN?.trim().toLowerCase();
+// Comma-separated domains, no "@" (must match the backend's ADMIN_EMAIL_DOMAIN).
+const ADMIN_EMAIL_DOMAINS: string[] = String(import.meta.env.VITE_PUBLIC_ADMIN_EMAIL_DOMAIN ?? '')
+	.split(',')
+	.map((domain) => domain.trim().toLowerCase())
+	.filter(Boolean);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Cookie name expected by SvelteKit server routes (`create-farm`, `new-farm` layout). */
 export const AUTH_TOKEN_COOKIE = 'token';
@@ -98,8 +101,8 @@ function isAuthError(error: unknown): error is AuthError {
 }
 
 export function isAdminEmail(email: string): boolean {
-	if (!ADMIN_EMAIL_DOMAIN) return false;
-	return email.trim().toLowerCase().endsWith(`@${ADMIN_EMAIL_DOMAIN}`);
+	const normalized = email.trim().toLowerCase();
+	return ADMIN_EMAIL_DOMAINS.some((domain) => normalized.endsWith(`@${domain}`));
 }
 
 export async function getPostAuthDestination(user: User): Promise<string> {

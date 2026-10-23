@@ -231,6 +231,32 @@ describe('authHelper (Firebase Auth)', () => {
     ).resolves.toMatchObject({ role: Role.ADMIN });
   });
 
+  test('ADMIN_EMAIL_DOMAIN accepts a comma-separated list of domains', async () => {
+    process.env.ADMIN_EMAIL_DOMAIN = 'mississippifarmtoschool.org, uwaterloo.ca';
+
+    for (const email of ['staff@mississippifarmtoschool.org', 'tester@uwaterloo.ca']) {
+      mockGetUser.mockResolvedValue({
+        uid: 'firebase-multi',
+        email,
+        emailVerified: true,
+        customClaims: {},
+      });
+      await expect(
+        authHelper.requireAuth({ firebaseUid: 'firebase-multi' })
+      ).resolves.toMatchObject({ role: Role.ADMIN });
+    }
+
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-multi',
+      email: 'farmer@gmail.com',
+      emailVerified: true,
+      customClaims: {},
+    });
+    await expect(authHelper.requireAuth({ firebaseUid: 'firebase-multi' })).resolves.toMatchObject({
+      role: Role.FARMER,
+    });
+  });
+
   test('no email is treated as admin when ADMIN_EMAIL_DOMAIN is unset', async () => {
     delete process.env.ADMIN_EMAIL_DOMAIN;
     mockGetUser.mockResolvedValue({
