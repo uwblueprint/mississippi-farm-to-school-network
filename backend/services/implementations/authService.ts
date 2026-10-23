@@ -146,6 +146,48 @@ class AuthService implements IAuthService {
       throw error;
     }
   }
+
+  async sendFarmAddedEmail(email: string, farmName: string, isNewAccount: boolean): Promise<void> {
+    if (!this.emailService) {
+      const errorMessage =
+        'Attempted to call sendFarmAddedEmail but this instance of AuthService does not have an EmailService instance';
+      Logger.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+
+    const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
+
+    try {
+      if (isNewAccount) {
+        const resetLink = await firebaseAdmin.auth().generatePasswordResetLink(email);
+        await this.emailService.sendEmail(email, 'Set your password for your farm account', {
+          recipientName: email,
+          title: 'Set your password',
+          previewText: `${farmName} has been added to your account.`,
+          body: `A Mississippi Farm to School Network admin has created an account for you and added ${farmName}. Use the button below to set a password and sign in. This link is only valid for 1 hour; if it expires, request a new one from the "Forgot password" page. If you already signed up with this email, you can just sign in with your existing password instead.`,
+          ctaText: 'Set password',
+          ctaUrl: resetLink,
+          isFarmerEmail: true,
+        });
+        return;
+      }
+
+      await this.emailService.sendEmail(email, 'A farm was added to your account', {
+        recipientName: email,
+        title: 'A farm was added to your account',
+        previewText: `${farmName} has been added to your account.`,
+        body: `A Mississippi Farm to School Network admin has added ${farmName} to your account. Sign in to view it on your dashboard. Your password has not changed.`,
+        ctaText: 'Sign in',
+        ctaUrl: `${frontendUrl}/login`,
+        isFarmerEmail: true,
+      });
+    } catch (error) {
+      Logger.error(
+        `Failed to send farm added email to ${email}. Reason = ${getErrorMessage(error)}`
+      );
+      throw error;
+    }
+  }
 }
 
 export default AuthService;

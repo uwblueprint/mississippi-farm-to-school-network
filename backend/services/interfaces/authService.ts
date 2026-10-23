@@ -50,6 +50,17 @@ interface IAuthService {
    * @throws Error if unable to generate link or send email
    */
   sendEmailVerificationLink(email: string): Promise<void>;
+
+  /**
+   * Tell a farmer that an admin added a farm to their account. For a brand-new account the
+   * email carries a link to set a password; for an existing account it only points to the
+   * sign-in page, so their password is never touched.
+   * @param email the farmer's email
+   * @param farmName name of the farm that was added
+   * @param isNewAccount whether the account was created for this farm
+   * @throws Error if unable to generate the link or send the email
+   */
+  sendFarmAddedEmail(email: string, farmName: string, isNewAccount: boolean): Promise<void>;
 }
 
 export default IAuthService;
