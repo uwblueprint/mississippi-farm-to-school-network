@@ -256,7 +256,11 @@ class UserService implements IUserService {
         if (existing.role !== Role.FARMER) {
           throw new Error(`The account for ${email} is not a farmer account.`);
         }
-        return { user: existing, isNewAccount: false };
+        // An account nobody has signed in to yet (e.g. one created for an earlier farm that
+        // failed or went unnoticed) has no password the farmer knows, so it still needs a link.
+        const { metadata } = await firebaseAdmin.auth().getUser(existing.firebase_uid);
+        const hasSignedIn = Boolean(metadata.lastSignInTime || metadata.lastRefreshTime);
+        return { user: existing, needsPasswordSetup: !hasSignedIn };
       }
 
       // Nobody knows this password; the farmer sets their own via a password reset link.
@@ -266,7 +270,7 @@ class UserService implements IUserService {
         password: randomBytes(32).toString('base64url'),
         emailVerified: true,
       });
-      return { user, isNewAccount: true };
+      return { user, needsPasswordSetup: true };
     } catch (error: unknown) {
       Logger.error(`Failed to get or create farmer account. Reason = ${getErrorMessage(error)}`);
       throw error;

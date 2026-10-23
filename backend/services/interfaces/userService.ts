@@ -85,7 +85,8 @@ interface IUserService {
    * password reset link) and a pre-verified email. An existing account is returned as is:
    * its password and details are never changed.
    * @param email the farmer's email
-   * @returns the account, and whether this call created it
+   * @returns the account, and whether the farmer still needs a link to set a password
+   * (the account is new, or has never been signed in to)
    * @throws Error if the email is invalid or belongs to a non-farmer account
    */
   getOrCreateFarmerByEmail(email: string): Promise<FarmerAccountResult>;

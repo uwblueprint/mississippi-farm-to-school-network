@@ -97,8 +97,11 @@ export type CreateUserDTO = {
 
 export type FarmerAccountResult = {
   user: UserDTO;
-  /** True when this call created the account; false when it already existed. */
-  isNewAccount: boolean;
+  /**
+   * True when the farmer has no password they know yet: the account was just created, or
+   * nobody has ever signed in to it. They need a set-password link instead of a sign-in link.
+   */
+  needsPasswordSetup: boolean;
 };
 
 export type UpdateUserDTO = {
