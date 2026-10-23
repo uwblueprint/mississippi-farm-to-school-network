@@ -1,5 +1,5 @@
 import * as firebaseAdmin from 'firebase-admin';
-import { Role, UserDTO } from '@/types';
+import { ADMIN_EMAIL_DOMAIN, Role, UserDTO } from '@/types';
 import { AuthenticationError, ForbiddenError } from 'apollo-server';
 import { AuthContext } from '@/middlewares/auth';
 import { getErrorMessage } from '@/utilities/errorUtils';
@@ -15,9 +15,6 @@ const USER_NOT_FOUND_MESSAGE = 'Authenticated user was not found.';
 const EMAIL_VERIFICATION_REQUIRED_MESSAGE = 'You must verify your email to access this resource.';
 const PERMISSION_DENIED_MESSAGE = 'You do not have permission to access this resource.';
 const OWNERSHIP_REQUIRED_MESSAGE = 'You do not have permission to access or modify this resource.';
-
-const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
-
 function resolveRoleFromClaimsOrEmail(
   email: string | undefined,
   customClaims?: Record<string, unknown> | null
