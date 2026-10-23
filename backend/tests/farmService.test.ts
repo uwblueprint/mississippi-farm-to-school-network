@@ -154,6 +154,38 @@ describe('FarmService (Firestore)', () => {
     });
   });
 
+  describe('assertCanCreateFarm', () => {
+    test('accepts a farm with an unused usda_farm_id', async () => {
+      await expect(service.assertCanCreateFarm(baseInput)).resolves.toBeUndefined();
+    });
+
+    test('writes nothing, so the same farm can still be created afterwards', async () => {
+      await service.assertCanCreateFarm(baseInput);
+
+      await expect(service.createFarm('owner-1', baseInput)).resolves.toMatchObject({
+        usda_farm_id: 'usda-1',
+      });
+    });
+
+    test('rejects a usda_farm_id that is already taken', async () => {
+      await service.createFarm('owner-1', baseInput);
+
+      await expect(
+        service.assertCanCreateFarm({ ...baseInput, farm_name: 'Other Farm' })
+      ).rejects.toThrow('Farm with that USDA farm ID already exists.');
+    });
+
+    test('rejects option values that are not allowed', async () => {
+      // GraphQL only types these as strings, so a bad value can reach the service.
+      const badInput = {
+        ...baseInput,
+        growing_practices: ['Not a real practice'],
+      } as unknown as CreateFarmInput;
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow();
+    });
+  });
+
   describe('createFarmRejection', () => {
     test('cannot reject a farm that is already approved', async () => {
       const farm = await service.createFarm('owner-1', baseInput);
