@@ -248,7 +248,11 @@ class UserService implements IUserService {
 
       if (user.email !== existing.email) {
         try {
-          await firebaseAdmin.auth().updateUser(existing.firebase_uid, { email: user.email });
+          // The Admin SDK keeps emailVerified on an email change; reset it so a new
+          // admin-domain address must be verified before it grants ADMIN.
+          await firebaseAdmin
+            .auth()
+            .updateUser(existing.firebase_uid, { email: user.email, emailVerified: false });
         } catch (error) {
           Logger.error(`Failed to update Firebase user. Reason = ${getErrorMessage(error)}`);
           throw error;
@@ -272,7 +276,7 @@ class UserService implements IUserService {
     }
   }
 
-  async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
+  async completeUserProfile(authUser: UserDTO, input: CompleteUserProfileInput): Promise<UserDTO> {
     try {
       if (
         !input.firebase_uid ||
@@ -305,14 +309,13 @@ class UserService implements IUserService {
         throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
-      const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
       const updated: UserDoc = {
         ...found.data,
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: digits,
-        role,
+        role: authUser.role,
         updatedAt: new Date().toISOString(),
       };
       await this.users().doc(found.id).set(updated);

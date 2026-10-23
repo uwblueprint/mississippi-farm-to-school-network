@@ -74,7 +74,11 @@ const userResolvers = {
       { id, user }: { id: string; user: UpdateUserDTO },
       context: AuthContext
     ): Promise<UserDTO> => {
-      await authHelper.requireOwnerOrAdmin(context, id);
+      const currentUser = await authHelper.requireOwnerOrAdmin(context, id);
+      if (currentUser.role !== Role.ADMIN) {
+        const existing = await userService.getUserById(id);
+        return userService.updateUserById(id, { ...user, role: existing.role });
+      }
       return userService.updateUserById(id, user);
     },
     deleteUserById: async (
@@ -117,7 +121,7 @@ const userResolvers = {
       if (currentUser.firebase_uid !== input.firebase_uid) {
         throw new ForbiddenError('You do not have permission to access or modify this resource.');
       }
-      return userService.completeUserProfile(input);
+      return userService.completeUserProfile(currentUser, input);
     },
     updateMyProfile: async (
       _parent: undefined,
