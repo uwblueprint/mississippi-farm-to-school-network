@@ -65,6 +65,9 @@ export enum Role {
   FARMER = 'FARMER',
 }
 
+/** Emails on this domain are treated as ADMIN when no stored role says otherwise. */
+export const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
+
 export type Token = {
   accessToken: string;
   refreshToken: string;
@@ -85,9 +88,20 @@ export type CreateUserDTO = {
   email: string;
   role: Role;
   password?: string;
+  /** Mark the email as already verified (Firebase Auth and the user doc). Defaults to false. */
+  emailVerified?: boolean;
   firstName?: string;
   lastName?: string;
   phone?: string;
+};
+
+export type FarmerAccountResult = {
+  user: UserDTO;
+  /**
+   * True when the farmer has no password they know yet: the account was just created, or
+   * nobody has ever signed in to it. They need a set-password link instead of a sign-in link.
+   */
+  needsPasswordSetup: boolean;
 };
 
 export type UpdateUserDTO = {

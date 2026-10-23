@@ -180,6 +180,12 @@ const farmType = gql`
 
   type Mutation {
     createFarm(input: CreateFarmInput!): FarmDTO!
+    """
+    Admin only. Creates a pending farm owned by the farmer with this email, creating
+    the farmer's account first (and emailing them a link to set a password) if none
+    exists. An existing account's password is never changed.
+    """
+    createFarmForFarmer(email: String!, input: CreateFarmInput!): FarmDTO!
     updateFarm(id: ID!, input: UpdateFarmInput!): FarmDTO!
     approveFarm(id: ID!): FarmDTO!
     rejectFarm(id: ID!, rejectionReason: String!): ActiveFarmRejectionDTO!

@@ -195,6 +195,15 @@ class FarmService implements IFarmService {
     });
   }
 
+  async assertCanCreateFarm(input: CreateFarmInput): Promise<void> {
+    this.validateFarmOptionArrays(input);
+
+    const usdaIdSnap = await this.farmUsdaIds().doc(input.usda_farm_id).get();
+    if (usdaIdSnap.exists) {
+      throw new Error('Farm with that USDA farm ID already exists.');
+    }
+  }
+
   async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     this.validateFarmOptionArrays(input);
 

@@ -1,9 +1,12 @@
+import { randomBytes } from 'crypto';
 import { AuthenticationError } from 'apollo-server';
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
 import {
+  ADMIN_EMAIL_DOMAIN,
   CompleteUserProfileInput,
   CreateUserDTO,
+  FarmerAccountResult,
   Role,
   SignUpMethod,
   UpdateMyProfileInput,
@@ -15,6 +18,8 @@ import logger from '@/utilities/logger';
 import { Collections, getFirestore, toIso } from '@/utilities/firestore';
 
 const Logger = logger(__filename);
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 type UserDoc = {
   firebase_uid: string;
@@ -190,6 +195,7 @@ class UserService implements IUserService {
           const firebaseUser = await firebaseAdmin.auth().createUser({
             email: user.email,
             password: user.password,
+            emailVerified: user.emailVerified ?? false,
           });
           resolvedFirebaseUid = firebaseUser.uid;
         } else {
@@ -208,7 +214,7 @@ class UserService implements IUserService {
         firebase_uid: resolvedFirebaseUid,
         email: user.email,
         role: user.role,
-        is_verified: false,
+        is_verified: user.emailVerified ?? false,
         firstName: user.firstName ?? null,
         lastName: user.lastName ?? null,
         phone: user.phone ?? null,
@@ -236,6 +242,72 @@ class UserService implements IUserService {
       Logger.error(`Failed to create user. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+  }
+
+  async getOrCreateFarmerByEmail(rawEmail: string): Promise<FarmerAccountResult> {
+    try {
+      const email = rawEmail.trim().toLowerCase();
+      if (!EMAIL_PATTERN.test(email)) {
+        throw new Error('Invalid email format.');
+      }
+
+      const existing = await this.findExistingAccount(email);
+      if (existing) {
+        if (existing.role !== Role.FARMER) {
+          throw new Error(`The account for ${email} is not a farmer account.`);
+        }
+        // An account nobody has signed in to yet (e.g. one created for an earlier farm that
+        // failed or went unnoticed) has no password the farmer knows, so it still needs a link.
+        const { metadata } = await firebaseAdmin.auth().getUser(existing.firebase_uid);
+        const hasSignedIn = Boolean(metadata.lastSignInTime || metadata.lastRefreshTime);
+        return { user: existing, needsPasswordSetup: !hasSignedIn };
+      }
+
+      // Nobody knows this password; the farmer sets their own via a password reset link.
+      const user = await this.createUser({
+        email,
+        role: Role.FARMER,
+        password: randomBytes(32).toString('base64url'),
+        emailVerified: true,
+      });
+      return { user, needsPasswordSetup: true };
+    } catch (error: unknown) {
+      Logger.error(`Failed to get or create farmer account. Reason = ${getErrorMessage(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Looks the account up in Firestore, then in Firebase Auth. Accounts that only exist in
+   * Firebase Auth (created before profile docs existed) get their profile doc created here
+   * so the rest of the app can find them.
+   */
+  private async findExistingAccount(email: string): Promise<UserDTO | null> {
+    const found = await this.findByEmail(email);
+    if (found) {
+      return toUserDTO(found.id, found.data);
+    }
+
+    let firebaseUser: firebaseAdmin.auth.UserRecord;
+    try {
+      firebaseUser = await firebaseAdmin.auth().getUserByEmail(email);
+    } catch (error: unknown) {
+      if ((error as { code?: string }).code === 'auth/user-not-found') {
+        return null;
+      }
+      throw error;
+    }
+
+    // Same precedence as authHelpers: a role claim wins, then the admin email domain.
+    const claimRole = (firebaseUser.customClaims ?? {}).role;
+    let role = email.endsWith(ADMIN_EMAIL_DOMAIN) ? Role.ADMIN : Role.FARMER;
+    if (claimRole === Role.ADMIN || claimRole === Role.FARMER) {
+      role = claimRole;
+    }
+    return this.createUser(
+      { email, role, emailVerified: firebaseUser.emailVerified },
+      firebaseUser.uid
+    );
   }
 
   async updateUserById(userId: string, user: UpdateUserDTO): Promise<UserDTO> {
@@ -305,7 +377,7 @@ class UserService implements IUserService {
         throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
-      const role = input.email.endsWith('@mississippifarmtoschool.org') ? Role.ADMIN : Role.FARMER;
+      const role = input.email.endsWith(ADMIN_EMAIL_DOMAIN) ? Role.ADMIN : Role.FARMER;
       const updated: UserDoc = {
         ...found.data,
         email: input.email,
