@@ -196,6 +196,8 @@ const farmResolvers = {
       await authHelper.requireRole(context, [Role.ADMIN]);
 
       // The farm belongs to the farmer, not the admin; it stays PENDING_APPROVAL like any new farm.
+      // Reject a bad farm before any account exists, so a failure leaves nothing behind.
+      await farmService.assertCanCreateFarm(input);
       const farmer = await userService.getOrCreateFarmerByEmail(email);
       const createdFarm = await farmService.createFarm(farmer.user.id, input);
 
@@ -203,7 +205,7 @@ const farmResolvers = {
         await authService.sendFarmAddedEmail(
           farmer.user.email,
           input.farm_name,
-          farmer.isNewAccount
+          farmer.needsPasswordSetup
         );
       } catch (error: unknown) {
         // The farm already exists; failing here would invite a retry that creates a duplicate.
