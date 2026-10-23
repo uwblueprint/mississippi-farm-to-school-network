@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 
 import type { FarmLocation } from '$lib/types/farm';
 
-type GeolocationStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+export type GeolocationStatus = 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
 
 let coords = $state<FarmLocation | null>(null);
 let status = $state<GeolocationStatus>('idle');
