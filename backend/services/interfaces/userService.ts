@@ -113,11 +113,12 @@ interface IUserService {
 
   /*
    * Complete user's profile during onboarding, updates user record
+   * @param authUser the authenticated user; its resolved role is stored on the profile
    * @param CompleteUserProfileInput includes firebase_uid, email, firstname, lastname, phone
    * @returns updated UserDTO
    * @throws Error if user not found or improper/missing inputs
    */
-  completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO>;
+  completeUserProfile(authUser: UserDTO, input: CompleteUserProfileInput): Promise<UserDTO>;
 
   /**
    * Update the signed-in user's own editable profile fields (name and phone). Email and
