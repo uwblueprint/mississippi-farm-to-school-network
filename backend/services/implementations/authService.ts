@@ -6,6 +6,7 @@ import { AuthDTO, Role, SignUpMethod, Token } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import FirebaseRestClient from '@/utilities/firebaseRestClient';
 import logger from '@/utilities/logger';
+import { isAdminEmail } from '@/utilities/adminEmail';
 
 const Logger = logger(__filename);
 
@@ -51,7 +52,8 @@ class AuthService implements IAuthService {
       const user = await this.userService.createUser(
         {
           email: googleUser.email,
-          role: Role.FARMER,
+          role:
+            googleUser.emailVerified && isAdminEmail(googleUser.email) ? Role.ADMIN : Role.FARMER,
         },
         googleUser.localId,
         SignUpMethod.GOOGLE
