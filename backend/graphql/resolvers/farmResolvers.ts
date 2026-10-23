@@ -1,8 +1,10 @@
 import { AuthenticationError, ForbiddenError, UserInputError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
 import UserService from '@/services/implementations/userService';
+import AuthService from '@/services/implementations/authService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
+import IAuthService from '@/services/interfaces/authService';
 import {
   CreateFarmInput,
   FarmDTO,
@@ -28,8 +30,9 @@ const fileStorageService: IFileStorageService = createFileStorageService();
 const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
-const MAX_FARMS_PAGE_SIZE = 100;
+const authService: IAuthService = new AuthService(userService, emailService);
 
+const MAX_FARMS_PAGE_SIZE = 100;
 const farmResolvers = {
   Query: {
     farmsByProximity: async (
@@ -180,6 +183,33 @@ const farmResolvers = {
         await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
       } catch {
         // email failure should not fail the mutation
+      }
+
+      return createdFarm;
+    },
+
+    createFarmForFarmer: async (
+      _parent: undefined,
+      { email, input }: { email: string; input: CreateFarmInput },
+      context: AuthContext
+    ): Promise<FarmDTO> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+
+      // The farm belongs to the farmer, not the admin; it stays PENDING_APPROVAL like any new farm.
+      const farmer = await userService.getOrCreateFarmerByEmail(email);
+      const createdFarm = await farmService.createFarm(farmer.user.id, input);
+
+      try {
+        await authService.sendFarmAddedEmail(
+          farmer.user.email,
+          input.farm_name,
+          farmer.isNewAccount
+        );
+      } catch (error: unknown) {
+        // The farm already exists; failing here would invite a retry that creates a duplicate.
+        Logger.error(
+          `Created farm ${createdFarm.id} for ${farmer.user.email} but failed to send the notification email. Reason = ${getErrorMessage(error)}`
+        );
       }
 
       return createdFarm;
