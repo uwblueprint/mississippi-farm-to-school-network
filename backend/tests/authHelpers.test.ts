@@ -23,6 +23,11 @@ describe('authHelper (Firebase Auth)', () => {
   beforeEach(() => {
     mockGetUser.mockReset();
     mockFirestoreInstance = new FakeFirestore();
+    process.env.ADMIN_EMAIL_DOMAIN = 'uwaterloo.ca';
+  });
+
+  afterAll(() => {
+    delete process.env.ADMIN_EMAIL_DOMAIN;
   });
 
   test('requireAuth throws AuthenticationError when firebaseUid is missing', async () => {
@@ -97,10 +102,10 @@ describe('authHelper (Firebase Auth)', () => {
     ).rejects.toThrow('You do not have permission to access this resource.');
   });
 
-  test('requireRole treats mississippifarmtoschool.org emails as ADMIN', async () => {
+  test('requireRole treats verified ADMIN_EMAIL_DOMAIN emails as ADMIN', async () => {
     mockGetUser.mockResolvedValue({
       uid: 'firebase-admin',
-      email: 'staff@mississippifarmtoschool.org',
+      email: 'Staff@UWaterloo.ca',
       emailVerified: true,
       customClaims: {},
     });
@@ -130,7 +135,7 @@ describe('authHelper (Firebase Auth)', () => {
   test('requireRole returns the user when all checks pass', async () => {
     mockGetUser.mockResolvedValue({
       uid: 'firebase-1',
-      email: 'admin@mississippifarmtoschool.org',
+      email: 'admin@uwaterloo.ca',
       emailVerified: true,
       customClaims: { role: Role.ADMIN },
     });
@@ -168,5 +173,75 @@ describe('authHelper (Firebase Auth)', () => {
     await expect(
       authHelper.requireRole({ firebaseUid: 'firebase-promoted' }, [Role.ADMIN])
     ).resolves.toMatchObject({ role: Role.ADMIN });
+  });
+
+  test('an unverified admin-domain email is not ADMIN, even for requireOwnerOrAdmin', async () => {
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-unverified',
+      email: 'staff@uwaterloo.ca',
+      emailVerified: false,
+      customClaims: {},
+    });
+
+    await expect(
+      authHelper.requireAuth({ firebaseUid: 'firebase-unverified' })
+    ).resolves.toMatchObject({ role: Role.FARMER });
+    await expect(
+      authHelper.requireOwnerOrAdmin({ firebaseUid: 'firebase-unverified' }, 'someone-else')
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  test.each(['test@notuwaterloo.ca', 'test@sub.uwaterloo.ca', 'uwaterloo.ca@gmail.com'])(
+    '%s is not treated as an admin-domain email',
+    async (email) => {
+      mockGetUser.mockResolvedValue({
+        uid: 'firebase-lookalike',
+        email,
+        emailVerified: true,
+        customClaims: {},
+      });
+
+      await expect(
+        authHelper.requireAuth({ firebaseUid: 'firebase-lookalike' })
+      ).resolves.toMatchObject({ role: Role.FARMER });
+    }
+  );
+
+  test('a verified admin-domain email is promoted over a stored FARMER profile', async () => {
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-staff',
+      email: 'staff@uwaterloo.ca',
+      emailVerified: true,
+      customClaims: {},
+    });
+    await mockFirestoreInstance.collection('users').doc('firebase-staff').set({
+      firebase_uid: 'firebase-staff',
+      email: 'staff@uwaterloo.ca',
+      role: Role.FARMER,
+      is_verified: false,
+      firstName: null,
+      lastName: null,
+      phone: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    await expect(
+      authHelper.requireRole({ firebaseUid: 'firebase-staff' }, [Role.ADMIN])
+    ).resolves.toMatchObject({ role: Role.ADMIN });
+  });
+
+  test('no email is treated as admin when ADMIN_EMAIL_DOMAIN is unset', async () => {
+    delete process.env.ADMIN_EMAIL_DOMAIN;
+    mockGetUser.mockResolvedValue({
+      uid: 'firebase-staff',
+      email: 'staff@uwaterloo.ca',
+      emailVerified: true,
+      customClaims: {},
+    });
+
+    await expect(authHelper.requireAuth({ firebaseUid: 'firebase-staff' })).resolves.toMatchObject({
+      role: Role.FARMER,
+    });
   });
 });
