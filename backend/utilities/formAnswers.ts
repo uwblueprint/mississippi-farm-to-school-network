@@ -33,6 +33,14 @@ const SOCIAL_QUESTIONS = {
   social_other: 'other',
 } as const;
 
+/** Question ids whose answers are copied onto a farm field (social ones onto social_media). */
+export const LEGACY_QUESTION_IDS: ReadonlySet<string> = new Set([
+  ...CHECKBOX_FIELDS,
+  ...TEXT_FIELDS,
+  'minimum_order',
+  ...Object.keys(SOCIAL_QUESTIONS),
+]);
+
 export type LegacyFarmFields = Record<(typeof CHECKBOX_FIELDS)[number], string[]> &
   Record<(typeof TEXT_FIELDS)[number], string | null> & {
     minimum_order: number | null;

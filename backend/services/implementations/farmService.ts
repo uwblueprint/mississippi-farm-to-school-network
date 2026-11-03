@@ -46,7 +46,9 @@ import {
   toIso,
 } from '@/utilities/firestore';
 import {
+  LEGACY_QUESTION_IDS,
   LegacyFarmFields,
+  allQuestions,
   answersFromLegacyFields,
   legacyFarmFields,
   validateAnswers,
@@ -122,6 +124,8 @@ type FarmDoc = {
 type AnswerUpdate = {
   answers: FormAnswers;
   fields: LegacyFarmFields;
+  // Question labels by id, so the resubmission email can name changed answers.
+  labels: Record<string, string>;
 };
 
 type FarmRejectionDoc = {
@@ -222,7 +226,11 @@ class FarmService implements IFarmService {
     const { data } = await this.getFarmDoc(farmId);
     const form = await formService.getFormVersion(data.formVersionId ?? INITIAL_FORM_VERSION_ID);
     const cleaned = validateAnswers(form.sections, answers);
-    return { answers: cleaned, fields: legacyFarmFields(form.sections, cleaned) };
+    return {
+      answers: cleaned,
+      fields: legacyFarmFields(form.sections, cleaned),
+      labels: Object.fromEntries(allQuestions(form.sections).map((q) => [q.id, q.label])),
+    };
   }
 
   private buildUpdateValues(
@@ -489,7 +497,8 @@ class FarmService implements IFarmService {
           resubmissionDiff = this.generateFieldLevelDiffAgainstPersisted(
             this.getRejectedSnapshot(farm, farmBeforeUpdate),
             this.convertToFarmDTO(id, next),
-            updateValues
+            updateValues,
+            answerUpdate?.labels ?? {}
           );
           if (resubmissionDiff.length > 0) next.status = FarmStatus.PENDING_APPROVAL;
         }
@@ -1081,10 +1090,13 @@ class FarmService implements IFarmService {
   private generateFieldLevelDiffAgainstPersisted(
     previousSnapshot: Partial<FarmDTO>,
     currentFarm: FarmDTO,
-    updatedPayload: Partial<FarmDoc>
+    updatedPayload: Partial<FarmDoc>,
+    questionLabels: Record<string, string>
   ): FarmFieldDiff[] {
     const diff: FarmFieldDiff[] = [];
-    const keys = Object.keys(updatedPayload).sort();
+    const keys = Object.keys(updatedPayload)
+      .filter((key) => key !== 'answers')
+      .sort();
 
     for (const key of keys) {
       if (EXCLUDED_RESUBMISSION_DIFF_FIELDS.has(key)) {
@@ -1106,11 +1118,44 @@ class FarmService implements IFarmService {
       }
     }
 
+    if (updatedPayload.answers !== undefined) {
+      diff.push(...this.diffCustomAnswers(previousSnapshot, currentFarm.answers, questionLabels));
+    }
+
     return diff;
   }
 
+  /**
+   * Answers that also fill a farm field are already diffed as that field, so only
+   * the form's other questions are compared here. Snapshots taken before answers
+   * existed are rebuilt from their fields.
+   */
+  private diffCustomAnswers(
+    previousSnapshot: Partial<FarmDTO>,
+    current: FormAnswers,
+    questionLabels: Record<string, string>
+  ): FarmFieldDiff[] {
+    const previous = previousSnapshot.answers ?? answersFromLegacyFields(previousSnapshot);
+    const ids = [...new Set([...Object.keys(previous), ...Object.keys(current)])]
+      .filter((id) => !LEGACY_QUESTION_IDS.has(id))
+      .sort();
+    return ids
+      .filter((id) => !this.valuesAreEqual(previous[id], current[id]))
+      .map((id) => ({
+        field: questionLabels[id] ?? id,
+        previous: previous[id] ?? null,
+        current: current[id] ?? null,
+      }));
+  }
+
   private valuesAreEqual(a: unknown, b: unknown): boolean {
-    return this.stableSerialize(a) === this.stableSerialize(b);
+    // Checkbox answers are now stored in option order, but older farms kept them
+    // in the order they were clicked, which isn't a change.
+    const sortStrings = (value: unknown) =>
+      Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+        ? [...value].sort()
+        : value;
+    return this.stableSerialize(sortStrings(a)) === this.stableSerialize(sortStrings(b));
   }
 
   private stableSerialize(value: unknown): string {
