@@ -1,5 +1,7 @@
 import { AuthenticationError, ForbiddenError, UserInputError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
+import FormService from '@/services/implementations/formService';
+import IFormService from '@/services/interfaces/formService';
 import UserService from '@/services/implementations/userService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
@@ -11,6 +13,7 @@ import {
   UpdateFarmInput,
   Role,
   ActiveFarmRejectionDTO,
+  FormVersionDTO,
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
@@ -26,6 +29,7 @@ const Logger = logger(__filename);
 const farmService: IFarmService = new FarmService();
 const fileStorageService: IFileStorageService = createFileStorageService();
 const userService: IUserService = new UserService();
+const formService: IFormService = new FormService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
 const MAX_FARMS_PAGE_SIZE = 100;
@@ -348,6 +352,8 @@ const farmResolvers = {
   },
 
   FarmDTO: {
+    formVersion: (farm: FarmDTO): Promise<FormVersionDTO> =>
+      formService.getFormVersion(farm.formVersionId),
     owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
       try {
         await authHelper.requireRole(context, [Role.ADMIN]);

@@ -3,6 +3,7 @@
 import { gqlClient } from '$lib/graphqlClient';
 import type { PendingFarmDto, RemovedFarm, RemovedFarmDto } from '$lib/types/admin';
 import { CHANGES_REQUESTED_FARMS_QUERY } from '$lib/utils/pending-request-adapter';
+import { FORM_VERSION_FIELDS } from '$lib/utils/form-answers';
 import { formatRelativeTime } from '$lib/utils/relative-time';
 
 /** The farms resolver caps pageSize at 100. */
@@ -46,6 +47,9 @@ const REMOVED_FARMS_QUERY = `
 			was_previously_rejected
 			deleted_at
 			deletion_reason
+			answers
+			formVersion {${FORM_VERSION_FIELDS}
+			}
 			createdAt
 			updatedAt
 			owner {

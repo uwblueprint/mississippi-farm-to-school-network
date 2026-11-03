@@ -4,6 +4,7 @@
 import type { PendingFarmDto, PendingRequest } from '$lib/types/admin';
 import { getFarmTags } from '$lib/utils/farm-tags';
 import { formatRelativeTime } from '$lib/utils/relative-time';
+import { FORM_VERSION_FIELDS } from '$lib/utils/form-answers';
 
 /** Fields selected for every farm shown in an admin queue (pending, changes requested, deleted). */
 const QUEUE_FARM_FIELDS = `
@@ -41,6 +42,9 @@ const QUEUE_FARM_FIELDS = `
 			was_previously_rejected
 			deletion_requested_at
 			deletion_approved_at
+			answers
+			formVersion {${FORM_VERSION_FIELDS}
+			}
 			createdAt
 			updatedAt
 			owner {

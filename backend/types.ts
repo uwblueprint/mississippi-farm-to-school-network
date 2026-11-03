@@ -171,6 +171,8 @@ export type FarmDTO = {
   deletion_requested_at: string | null;
   // Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) at the same time.
   deletion_approved_at: string | null;
+  formVersionId: string;
+  answers: FormAnswers;
   createdAt: string;
   updatedAt: string;
 };
@@ -197,34 +199,78 @@ export type FarmRejectionDTO = {
   resolution_type: FarmRejectionResolutionType | null;
 };
 
+export enum FormQuestionType {
+  TEXT = 'TEXT',
+  TEXTAREA = 'TEXTAREA',
+  NUMBER = 'NUMBER',
+  URL = 'URL',
+  CHECKBOX = 'CHECKBOX',
+  LOCKED = 'LOCKED',
+}
+
+export enum LockedFormField {
+  USDA_FARM_ID = 'USDA_FARM_ID',
+  FARM_NAME = 'FARM_NAME',
+  FARM_ADDRESS = 'FARM_ADDRESS',
+  COUNTY = 'COUNTY',
+  PRIMARY_PHONE = 'PRIMARY_PHONE',
+  PRIMARY_EMAIL = 'PRIMARY_EMAIL',
+  PHOTOS = 'PHOTOS',
+}
+
+export type FormOption = {
+  id: string;
+  label: string;
+};
+
+export type FormCondition = {
+  questionId: string;
+  optionIds: string[];
+};
+
+export type FormQuestion = {
+  id: string;
+  type: FormQuestionType;
+  label: string;
+  required: boolean;
+  placeholder: string | null;
+  helpText: string | null;
+  options: FormOption[];
+  exclusiveOptionId: string | null;
+  showIf: FormCondition | null;
+  lockedField: LockedFormField | null;
+};
+
+export type FormSection = {
+  id: string;
+  title: string;
+  questions: FormQuestion[];
+};
+
+export type FormVersionDTO = {
+  id: string;
+  version: number;
+  sections: FormSection[];
+  createdBy: string | null;
+  createdAt: string;
+};
+
+export type FormAnswerValue = string | number | string[] | null;
+export type FormAnswers = Record<string, FormAnswerValue>;
+
 export type CreateFarmInput = {
+  usda_farm_id: string;
   farm_name: string;
   primary_phone: string;
   primary_email: string;
-  website?: string;
-  social_media?: Record<string, unknown>;
   farm_address: string;
-  usda_farm_id: string;
   county: string;
-  cities_served?: string[];
   location: LocationDTO;
-  seasonal_products: SeasonalProduct[];
-  meat_products: MeatProduct[];
-  other_products: OtherProduct[];
-  seasonal_products_detail?: string;
-  meat_products_detail?: string;
-  other_products_detail?: string;
-  growing_practices: GrowingPractice[];
-  food_safety_certifications: FoodSafetyCertification[];
-  farm_experiences?: FarmExperience[];
-  farm_characteristics?: FarmCharacteristic[];
-  farm_to_school_sales?: FarmToSchoolSale[];
-  market_sales_data?: { market: string; times: string }[];
-  f2s_experience?: string;
-  minimum_order?: number;
-  delivery_details?: string;
+  cities_served?: string[];
   cover_photo?: string;
   carousel_photos?: string[];
+  formVersionId: string;
+  answers: FormAnswers;
 };
 
 export type AuthDTO = Token & UserDTO;
@@ -262,6 +308,7 @@ export type UpdateFarmInput = {
   delivery_details?: string;
   cover_photo?: string;
   carousel_photos?: string[];
+  answers?: FormAnswers;
 };
 
 export interface FarmFilter {

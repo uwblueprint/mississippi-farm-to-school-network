@@ -1,4 +1,4 @@
-import { ForbiddenError } from 'apollo-server';
+import { ForbiddenError, UserInputError } from 'apollo-server';
 import IFarmService from '@/services/interfaces/farmService';
 import {
   CreateFarmInput,
@@ -12,6 +12,7 @@ import {
   FarmRejectionResolutionType,
   FarmSnapshotDTO,
   EmailChangeEntry,
+  FormAnswers,
 } from '@/types';
 import {
   GROWING_PRACTICES,
@@ -24,6 +25,9 @@ import {
   FARM_TO_SCHOOL_SALES,
   assertAllowedValues,
 } from '@/constants/farmOptions';
+import { INITIAL_FORM_VERSION_ID } from '@/constants/defaultForm';
+import FormService from '@/services/implementations/formService';
+import IFormService from '@/services/interfaces/formService';
 import UserService from '@/services/implementations/userService';
 import EmailService from '@/services/implementations/emailService';
 import IUserService from '@/services/interfaces/userService';
@@ -41,9 +45,18 @@ import {
   newId,
   toIso,
 } from '@/utilities/firestore';
+import {
+  LEGACY_QUESTION_IDS,
+  LegacyFarmFields,
+  allQuestions,
+  answersFromLegacyFields,
+  legacyFarmFields,
+  validateAnswers,
+} from '@/utilities/formAnswers';
 
 const Logger = logger(__filename);
 const userService: IUserService = new UserService();
+const formService: IFormService = new FormService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 const ADMIN_RESUBMISSION_EMAIL = 'mfsn@uwblueprint.org';
 const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
@@ -55,6 +68,7 @@ const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
   'cover_photo',
   'carousel_photos',
 ]);
+const FORM_SOCIAL_MEDIA_KEYS = ['instagram', 'facebook', 'other'];
 
 type FarmFieldDiff = {
   field: string;
@@ -101,8 +115,17 @@ type FarmDoc = {
   status_before_deletion?: FarmStatus | null;
   deletion_requested_at?: string | null;
   deletion_approved_at?: string | null;
+  formVersionId?: string;
+  answers?: FormAnswers;
   createdAt: string;
   updatedAt: string;
+};
+
+type AnswerUpdate = {
+  answers: FormAnswers;
+  fields: LegacyFarmFields;
+  // Question labels by id, so the resubmission email can name changed answers.
+  labels: Record<string, string>;
 };
 
 type FarmRejectionDoc = {
@@ -131,7 +154,7 @@ class FarmService implements IFarmService {
     return getFirestore().collection(Collections.farmRejections);
   }
 
-  private validateFarmOptionArrays(input: CreateFarmInput | UpdateFarmInput): void {
+  private validateFarmOptionArrays(input: UpdateFarmInput): void {
     if (input.seasonal_products !== undefined) {
       assertAllowedValues(input.seasonal_products, SEASONAL_PRODUCTS, 'seasonal_products');
     }
@@ -195,12 +218,59 @@ class FarmService implements IFarmService {
     });
   }
 
-  async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
-    this.validateFarmOptionArrays(input);
+  /**
+   * Checks an update's answers against the farm's own form version, which never
+   * changes, so it's safe to read outside the update's transaction.
+   */
+  private async getAnswerUpdate(farmId: string, answers: unknown): Promise<AnswerUpdate> {
+    const { data } = await this.getFarmDoc(farmId);
+    const form = await formService.getFormVersion(data.formVersionId ?? INITIAL_FORM_VERSION_ID);
+    const cleaned = validateAnswers(form.sections, answers);
+    return {
+      answers: cleaned,
+      fields: legacyFarmFields(form.sections, cleaned),
+      labels: Object.fromEntries(allQuestions(form.sections).map((q) => [q.id, q.label])),
+    };
+  }
 
+  private buildUpdateValues(
+    farm: FarmDoc,
+    input: UpdateFarmInput,
+    answerUpdate: AnswerUpdate | null
+  ): Partial<FarmDoc> {
+    const values = Object.fromEntries(
+      Object.entries(input).filter(([key, value]) => key !== 'answers' && value !== undefined)
+    ) as Partial<FarmDoc>;
+    if (!answerUpdate) return values;
+
+    const { social_media: formSocial, ...fields } = answerUpdate.fields;
+    const kept = Object.fromEntries(
+      Object.entries(farm.social_media ?? {}).filter(
+        ([key]) => !FORM_SOCIAL_MEDIA_KEYS.includes(key)
+      )
+    );
+    const social_media = { ...kept, ...formSocial };
+    return {
+      ...values,
+      ...fields,
+      social_media: Object.keys(social_media).length > 0 ? social_media : null,
+      answers: answerUpdate.answers,
+    };
+  }
+
+  async createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO> {
     let createdFarm: FarmDTO;
 
     try {
+      const form = await formService.getPublishedForm();
+      if (input.formVersionId !== form.id) {
+        throw new UserInputError(
+          'The farm form has been updated since you opened it. Reload the page to see the latest questions.'
+        );
+      }
+      const answers = validateAnswers(form.sections, input.answers);
+      const { social_media, ...fields } = legacyFarmFields(form.sections, answers);
+
       const id = newId();
       const now = new Date().toISOString();
       const data: FarmDoc = {
@@ -209,31 +279,19 @@ class FarmService implements IFarmService {
         farm_name: input.farm_name,
         primary_phone: input.primary_phone,
         primary_email: input.primary_email,
-        website: input.website ?? null,
-        social_media: input.social_media ?? null,
+        social_media: Object.keys(social_media).length > 0 ? social_media : null,
         farm_address: input.farm_address,
         county: input.county,
         cities_served: input.cities_served ?? [],
         location: { lat: input.location.lat, lng: input.location.lng },
-        seasonal_products: input.seasonal_products ?? [],
-        meat_products: input.meat_products ?? [],
-        other_products: input.other_products ?? [],
-        seasonal_products_detail: input.seasonal_products_detail ?? null,
-        meat_products_detail: input.meat_products_detail ?? null,
-        other_products_detail: input.other_products_detail ?? null,
-        market_sales_data: input.market_sales_data ?? null,
-        growing_practices: input.growing_practices ?? [],
-        food_safety_certifications: input.food_safety_certifications ?? [],
-        farm_experiences: input.farm_experiences ?? [],
-        farm_characteristics: input.farm_characteristics ?? [],
-        farm_to_school_sales: input.farm_to_school_sales ?? [],
-        f2s_experience: input.f2s_experience ?? null,
-        minimum_order: input.minimum_order ?? null,
-        delivery_details: input.delivery_details ?? null,
+        ...fields,
+        market_sales_data: null,
         cover_photo: input.cover_photo ?? null,
         carousel_photos: input.carousel_photos ?? [],
         status: FarmStatus.PENDING_APPROVAL,
         is_archived: false,
+        formVersionId: form.id,
+        answers,
         createdAt: now,
         updatedAt: now,
       };
@@ -244,6 +302,12 @@ class FarmService implements IFarmService {
           const usdaIdSnap = await tx.get(usdaIdRef);
           if (usdaIdSnap.exists) {
             throw new Error('Farm with that USDA farm ID already exists.');
+          }
+          // Re-checked here so a form published after the check above can't be skipped.
+          if ((await formService.getPublishedForm(tx)).id !== form.id) {
+            throw new UserInputError(
+              'The farm form has been updated since you opened it. Reload the page to see the latest questions.'
+            );
           }
           tx.create(usdaIdRef, { farm_id: id });
           tx.set(this.farms().doc(id), data);
@@ -386,10 +450,8 @@ class FarmService implements IFarmService {
   async updateFarm(id: string, input: UpdateFarmInput, isAdmin: boolean): Promise<FarmDTO> {
     try {
       this.validateFarmOptionArrays(input);
-
-      const updateValues = Object.fromEntries(
-        Object.entries(input).filter(([, value]) => value !== undefined)
-      ) as Partial<UpdateFarmInput>;
+      const answerUpdate =
+        input.answers !== undefined ? await this.getAnswerUpdate(id, input.answers) : null;
 
       const farmRef = this.farms().doc(id);
       // The permission checks, usda_farm_id move, farm write and rejection
@@ -415,6 +477,7 @@ class FarmService implements IFarmService {
         }
 
         const now = new Date().toISOString();
+        const updateValues = this.buildUpdateValues(farm, input, answerUpdate);
         const next: FarmDoc = {
           ...farm,
           ...updateValues,
@@ -434,7 +497,8 @@ class FarmService implements IFarmService {
           resubmissionDiff = this.generateFieldLevelDiffAgainstPersisted(
             this.getRejectedSnapshot(farm, farmBeforeUpdate),
             this.convertToFarmDTO(id, next),
-            input
+            updateValues,
+            answerUpdate?.labels ?? {}
           );
           if (resubmissionDiff.length > 0) next.status = FarmStatus.PENDING_APPROVAL;
         }
@@ -687,6 +751,8 @@ class FarmService implements IFarmService {
       deletion_reason: data.deletion_reason ?? null,
       deletion_requested_at: data.deletion_requested_at ? toIso(data.deletion_requested_at) : null,
       deletion_approved_at: data.deletion_approved_at ? toIso(data.deletion_approved_at) : null,
+      formVersionId: data.formVersionId ?? INITIAL_FORM_VERSION_ID,
+      answers: data.answers ?? answersFromLegacyFields(data),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -752,6 +818,8 @@ class FarmService implements IFarmService {
       deletion_reason: data.deletion_reason ?? null,
       deletion_requested_at: data.deletion_requested_at ? toIso(data.deletion_requested_at) : null,
       deletion_approved_at: data.deletion_approved_at ? toIso(data.deletion_approved_at) : null,
+      formVersionId: data.formVersionId ?? INITIAL_FORM_VERSION_ID,
+      answers: data.answers ?? answersFromLegacyFields(data),
       createdAt: toIso(data.createdAt),
       updatedAt: toIso(data.updatedAt),
     };
@@ -1022,17 +1090,20 @@ class FarmService implements IFarmService {
   private generateFieldLevelDiffAgainstPersisted(
     previousSnapshot: Partial<FarmDTO>,
     currentFarm: FarmDTO,
-    updatedPayload: UpdateFarmInput
+    updatedPayload: Partial<FarmDoc>,
+    questionLabels: Record<string, string>
   ): FarmFieldDiff[] {
     const diff: FarmFieldDiff[] = [];
-    const keys = Object.keys(updatedPayload).sort();
+    const keys = Object.keys(updatedPayload)
+      .filter((key) => key !== 'answers')
+      .sort();
 
     for (const key of keys) {
       if (EXCLUDED_RESUBMISSION_DIFF_FIELDS.has(key)) {
         continue;
       }
 
-      if (updatedPayload[key as keyof UpdateFarmInput] === undefined) {
+      if (updatedPayload[key as keyof FarmDoc] === undefined) {
         continue;
       }
 
@@ -1047,11 +1118,44 @@ class FarmService implements IFarmService {
       }
     }
 
+    if (updatedPayload.answers !== undefined) {
+      diff.push(...this.diffCustomAnswers(previousSnapshot, currentFarm.answers, questionLabels));
+    }
+
     return diff;
   }
 
+  /**
+   * Answers that also fill a farm field are already diffed as that field, so only
+   * the form's other questions are compared here. Snapshots taken before answers
+   * existed are rebuilt from their fields.
+   */
+  private diffCustomAnswers(
+    previousSnapshot: Partial<FarmDTO>,
+    current: FormAnswers,
+    questionLabels: Record<string, string>
+  ): FarmFieldDiff[] {
+    const previous = previousSnapshot.answers ?? answersFromLegacyFields(previousSnapshot);
+    const ids = [...new Set([...Object.keys(previous), ...Object.keys(current)])]
+      .filter((id) => !LEGACY_QUESTION_IDS.has(id))
+      .sort();
+    return ids
+      .filter((id) => !this.valuesAreEqual(previous[id], current[id]))
+      .map((id) => ({
+        field: questionLabels[id] ?? id,
+        previous: previous[id] ?? null,
+        current: current[id] ?? null,
+      }));
+  }
+
   private valuesAreEqual(a: unknown, b: unknown): boolean {
-    return this.stableSerialize(a) === this.stableSerialize(b);
+    // Checkbox answers are now stored in option order, but older farms kept them
+    // in the order they were clicked, which isn't a change.
+    const sortStrings = (value: unknown) =>
+      Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+        ? [...value].sort()
+        : value;
+    return this.stableSerialize(sortStrings(a)) === this.stableSerialize(sortStrings(b));
   }
 
   private stableSerialize(value: unknown): string {
@@ -1164,9 +1268,9 @@ class FarmService implements IFarmService {
     isAdmin: boolean
   ): Promise<FarmDTO> {
     try {
-      const updateValues = Object.fromEntries(
-        Object.entries(input).filter(([, value]) => value !== undefined)
-      ) as Partial<UpdateFarmInput>;
+      this.validateFarmOptionArrays(input);
+      const answerUpdate =
+        input.answers !== undefined ? await this.getAnswerUpdate(farmId, input.answers) : null;
 
       const farmRef = this.farms().doc(farmId);
       // Reads and writes both run inside the transaction so a concurrent write to the
@@ -1193,6 +1297,7 @@ class FarmService implements IFarmService {
 
         const activeSnap = await tx.get(this.rejections().where('farm_id', '==', farmId));
 
+        const updateValues = this.buildUpdateValues(farm, input, answerUpdate);
         const nextFarm: FarmDoc = {
           ...farm,
           ...updateValues,

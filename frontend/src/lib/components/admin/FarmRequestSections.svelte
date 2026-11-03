@@ -8,12 +8,12 @@
 	let { sections }: Props = $props();
 </script>
 
-{#each sections as section (section.title)}
+{#each sections as section (section.id)}
 	<hr class="farm-request-modal__divider" />
 
 	<section class="farm-request-modal__section">
 		<h3 class="farm-request-modal__section-title">{section.title}</h3>
-		{#each section.fields as field, index (`${section.title}-${index}`)}
+		{#each section.fields as field, index (`${section.id}-${index}`)}
 			<div class="farm-request-modal__field">
 				{#if field.label}
 					<p class="farm-request-modal__field-label">{field.label}</p>

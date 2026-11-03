@@ -1,18 +1,23 @@
 import type { PendingFarmDto } from '$lib/types/admin';
 import type { MarketSalesData } from '$lib/types/farm';
+import {
+	answerableQuestions,
+	isEmptyAnswer,
+	isQuestionVisible,
+	optionLabels
+} from '$lib/utils/form-answers';
 
 export type ReviewField =
 	| { kind: 'text'; label?: string; value: string | null | undefined }
 	| { kind: 'list'; label?: string; values: string[] | null | undefined };
 
 export type ReviewSection = {
+	id: string;
 	title: string;
 	fields: ReviewField[];
 };
 
-function joinList(values: string[]): string {
-	return values.join(', ');
-}
+const CONTACT_CARD_QUESTION_IDS = new Set(['website', 'social_instagram', 'social_facebook']);
 
 function nonEmptyText(value: string | null | undefined): string | null {
 	const trimmed = value?.trim();
@@ -24,96 +29,47 @@ function nonEmptyList(values: string[] | null | undefined): string[] | null {
 	return values;
 }
 
-function detailOrList(
-	detail: string | null | undefined,
-	list: string[] | null | undefined
-): string | null {
-	return nonEmptyText(detail) ?? (nonEmptyList(list) ? joinList(list!) : null);
-}
-
-/** Build review sections for the admin modal; empty fields/sections are omitted. */
+/** Build review sections from the farm's own form version; empty fields/sections are omitted. */
 export function buildReviewSections(farm: PendingFarmDto): ReviewSection[] {
-	const minimumOrderLabel =
-		farm.minimum_order != null ? `$${farm.minimum_order} minimum order.` : null;
+	const form = farm.formVersion;
+	const answers = farm.answers ?? {};
+	const answerable = new Set(answerableQuestions(form).map((question) => question.id));
 
-	const marketSales = farm.market_sales_data?.length
-		? farm.market_sales_data
-				.map((entry: MarketSalesData) => `${entry.market} (${entry.times})`)
-				.join('; ')
-		: null;
+	const sections: ReviewSection[] = form.sections.map((section) => ({
+		id: section.id,
+		title: section.title,
+		fields: section.questions
+			.filter(
+				(question) =>
+					answerable.has(question.id) &&
+					!CONTACT_CARD_QUESTION_IDS.has(question.id) &&
+					isQuestionVisible(question, answers) &&
+					!isEmptyAnswer(answers[question.id])
+			)
+			.map((question): ReviewField => {
+				const value = answers[question.id];
+				if (question.type === 'CHECKBOX') {
+					return { kind: 'list', label: question.label, values: optionLabels(question, value) };
+				}
+				return { kind: 'text', label: question.label, value: String(value) };
+			})
+	}));
 
-	const sections: ReviewSection[] = [
-		{
-			title: 'About',
-			fields: [{ kind: 'list', label: 'Growing Practices', values: farm.growing_practices }]
-		},
-		{
-			title: 'Products Offered',
+	// Not a form question, but older farms may have it.
+	if (farm.market_sales_data?.length) {
+		sections.push({
+			id: 'market_sales',
+			title: 'Market Sales',
 			fields: [
 				{
 					kind: 'text',
-					label: 'Seasonal Produce',
-					value: detailOrList(farm.seasonal_products_detail, farm.seasonal_products)
-				},
-				{
-					kind: 'text',
-					label: 'Meat',
-					value: detailOrList(farm.meat_products_detail, farm.meat_products)
-				},
-				{
-					kind: 'text',
-					label: 'Other',
-					value: detailOrList(farm.other_products_detail, farm.other_products)
+					value: farm.market_sales_data
+						.map((entry: MarketSalesData) => `${entry.market} (${entry.times})`)
+						.join('; ')
 				}
 			]
-		},
-		{
-			title: 'Food Safety & Certifications',
-			fields: [
-				{
-					kind: 'list',
-					label: 'Food Safety Certifications',
-					values: farm.food_safety_certifications
-				}
-			]
-		},
-		{
-			title: 'Farm Experiences & Services',
-			fields: [{ kind: 'list', values: farm.farm_experiences }]
-		},
-		{
-			title: 'Farm Characteristics',
-			fields: [
-				{
-					kind: 'list',
-					label: 'Farm Characteristics',
-					values: farm.farm_characteristics
-				}
-			]
-		},
-		{
-			title: 'Farm to School Sales',
-			fields: [
-				{ kind: 'list', values: farm.farm_to_school_sales },
-				{
-					kind: 'text',
-					label: 'Farm to School Experience',
-					value: farm.f2s_experience
-				},
-				{
-					kind: 'text',
-					label: 'Delivery Capabilities',
-					value: farm.delivery_details
-				},
-				{
-					kind: 'text',
-					label: 'Minimum Order Requirements',
-					value: minimumOrderLabel
-				},
-				{ kind: 'text', label: 'Market Sales', value: marketSales }
-			]
-		}
-	];
+		});
+	}
 
 	return sections
 		.map((section) => ({

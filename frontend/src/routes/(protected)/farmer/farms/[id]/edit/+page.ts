@@ -2,11 +2,12 @@ import { error, redirect } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
 import { gqlClient } from '$lib/graphqlClient';
 import { farmToFormModel, type FarmDTO, type FarmFormModel } from '$lib/farmMapping';
+import { FORM_VERSION_FIELDS } from '$lib/utils/form-answers';
 
 // Client-side load: the (protected) subtree is `ssr = false` and authenticates
 // with the Firebase ID token (via gqlClient), not a server cookie. Mirrors the
 // data the previous +page.server.ts loader returned (SHARED CONTRACT with
-// +page.svelte: { form, status, rejection, images }).
+// +page.svelte: { form, formVersion, answers, status, rejection, images }).
 
 const FARM_BY_ID = `
 	query FarmById($id: ID!) {
@@ -19,21 +20,13 @@ const FARM_BY_ID = `
 			cities_served
 			primary_phone
 			primary_email
-			website
-			social_media
-			seasonal_products
-			meat_products
-			other_products
-			seasonal_products_detail
-			growing_practices
-			food_safety_certifications
-			farm_experiences
-			farm_characteristics
-			farm_to_school_sales
 			cover_photo
 			carousel_photos
 			status
 			deletion_requested_at
+			answers
+			formVersion {${FORM_VERSION_FIELDS}
+			}
 		}
 	}
 `;
@@ -156,6 +149,8 @@ export const load: PageLoad = async ({ params }) => {
 
 	return {
 		form,
+		formVersion: farm.formVersion,
+		answers: farm.answers ?? {},
 		status: farm.status,
 		deletionRequested: Boolean(farm.deletion_requested_at),
 		rejection,

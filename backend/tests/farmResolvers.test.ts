@@ -171,11 +171,12 @@ const minimalCreateFarmInput = {
   farm_address: '123 Farm Rd, Jackson, MS',
   county: 'Hinds',
   location: { lat: 32.3, lng: -90.18 },
-  seasonal_products: ['Fruits and Vegetables'],
-  meat_products: [],
-  other_products: [],
-  growing_practices: ['Conventional'],
-  food_safety_certifications: ['None of the above'],
+  formVersionId: 'v1',
+  answers: {
+    seasonal_products: ['Fruits and Vegetables'],
+    growing_practices: ['Conventional'],
+    food_safety_certifications: ['None of the above'],
+  },
 } as CreateFarmInput;
 
 describe('farmResolvers.Query.farmsByProximity', () => {

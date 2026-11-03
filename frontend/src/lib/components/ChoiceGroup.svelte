@@ -10,9 +10,10 @@
 		 *  the rest: checking it clears the others, and checking any other
 		 *  option clears it. */
 		exclusive?: string;
+		optionLabel?: (option: string) => string;
 	}
 
-	let { label, options, value = $bindable(), exclusive }: Props = $props();
+	let { label, options, value = $bindable(), exclusive, optionLabel }: Props = $props();
 
 	function toggle(option: string) {
 		if (value.includes(option)) {
@@ -30,7 +31,7 @@
 	{#each options as option (option)}
 		<label class="choice">
 			<input type="checkbox" checked={value.includes(option)} onchange={() => toggle(option)} />
-			<span>{option}</span>
+			<span>{optionLabel ? optionLabel(option) : option}</span>
 		</label>
 	{/each}
 </fieldset>
