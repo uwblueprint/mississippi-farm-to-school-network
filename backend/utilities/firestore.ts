@@ -16,6 +16,7 @@ export const Collections = {
   // Firestore transactions don't detect a new document being added that newly matches
   // a query that previously returned no results).
   farmUsdaIds: 'farm_usda_ids',
+  formVersions: 'form_versions',
 } as const;
 
 export type FirestoreLocation = { lat: number; lng: number };
