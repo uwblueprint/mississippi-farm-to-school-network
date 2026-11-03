@@ -1,4 +1,5 @@
 import type { FarmStatus } from '$lib/types/farm';
+import type { FormAnswers, FormVersion } from '$lib/types/form';
 
 /** Mirrors the `Role` enum on the backend (`backend/types.ts`). */
 export type UserRole = 'ADMIN' | 'FARMER';
@@ -37,6 +38,8 @@ export type PendingFarmDto = {
 	was_previously_rejected: boolean;
 	deletion_requested_at: string | null;
 	deletion_approved_at: string | null;
+	formVersion: FormVersion;
+	answers: FormAnswers;
 	createdAt: string;
 	updatedAt: string;
 	owner: {

@@ -6,6 +6,7 @@ import {
 	GROWING_PRACTICES,
 	NONE_OF_THE_ABOVE
 } from '$lib/constants/farmOptions';
+import { FORM_VERSION_FIELDS } from '$lib/utils/form-answers';
 
 export const ADMIN_FARMS_PAGE_SIZE = 11;
 
@@ -105,6 +106,9 @@ export const FARM_DETAILS_QUERY = `
 			carousel_photos
 			status
 			was_previously_rejected
+			answers
+			formVersion {${FORM_VERSION_FIELDS}
+			}
 			createdAt
 			updatedAt
 			owner {

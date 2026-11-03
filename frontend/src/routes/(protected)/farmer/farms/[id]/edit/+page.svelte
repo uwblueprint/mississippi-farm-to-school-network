@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { page } from '$app/stores';
 	import { goto, invalidateAll } from '$app/navigation';
 	import type { PageData } from './$types';
@@ -14,17 +15,14 @@
 	import { preparePhotos } from '$lib/utils/prepare-photo';
 	import { formModelToUpdateInput } from '$lib/farmMapping';
 	import { uploadFarmPhoto } from '$lib/utils/farm-image-upload';
+	import type { FormAnswers, FormQuestion } from '$lib/types/form';
 	import {
-		NONE_OF_THE_ABOVE,
-		GROWING_PRACTICES,
-		SEASONAL_PRODUCTS,
-		MEAT_PRODUCTS,
-		OTHER_PRODUCTS,
-		FOOD_SAFETY_CERTIFICATIONS,
-		FARM_EXPERIENCES,
-		FARM_CHARACTERISTICS,
-		FARM_TO_SCHOOL_SALES
-	} from '$lib/constants/farmOptions';
+		answerErrors,
+		answerableQuestions,
+		answersPayload,
+		displayLabel,
+		isQuestionVisible
+	} from '$lib/utils/form-answers';
 
 	let { data }: { data: PageData } = $props();
 
@@ -65,17 +63,60 @@
 	`;
 
 	// --- Form state ---------------------------------------------------------
-	// Backend-mapped fields, seeded from the loader (farmToFormModel). The
-	// checkbox groups live in here too (not separate local state) so that
-	// formModelToUpdateInput actually sends them on save.
+	// The locked farm fields, seeded from the loader (farmToFormModel).
 	const farm = $state({ ...data.form });
 
-	// Checkbox option labels come from $lib/constants/farmOptions (the frontend
-	// mirror of the backend's allowed values); the selected labels are stored
-	// verbatim in the backend string-array columns. The backend also accepts
-	// "None of the above" for these two groups.
-	const GROWING_PRACTICE_OPTIONS = [...GROWING_PRACTICES, NONE_OF_THE_ABOVE];
-	const FOOD_SAFETY_OPTIONS = [...FOOD_SAFETY_CERTIFICATIONS, NONE_OF_THE_ABOVE];
+	// Every other question comes from the farm's own form version, not the latest
+	// one. Text and number answers are held as strings; answersPayload converts them.
+	const formVersion = untrack(() => data.formVersion);
+	const answers = $state<FormAnswers>(
+		untrack(() =>
+			Object.fromEntries(
+				answerableQuestions(formVersion).map((question) => {
+					const value = data.answers[question.id];
+					if (question.type === 'CHECKBOX') return [question.id, Array.isArray(value) ? value : []];
+					return [question.id, value == null ? '' : String(value)];
+				})
+			)
+		)
+	);
+	let showAnswerErrors = $state(false);
+	const shownAnswers = $derived(answersPayload(formVersion, answers));
+	const questionErrors = $derived(answerErrors(formVersion, answers));
+
+	function textAnswer(question: FormQuestion): string {
+		const value = answers[question.id];
+		return typeof value === 'string' ? value : '';
+	}
+
+	function checkedOptions(question: FormQuestion): string[] {
+		const value = answers[question.id];
+		return Array.isArray(value) ? value : [];
+	}
+
+	function optionLabelFor(question: FormQuestion) {
+		return (optionId: string) =>
+			question.options.find((option) => option.id === optionId)?.label ?? optionId;
+	}
+
+	function isHalfWidth(question: FormQuestion): boolean {
+		return (
+			question.type === 'TEXT' ||
+			question.type === 'URL' ||
+			question.lockedField === 'PRIMARY_PHONE' ||
+			question.lockedField === 'PRIMARY_EMAIL'
+		);
+	}
+
+	// Photos are edited in the Dashboard Image / Photo Gallery sections at the top.
+	const formSections = $derived(
+		formVersion.sections
+			.map((section) => ({
+				...section,
+				questions: section.questions.filter((question) => question.lockedField !== 'PHOTOS')
+			}))
+			.filter((section) => section.questions.length > 0)
+	);
 
 	// The two image buckets, resolved by the loader from cover_photo /
 	// carousel_photos (`images` ids) + getImages. Derived from `data`
@@ -129,11 +170,19 @@
 	// approval queue); all others use updateFarm.
 	async function handleSave(event: SubmitEvent) {
 		event.preventDefault();
-		saving = true;
 		actionError = '';
+		const unanswered = answerableQuestions(formVersion).filter(
+			(question) => questionErrors[question.id]
+		);
+		if (unanswered.length > 0) {
+			showAnswerErrors = true;
+			actionError = `Please fix: ${unanswered.map((question) => question.label).join(', ')}`;
+			return;
+		}
+		saving = true;
 		const resubmitting = data.status === 'REJECTED';
 		try {
-			const input = formModelToUpdateInput(farm);
+			const input = formModelToUpdateInput(farm, shownAnswers);
 			await gqlClient(resubmitting ? RESUBMIT_FARM : UPDATE_FARM, { id: farmId, input });
 		} catch (err) {
 			actionError = err instanceof Error ? err.message : 'Save failed.';
@@ -380,85 +429,71 @@
 		/>
 	</section>
 
-	<section class="section">
-		<h2 class="section__heading">Farm Basics</h2>
+	{#each formSections as section (section.id)}
+		<section class="section">
+			<h2 class="section__heading">{section.title}</h2>
 
-		<TextInput size="lg" label="Farm ID#" value={farm.readableId} readonly />
-
-		<TextInput size="lg" label="Farm Name" bind:value={farm.name} />
-		<TextInput size="lg" label="Farm address" bind:value={farm.address} />
-		<TextInput size="lg" label="County" bind:value={farm.county} />
-		<TextInput size="lg" label="Cities Served" bind:value={farm.cities} />
-		<p class="field-note">Separate multiple cities with commas.</p>
-	</section>
-
-	<section class="section">
-		<h2 class="section__heading">Primary Contact Information</h2>
-
-		<div class="field-grid">
-			<TextInput size="lg" label="Phone Number" bind:value={farm.phone} />
-			<TextInput size="lg" label="Email Address" bind:value={farm.email} />
-			<TextInput size="lg" label="*Optional: Instagram" bind:value={farm.instagram} />
-			<TextInput size="lg" label="*Optional: Facebook" bind:value={farm.facebook} />
-			<TextInput size="lg" label="*Optional: Website" bind:value={farm.website} />
-			<TextInput
-				size="lg"
-				label="*Optional: Other (social media + username)"
-				bind:value={farm.other}
-			/>
-		</div>
-	</section>
-
-	<section class="section">
-		<h2 class="section__heading">Farm Profile</h2>
-
-		<!-- Each group binds the selected labels verbatim to its backend
-		     string-array column (see farmMapping / $lib/constants/farmOptions). -->
-		<ChoiceGroup
-			label="Growing Practices"
-			options={GROWING_PRACTICE_OPTIONS}
-			exclusive={NONE_OF_THE_ABOVE}
-			bind:value={farm.growingPractices}
-		/>
-
-		<ChoiceGroup
-			label="Seasonal Products"
-			options={SEASONAL_PRODUCTS}
-			bind:value={farm.seasonalProducts}
-		/>
-		<ChoiceGroup label="Meat Products" options={MEAT_PRODUCTS} bind:value={farm.meatProducts} />
-		<ChoiceGroup label="Other Products" options={OTHER_PRODUCTS} bind:value={farm.otherProducts} />
-
-		<!-- seasonal_products_detail — free-text detail for the products above. -->
-		<TextInput
-			size="lg"
-			label="Seasonal product and products offered"
-			bind:value={farm.seasonal}
-			multiline
-		/>
-
-		<ChoiceGroup
-			label="Food Safety & Certifications"
-			options={FOOD_SAFETY_OPTIONS}
-			exclusive={NONE_OF_THE_ABOVE}
-			bind:value={farm.foodSafety}
-		/>
-		<ChoiceGroup
-			label="Farm Experiences & Services"
-			options={FARM_EXPERIENCES}
-			bind:value={farm.experiences}
-		/>
-		<ChoiceGroup
-			label="Farm Characteristics"
-			options={FARM_CHARACTERISTICS}
-			bind:value={farm.characteristics}
-		/>
-		<ChoiceGroup
-			label="Farm to School Sales"
-			options={FARM_TO_SCHOOL_SALES}
-			bind:value={farm.schoolSales}
-		/>
-	</section>
+			<div class="question-grid">
+				{#each section.questions as question (question.id)}
+					{#if question.type === 'LOCKED'}
+						<div class="question" class:question--half={isHalfWidth(question)}>
+							{#if question.lockedField === 'USDA_FARM_ID'}
+								<TextInput size="lg" label={question.label} value={farm.readableId} readonly />
+							{:else if question.lockedField === 'FARM_NAME'}
+								<TextInput size="lg" label={question.label} bind:value={farm.name} />
+							{:else if question.lockedField === 'FARM_ADDRESS'}
+								<TextInput size="lg" label={question.label} bind:value={farm.address} />
+							{:else if question.lockedField === 'COUNTY'}
+								<TextInput size="lg" label={question.label} bind:value={farm.county} />
+							{:else if question.lockedField === 'PRIMARY_PHONE'}
+								<TextInput size="lg" label={question.label} bind:value={farm.phone} />
+							{:else if question.lockedField === 'PRIMARY_EMAIL'}
+								<TextInput size="lg" label={question.label} bind:value={farm.email} />
+							{/if}
+						</div>
+						{#if question.lockedField === 'COUNTY'}
+							<!-- Not a form question, so it's placed after County. -->
+							<div class="question">
+								<TextInput size="lg" label="Cities Served" bind:value={farm.cities} />
+								<p class="field-note">Separate multiple cities with commas.</p>
+							</div>
+						{/if}
+					{:else if isQuestionVisible(question, shownAnswers)}
+						{@const error = showAnswerErrors ? questionErrors[question.id] : ''}
+						<div class="question" class:question--half={isHalfWidth(question)}>
+							{#if question.type === 'CHECKBOX'}
+								<ChoiceGroup
+									label={displayLabel(question)}
+									options={question.options.map((option) => option.id)}
+									optionLabel={optionLabelFor(question)}
+									exclusive={question.exclusiveOptionId ?? undefined}
+									bind:value={
+										() => checkedOptions(question), (next) => (answers[question.id] = next)
+									}
+								/>
+								{#if error}
+									<p class="form-error" role="alert">{error}</p>
+								{/if}
+							{:else}
+								<TextInput
+									size="lg"
+									label={displayLabel(question)}
+									placeholder={question.placeholder ?? undefined}
+									multiline={question.type === 'TEXTAREA'}
+									inputmode={question.type === 'NUMBER' ? 'numeric' : undefined}
+									{error}
+									bind:value={() => textAnswer(question), (next) => (answers[question.id] = next)}
+								/>
+							{/if}
+							{#if question.helpText}
+								<p class="field-note">{question.helpText}</p>
+							{/if}
+						</div>
+					{/if}
+				{/each}
+			</div>
+		</section>
+	{/each}
 
 	<div class="footer-actions">
 		{#if data.deletionRequested}
@@ -599,10 +634,21 @@
 		line-height: normal;
 	}
 
-	.field-grid {
+	.question-grid {
 		display: grid;
-		grid-template-columns: repeat(2, 1fr);
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 18px 20px;
+	}
+
+	.question {
+		grid-column: 1 / -1;
+		display: flex;
+		flex-direction: column;
+		gap: 18px;
+	}
+
+	.question--half {
+		grid-column: span 1;
 	}
 
 	.dashboard-image {
