@@ -10,17 +10,17 @@
 	import { refreshAuthTokenCookie } from '$lib/auth';
 	import { showToast } from '$lib/state/toast.svelte';
 	import { COUNTIES } from '$lib/data/msCounties';
+	import { gqlClient } from '$lib/graphqlClient';
+	import type { FormAnswers, FormQuestion, FormVersion } from '$lib/types/form';
 	import {
-		NONE_OF_THE_ABOVE,
-		GROWING_PRACTICES,
-		SEASONAL_PRODUCTS,
-		MEAT_PRODUCTS,
-		OTHER_PRODUCTS,
-		FOOD_SAFETY_CERTIFICATIONS,
-		FARM_EXPERIENCES,
-		FARM_CHARACTERISTICS,
-		FARM_TO_SCHOOL_SALES
-	} from '$lib/constants/farmOptions';
+		PUBLISHED_FORM_QUERY,
+		answerErrors,
+		answersPayload,
+		displayLabel,
+		isEmptyAnswer,
+		isQuestionVisible,
+		toggleOption
+	} from '$lib/utils/form-answers';
 
 	let { data } = $props();
 
@@ -52,25 +52,11 @@
 	let email = $state(untrack(() => data.user?.email ?? ''));
 	/** The pre-filled email, so filling it in doesn't count as an unsaved edit. */
 	let prefilledEmail = $state(untrack(() => data.user?.email ?? ''));
-	let instagram = $state('');
-	let facebook = $state('');
-	let website = $state('');
-	let otherSocial = $state('');
 
-	let growingPractices = $state<string[]>([]);
-	let seasonalProducts = $state<string[]>([]);
-	let meatProducts = $state<string[]>([]);
-	let otherProducts = $state<string[]>([]);
-	let seasonalDetail = $state('');
-	let meatDetail = $state('');
-	let otherDetail = $state('');
-	let foodSafetyCertifications = $state<string[]>([]);
-	let farmExperiences = $state<string[]>([]);
-	let farmCharacteristics = $state<string[]>([]);
-	let farmToSchoolSales = $state<string[]>([]);
-	let f2sExperience = $state('');
-	let minimumOrder = $state('');
-	let deliveryDetails = $state('');
+	// Every other question comes from the published form, keyed by question id.
+	let form = $state<FormVersion | null>(null);
+	let formLoadError = $state<string | null>(null);
+	let answers = $state<FormAnswers>({});
 
 	let farmPhotos = $state<File[]>([]);
 	// Kept apart: the picker reports rejections in a separate change event that
@@ -95,14 +81,22 @@
 			const currentEmail = getFirebaseAuth().currentUser?.email;
 			if (currentEmail) email = prefilledEmail = currentEmail;
 		}
+		void loadForm();
 	});
 
-	const NONE = NONE_OF_THE_ABOVE;
-	const DELIVERY_AVAILABLE = 'Delivery Available';
+	async function loadForm() {
+		formLoadError = null;
+		try {
+			const result = await gqlClient<{ publishedForm: FormVersion }>(PUBLISHED_FORM_QUERY);
+			form = result.publishedForm;
+		} catch (err) {
+			formLoadError = err instanceof Error ? err.message : 'Could not load the form.';
+		}
+	}
+
 	const MS_COUNTIES = COUNTIES;
 
 	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-	const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 
 	let touched = $state<Record<string, boolean>>({});
 
@@ -110,11 +104,9 @@
 		MS_COUNTIES.filter((name) => name.toLowerCase().includes(county.trim().toLowerCase()))
 	);
 
-	const f2sSelected = $derived(farmToSchoolSales.length > 0);
-	const deliverySelected = $derived(farmToSchoolSales.includes(DELIVERY_AVAILABLE));
-	const seasonalSelected = $derived(seasonalProducts.length > 0);
-	const meatSelected = $derived(meatProducts.length > 0);
-	const otherSelected = $derived(otherProducts.length > 0);
+	// What would be submitted; also decides which conditional questions show.
+	const submittedAnswers = $derived(form ? answersPayload(form, answers) : {});
+	const questionErrors = $derived(form ? answerErrors(form, answers) : {});
 
 	const errors = $derived({
 		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm ID is required.' : '',
@@ -137,18 +129,15 @@
 				? 'Email address is required.'
 				: !emailPattern.test(email)
 					? 'Enter a valid email address.'
-					: '',
-		website: website.trim() !== '' && !urlPattern.test(website.trim()) ? 'Enter a valid URL.' : '',
-		growingPractices: growingPractices.length === 0 ? 'Select at least one growing practice.' : '',
-		foodSafetyCertifications:
-			foodSafetyCertifications.length === 0 ? 'Select at least one option.' : '',
-		f2sExperience: f2sSelected && f2sExperience.trim() === '' ? 'This field is required.' : '',
-		minimumOrder: f2sSelected && minimumOrder.trim() === '' ? 'Minimum order is required.' : '',
-		deliveryDetails:
-			deliverySelected && deliveryDetails.trim() === '' ? 'This field is required.' : ''
+					: ''
 	});
 
-	const isValid = $derived(Object.values(errors).every((message) => message === ''));
+	const isValid = $derived(
+		form !== null &&
+			[...Object.values(errors), ...Object.values(questionErrors)].every(
+				(message) => message === ''
+			)
+	);
 
 	const isDirty = $derived(
 		usdaFarmId !== '' ||
@@ -157,24 +146,7 @@
 			county !== '' ||
 			phone !== (data.user?.phone ?? '') ||
 			email !== prefilledEmail ||
-			instagram !== '' ||
-			facebook !== '' ||
-			website !== '' ||
-			otherSocial !== '' ||
-			growingPractices.length > 0 ||
-			seasonalProducts.length > 0 ||
-			meatProducts.length > 0 ||
-			otherProducts.length > 0 ||
-			seasonalDetail !== '' ||
-			meatDetail !== '' ||
-			otherDetail !== '' ||
-			foodSafetyCertifications.length > 0 ||
-			farmExperiences.length > 0 ||
-			farmCharacteristics.length > 0 ||
-			farmToSchoolSales.length > 0 ||
-			f2sExperience !== '' ||
-			minimumOrder !== '' ||
-			deliveryDetails !== '' ||
+			Object.values(answers).some((value) => !isEmptyAnswer(value)) ||
 			farmPhotos.length > 0
 	);
 
@@ -189,22 +161,30 @@
 		input.value = cleaned;
 	}
 
-	function handleMinimumOrderInput(event: Event) {
+	function handleNumberInput(question: FormQuestion, event: Event) {
 		const input = event.currentTarget as HTMLInputElement;
 		const cleaned = digitsOnly(input.value);
-		minimumOrder = cleaned;
+		answers[question.id] = cleaned;
 		input.value = cleaned;
 	}
 
-	function toggleInGroup(current: string[], option: string, checked: boolean, hasNone: boolean) {
-		if (hasNone && option === NONE) {
-			return checked ? [NONE] : [];
-		}
-		let next = checked ? [...current, option] : current.filter((item) => item !== option);
-		if (hasNone) {
-			next = next.filter((item) => item !== NONE);
-		}
-		return next;
+	function textAnswer(question: FormQuestion): string {
+		const value = answers[question.id];
+		return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+	}
+
+	function checkedOptions(question: FormQuestion): string[] {
+		const value = answers[question.id];
+		return Array.isArray(value) ? value : [];
+	}
+
+	function isHalfWidth(question: FormQuestion): boolean {
+		return (
+			question.type === 'TEXT' ||
+			question.type === 'URL' ||
+			question.lockedField === 'PRIMARY_PHONE' ||
+			question.lockedField === 'PRIMARY_EMAIL'
+		);
 	}
 
 	function handleAddressInput() {
@@ -359,45 +339,26 @@
 		photoPrepareMessages = errors;
 	}
 
-	function buildFarmPayload() {
-		const socialMedia: Record<string, string> = {};
-		if (instagram.trim()) socialMedia.instagram = instagram.trim();
-		if (facebook.trim()) socialMedia.facebook = facebook.trim();
-		if (otherSocial.trim()) socialMedia.other = otherSocial.trim();
-
+	function buildFarmPayload(currentForm: FormVersion) {
 		return {
 			usda_farm_id: usdaFarmId.trim(),
 			farm_name: farmName.trim(),
-			seasonal_products_detail: seasonalDetail.trim(),
-			meat_products_detail: meatDetail.trim(),
-			other_products_detail: otherDetail.trim(),
 			primary_phone: phone,
 			primary_email: email.trim(),
-			website: website.trim() || null,
-			social_media: Object.keys(socialMedia).length > 0 ? socialMedia : null,
 			farm_address: farmAddress.trim(),
 			county: county.trim(),
 			location: { lat: addressLat, lng: addressLng },
-			seasonal_products: seasonalProducts,
-			meat_products: meatProducts,
-			other_products: otherProducts,
-			growing_practices: growingPractices,
-			food_safety_certifications: foodSafetyCertifications,
-			farm_experiences: farmExperiences,
-			farm_characteristics: farmCharacteristics,
-			farm_to_school_sales: farmToSchoolSales,
-			f2s_experience: f2sSelected ? f2sExperience.trim() || null : null,
-			minimum_order: f2sSelected && minimumOrder.trim() !== '' ? Number(minimumOrder) : null,
-			delivery_details: deliverySelected ? deliveryDetails.trim() || null : null,
 			cover_photo: null,
-			carousel_photos: []
+			carousel_photos: [],
+			formVersionId: currentForm.id,
+			answers: answersPayload(currentForm, answers)
 		};
 	}
 
 	async function handleSubmit() {
 		// The farm already exists; another submit would create a duplicate.
-		if (submitted) return;
-		for (const key of Object.keys(errors)) {
+		if (submitted || !form) return;
+		for (const key of [...Object.keys(errors), ...Object.keys(questionErrors)]) {
 			touched[key] = true;
 		}
 		if (submitting || preparingPhotos) return;
@@ -412,7 +373,7 @@
 		submitting = true;
 		submitError = null;
 
-		const payload = buildFarmPayload();
+		const payload = buildFarmPayload(form);
 
 		try {
 			await refreshAuthTokenCookie();
@@ -486,46 +447,369 @@
 	}
 </script>
 
-{#snippet checkboxGroup(
-	field: string,
-	options: string[],
-	selected: string[],
-	set: (next: string[]) => void,
-	hasNone: boolean
-)}
-	<div
-		class="choice-list"
-		class:group-error={touched[field] && errors[field as keyof typeof errors]}
-	>
-		{#each options as option}
-			<label class="choice">
+{#snippet answerField(question: FormQuestion)}
+	{@const fieldId = `question-${question.id}`}
+	{@const invalid = Boolean(touched[question.id] && questionErrors[question.id])}
+	<div class="form-group" class:form-group--half={isHalfWidth(question)}>
+		{#if question.type === 'CHECKBOX'}
+			<span class="field-label">{displayLabel(question)}</span>
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+			<div class="choice-list" class:group-error={invalid}>
+				{#each question.options as option (option.id)}
+					<label class="choice">
+						<input
+							type="checkbox"
+							checked={checkedOptions(question).includes(option.id)}
+							onchange={(e) => {
+								answers[question.id] = toggleOption(
+									question,
+									answers[question.id],
+									option.id,
+									e.currentTarget.checked
+								);
+								touched[question.id] = true;
+							}}
+						/>
+						<span>{option.label}</span>
+					</label>
+				{/each}
+			</div>
+		{:else}
+			<label class="field-label" for={fieldId}>{displayLabel(question)}</label>
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+			{#if question.type === 'TEXTAREA'}
+				<textarea
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					rows="3"
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
+					onblur={() => (touched[question.id] = true)}
+				></textarea>
+			{:else if question.type === 'NUMBER'}
 				<input
-					type="checkbox"
-					checked={selected.includes(option)}
-					onchange={(e) => {
-						set(toggleInGroup(selected, option, e.currentTarget.checked, hasNone));
-						touched[field] = true;
-					}}
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					inputmode="numeric"
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => handleNumberInput(question, e)}
+					onblur={() => (touched[question.id] = true)}
 				/>
-				<span>{option}</span>
-			</label>
-		{/each}
-		{#if hasNone}
-			<label class="choice">
+			{:else}
 				<input
-					type="checkbox"
-					checked={selected.includes(NONE)}
-					onchange={(e) => {
-						set(toggleInGroup(selected, NONE, e.currentTarget.checked, hasNone));
-						touched[field] = true;
-					}}
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
+					onblur={() => (touched[question.id] = true)}
 				/>
-				<span>{NONE}</span>
-			</label>
+			{/if}
+		{/if}
+		{#if invalid}
+			<span class="error-text">{questionErrors[question.id]}</span>
 		{/if}
 	</div>
-	{#if touched[field] && errors[field as keyof typeof errors]}
-		<span class="error-text">{errors[field as keyof typeof errors]}</span>
+{/snippet}
+
+{#snippet lockedQuestion(question: FormQuestion)}
+	{#if question.lockedField === 'USDA_FARM_ID'}
+		<div class="form-group">
+			<label class="field-label" for="usda-farm-id">{question.label}</label>
+			<input
+				id="usda-farm-id"
+				class="field"
+				class:input-error={touched.usdaFarmId && errors.usdaFarmId}
+				placeholder={question.placeholder ?? ''}
+				bind:value={usdaFarmId}
+				onblur={() => (touched.usdaFarmId = true)}
+			/>
+			{#if touched.usdaFarmId && errors.usdaFarmId}
+				<span class="error-text">{errors.usdaFarmId}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'FARM_NAME'}
+		<div class="form-group">
+			<label class="field-label" for="farm-name">{question.label}</label>
+			<input
+				id="farm-name"
+				class="field"
+				class:input-error={touched.farmName && errors.farmName}
+				placeholder={question.placeholder ?? ''}
+				bind:value={farmName}
+				onblur={() => (touched.farmName = true)}
+			/>
+			{#if touched.farmName && errors.farmName}
+				<span class="error-text">{errors.farmName}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'FARM_ADDRESS'}
+		<div class="form-group">
+			<label class="field-label" for="farm-address">{question.label}</label>
+			<div class="combobox">
+				<div class="search-field">
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="11" cy="11" r="7" />
+						<path d="M21 21l-4.35-4.35" />
+					</svg>
+					<input
+						id="farm-address"
+						class="field"
+						class:input-error={touched.farmAddress && errors.farmAddress}
+						placeholder={question.placeholder ?? ''}
+						autocomplete="off"
+						role="combobox"
+						aria-autocomplete="list"
+						aria-controls="farm-address-options"
+						aria-expanded={addressFocused && addressSuggestions.length > 0}
+						aria-activedescendant={addressActiveIndex >= 0
+							? `farm-address-option-${addressActiveIndex}`
+							: undefined}
+						bind:value={farmAddress}
+						oninput={handleAddressInput}
+						onkeydown={handleAddressKeydown}
+						onfocus={() => (addressFocused = true)}
+						onblur={() => {
+							touched.farmAddress = true;
+							addressFocused = false;
+						}}
+					/>
+				</div>
+				{#if addressFocused && (addressLoading || addressSearched)}
+					<ul class="combobox-list" id="farm-address-options" role="listbox">
+						{#if addressLoading && addressSuggestions.length === 0}
+							<li class="combobox-empty">Searching…</li>
+						{:else if addressSuggestions.length === 0}
+							<li class="combobox-empty">No matching Mississippi addresses</li>
+						{/if}
+						{#each addressSuggestions as suggestion, i (suggestion.placeId)}
+							<li
+								id={`farm-address-option-${i}`}
+								role="option"
+								aria-selected={i === addressActiveIndex}
+							>
+								<button
+									type="button"
+									tabindex="-1"
+									class="combobox-option"
+									class:combobox-option--active={i === addressActiveIndex}
+									onmouseenter={() => (addressActiveIndex = i)}
+									onmousedown={(e) => {
+										e.preventDefault();
+										void selectAddress(suggestion);
+									}}
+								>
+									<span class="addr-primary">{suggestion.primary}</span>
+									{#if suggestion.secondary}
+										<span class="addr-secondary">{suggestion.secondary}</span>
+									{/if}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			{#if addressSelectError}
+				<span class="error-text">{addressSelectError}</span>
+			{:else if touched.farmAddress && errors.farmAddress}
+				<span class="error-text">{errors.farmAddress}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'COUNTY'}
+		<div class="form-group">
+			<label class="field-label" for="county">{question.label}</label>
+			<div class="combobox">
+				<div class="search-field">
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="11" cy="11" r="7" />
+						<path d="M21 21l-4.35-4.35" />
+					</svg>
+					<input
+						id="county"
+						class="field"
+						class:input-error={touched.county && errors.county}
+						placeholder={question.placeholder ?? ''}
+						autocomplete="off"
+						bind:value={county}
+						oninput={() => (countyFocused = true)}
+						onfocus={() => (countyFocused = true)}
+						onblur={() => {
+							touched.county = true;
+							countyFocused = false;
+						}}
+					/>
+				</div>
+				{#if countyFocused && filteredCounties.length > 0}
+					<ul class="combobox-list">
+						{#each filteredCounties as name}
+							<li>
+								<button
+									type="button"
+									class="combobox-option"
+									onmousedown={(e) => {
+										e.preventDefault();
+										selectCounty(name);
+									}}
+								>
+									{name}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			{#if touched.county && errors.county}
+				<span class="error-text">{errors.county}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PRIMARY_PHONE'}
+		<div class="form-group form-group--half">
+			<label class="field-label" for="phone">{question.label}</label>
+			<input
+				id="phone"
+				class="field"
+				class:input-error={touched.phone && errors.phone}
+				inputmode="numeric"
+				placeholder={question.placeholder ?? ''}
+				value={phone}
+				oninput={handlePhoneInput}
+				onblur={() => (touched.phone = true)}
+			/>
+			{#if touched.phone && errors.phone}
+				<span class="error-text">{errors.phone}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PRIMARY_EMAIL'}
+		<div class="form-group form-group--half">
+			<label class="field-label" for="email">{question.label}</label>
+			<input
+				id="email"
+				class="field"
+				class:input-error={touched.email && errors.email}
+				type="email"
+				placeholder={question.placeholder ?? ''}
+				bind:value={email}
+				onblur={() => (touched.email = true)}
+			/>
+			{#if touched.email && errors.email}
+				<span class="error-text">{errors.email}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PHOTOS'}
+		<div class="form-group">
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+
+			<FileUpload
+				accept={IMAGE_ACCEPT}
+				maxFiles={MAX_PHOTOS}
+				acceptedFiles={farmPhotos}
+				onFileChange={handlePhotosChange}
+			>
+				<FileUpload.Label class="sr-only">Upload farm photos</FileUpload.Label>
+				<FileUpload.Dropzone
+					class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
+				>
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="#131927"
+						stroke-width="1.6"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M12 16V4" />
+						<path d="M8 8l4-4 4 4" />
+						<path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+					</svg>
+					<FileUpload.Trigger
+						class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
+					>
+						Upload farm photos
+					</FileUpload.Trigger>
+					<span class="text-xs text-[#9aa0a6]">
+						JPG, PNG or HEIC, up to {MAX_PHOTOS} pics ({MAX_UPLOAD_LABEL} each)
+					</span>
+					<FileUpload.HiddenInput />
+				</FileUpload.Dropzone>
+
+				{#if preparingPhotos}
+					<p class="photo-status" role="status">Preparing photos…</p>
+				{/if}
+				{#each photoMessages as message (message)}
+					<p class="error-text photo-error" role="alert">{message}</p>
+				{/each}
+
+				{#if farmPhotos.length > 0}
+					<FileUpload.ItemGroup class="file-list">
+						{#each farmPhotos as file, index (`${index}-${file.name}-${file.size}-${file.lastModified}`)}
+							<FileUpload.Item {file} class={index === coverIndex ? 'cover-photo' : undefined}>
+								<button
+									class="tile-btn"
+									type="button"
+									aria-pressed={index === coverIndex}
+									aria-label={`Set ${file.name} as cover photo`}
+									onclick={() => (coverIndex = index)}
+								>
+									<img class="file-thumb" src={photoUrl(file)} alt="" />
+								</button>
+								<span class="file-name">{file.name}</span>
+								{#if index === coverIndex}
+									<span class="cover-badge">Cover</span>
+								{/if}
+								<FileUpload.ItemDeleteTrigger
+									class="tile-delete"
+									aria-label={`Remove ${file.name}`}
+								>
+									<svg
+										width="12"
+										height="12"
+										viewBox="0 0 12 12"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.8"
+										stroke-linecap="round"
+									>
+										<path d="M2 2l8 8" />
+										<path d="M10 2l-8 8" />
+									</svg>
+								</FileUpload.ItemDeleteTrigger>
+							</FileUpload.Item>
+						{/each}
+					</FileUpload.ItemGroup>
+				{/if}
+			</FileUpload>
+		</div>
 	{/if}
 {/snippet}
 
@@ -539,7 +823,7 @@
 			class="save-btn"
 			type="button"
 			onclick={handleSubmit}
-			disabled={submitted || submitting || preparingPhotos}
+			disabled={!form || submitted || submitting || preparingPhotos}
 		>
 			{submitting ? 'Saving…' : 'Save Changes'}
 		</button>
@@ -547,562 +831,46 @@
 
 	<h1 class="page-title">Create a Farm</h1>
 
-	<h2 class="section-title">Farm Basics</h2>
-
-	<div class="form-group">
-		<label class="field-label" for="usda-farm-id">Farm ID #</label>
-		<input
-			id="usda-farm-id"
-			class="field"
-			class:input-error={touched.usdaFarmId && errors.usdaFarmId}
-			placeholder="e.g. 32486126374"
-			bind:value={usdaFarmId}
-			onblur={() => (touched.usdaFarmId = true)}
-		/>
-		{#if touched.usdaFarmId && errors.usdaFarmId}
-			<span class="error-text">{errors.usdaFarmId}</span>
+	{#if !form}
+		{#if formLoadError}
+			<p class="submit-error form-load-error" role="alert">{formLoadError}</p>
+			<button class="back-btn" type="button" onclick={loadForm}>Try again</button>
+		{:else}
+			<p class="field-help" role="status">Loading form…</p>
 		{/if}
-	</div>
+	{:else}
+		{#each form.sections as section (section.id)}
+			<h2 class="section-title">{section.title}</h2>
 
-	<div class="form-group">
-		<label class="field-label" for="farm-name">Farm Name</label>
-		<input
-			id="farm-name"
-			class="field"
-			class:input-error={touched.farmName && errors.farmName}
-			placeholder="e.g. Two Brooks Farm"
-			bind:value={farmName}
-			onblur={() => (touched.farmName = true)}
-		/>
-		{#if touched.farmName && errors.farmName}
-			<span class="error-text">{errors.farmName}</span>
-		{/if}
-	</div>
-
-	<div class="form-group">
-		<label class="field-label" for="farm-address">Farm address</label>
-		<div class="combobox">
-			<div class="search-field">
-				<svg
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<circle cx="11" cy="11" r="7" />
-					<path d="M21 21l-4.35-4.35" />
-				</svg>
-				<input
-					id="farm-address"
-					class="field"
-					class:input-error={touched.farmAddress && errors.farmAddress}
-					placeholder="Search Farm Address"
-					autocomplete="off"
-					role="combobox"
-					aria-autocomplete="list"
-					aria-controls="farm-address-options"
-					aria-expanded={addressFocused && addressSuggestions.length > 0}
-					aria-activedescendant={addressActiveIndex >= 0
-						? `farm-address-option-${addressActiveIndex}`
-						: undefined}
-					bind:value={farmAddress}
-					oninput={handleAddressInput}
-					onkeydown={handleAddressKeydown}
-					onfocus={() => (addressFocused = true)}
-					onblur={() => {
-						touched.farmAddress = true;
-						addressFocused = false;
-					}}
-				/>
-			</div>
-			{#if addressFocused && (addressLoading || addressSearched)}
-				<ul class="combobox-list" id="farm-address-options" role="listbox">
-					{#if addressLoading && addressSuggestions.length === 0}
-						<li class="combobox-empty">Searching…</li>
-					{:else if addressSuggestions.length === 0}
-						<li class="combobox-empty">No matching Mississippi addresses</li>
+			<div class="question-grid">
+				{#each section.questions as question (question.id)}
+					{#if question.type === 'LOCKED'}
+						{@render lockedQuestion(question)}
+					{:else if isQuestionVisible(question, submittedAnswers)}
+						{@render answerField(question)}
 					{/if}
-					{#each addressSuggestions as suggestion, i (suggestion.placeId)}
-						<li
-							id={`farm-address-option-${i}`}
-							role="option"
-							aria-selected={i === addressActiveIndex}
-						>
-							<button
-								type="button"
-								tabindex="-1"
-								class="combobox-option"
-								class:combobox-option--active={i === addressActiveIndex}
-								onmouseenter={() => (addressActiveIndex = i)}
-								onmousedown={(e) => {
-									e.preventDefault();
-									void selectAddress(suggestion);
-								}}
-							>
-								<span class="addr-primary">{suggestion.primary}</span>
-								{#if suggestion.secondary}
-									<span class="addr-secondary">{suggestion.secondary}</span>
-								{/if}
-							</button>
-						</li>
-					{/each}
-				</ul>
-			{/if}
-		</div>
-		{#if addressSelectError}
-			<span class="error-text">{addressSelectError}</span>
-		{:else if touched.farmAddress && errors.farmAddress}
-			<span class="error-text">{errors.farmAddress}</span>
-		{/if}
-	</div>
-
-	<div class="form-group">
-		<label class="field-label" for="county">County</label>
-		<div class="combobox">
-			<div class="search-field">
-				<svg
-					width="18"
-					height="18"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<circle cx="11" cy="11" r="7" />
-					<path d="M21 21l-4.35-4.35" />
-				</svg>
-				<input
-					id="county"
-					class="field"
-					class:input-error={touched.county && errors.county}
-					placeholder="Start typing your county"
-					autocomplete="off"
-					bind:value={county}
-					oninput={() => (countyFocused = true)}
-					onfocus={() => (countyFocused = true)}
-					onblur={() => {
-						touched.county = true;
-						countyFocused = false;
-					}}
-				/>
+				{/each}
 			</div>
-			{#if countyFocused && filteredCounties.length > 0}
-				<ul class="combobox-list">
-					{#each filteredCounties as name}
-						<li>
-							<button
-								type="button"
-								class="combobox-option"
-								onmousedown={(e) => {
-									e.preventDefault();
-									selectCounty(name);
-								}}
-							>
-								{name}
-							</button>
-						</li>
-					{/each}
-				</ul>
+		{/each}
+
+		<div class="submit-section">
+			{#if submitError}
+				<p class="submit-error" role="alert">{submitError}</p>
 			{/if}
-		</div>
-		{#if touched.county && errors.county}
-			<span class="error-text">{errors.county}</span>
-		{/if}
-	</div>
-
-	<h2 class="section-title">Primary Contact Information</h2>
-
-	<div class="row">
-		<div class="form-group">
-			<label class="field-label" for="phone">Phone Number</label>
-			<input
-				id="phone"
-				class="field"
-				class:input-error={touched.phone && errors.phone}
-				inputmode="numeric"
-				placeholder="10 digit number"
-				value={phone}
-				oninput={handlePhoneInput}
-				onblur={() => (touched.phone = true)}
-			/>
-			{#if touched.phone && errors.phone}
-				<span class="error-text">{errors.phone}</span>
-			{/if}
-		</div>
-
-		<div class="form-group">
-			<label class="field-label" for="email">Email Address</label>
-			<input
-				id="email"
-				class="field"
-				class:input-error={touched.email && errors.email}
-				type="email"
-				placeholder="e.g. name@email.com"
-				bind:value={email}
-				onblur={() => (touched.email = true)}
-			/>
-			{#if touched.email && errors.email}
-				<span class="error-text">{errors.email}</span>
-			{/if}
-		</div>
-	</div>
-
-	<div class="row">
-		<div class="form-group">
-			<label class="field-label" for="instagram">Optional: Instagram</label>
-			<input
-				id="instagram"
-				class="field"
-				placeholder="e.g. @twobrooksfarm"
-				bind:value={instagram}
-			/>
-		</div>
-
-		<div class="form-group">
-			<label class="field-label" for="facebook">Optional: Facebook</label>
-			<input
-				id="facebook"
-				class="field"
-				placeholder="e.g. facebook.com/twobrooksfarm"
-				bind:value={facebook}
-			/>
-		</div>
-	</div>
-
-	<div class="row">
-		<div class="form-group">
-			<label class="field-label" for="website">Optional: Website</label>
-			<input
-				id="website"
-				class="field"
-				class:input-error={touched.website && errors.website}
-				placeholder="e.g. https://twobrooksfarm.com"
-				bind:value={website}
-				onblur={() => (touched.website = true)}
-			/>
-			{#if touched.website && errors.website}
-				<span class="error-text">{errors.website}</span>
-			{/if}
-		</div>
-
-		<div class="form-group">
-			<label class="field-label" for="other-social">
-				Optional: Other (social media + username)
-			</label>
-			<input
-				id="other-social"
-				class="field"
-				placeholder="e.g. X: @twobrooksfarm"
-				bind:value={otherSocial}
-			/>
-		</div>
-	</div>
-
-	<h2 class="section-title">Farm Profile</h2>
-
-	<div class="form-group">
-		<span class="field-label">Growing Practices</span>
-		{@render checkboxGroup(
-			'growingPractices',
-			GROWING_PRACTICES,
-			growingPractices,
-			(next) => (growingPractices = next),
-			true
-		)}
-	</div>
-
-	<h2 class="section-title">Products offered</h2>
-
-	<div class="form-group">
-		<span class="field-label">Optional: Seasonal product and products offered</span>
-		{@render checkboxGroup(
-			'seasonalProducts',
-			SEASONAL_PRODUCTS,
-			seasonalProducts,
-			(next) => (seasonalProducts = next),
-			false
-		)}
-	</div>
-
-	{#if seasonalSelected}
-		<div class="form-group">
-			<label class="field-label" for="seasonal-detail"
-				>Optional: List each fruit, vegetable, herb, or dairy product offered</label
+			<button
+				class="submit"
+				type="button"
+				onclick={handleSubmit}
+				disabled={submitted || submitting || preparingPhotos}
 			>
-			<textarea
-				id="seasonal-detail"
-				class="field"
-				rows="3"
-				placeholder="Example: tomatoes, zucchini, basil, kale, strawberries, eggs"
-				bind:value={seasonalDetail}
-			></textarea>
+				{submitting
+					? 'Submitting…'
+					: preparingPhotos
+						? 'Preparing photos…'
+						: 'Submit Farm Information'}
+			</button>
 		</div>
 	{/if}
-
-	<div class="form-group">
-		<span class="field-label">Optional: Meat</span>
-		{@render checkboxGroup(
-			'meatProducts',
-			MEAT_PRODUCTS,
-			meatProducts,
-			(next) => (meatProducts = next),
-			false
-		)}
-	</div>
-
-	{#if meatSelected}
-		<div class="form-group">
-			<label class="field-label" for="meat-detail">Optional: List each meat product offered</label>
-			<textarea
-				id="meat-detail"
-				class="field"
-				rows="3"
-				placeholder="Example: ground beef, whole chicken, pork chops, catfish"
-				bind:value={meatDetail}
-			></textarea>
-		</div>
-	{/if}
-
-	<div class="form-group">
-		<span class="field-label">Optional: Other</span>
-		{@render checkboxGroup(
-			'otherProducts',
-			OTHER_PRODUCTS,
-			otherProducts,
-			(next) => (otherProducts = next),
-			false
-		)}
-	</div>
-
-	{#if otherSelected}
-		<div class="form-group">
-			<label class="field-label" for="other-detail">Optional: List each other product offered</label
-			>
-			<textarea
-				id="other-detail"
-				class="field"
-				rows="3"
-				placeholder="Example: honey, shiitake mushrooms, sunflowers, seedlings"
-				bind:value={otherDetail}
-			></textarea>
-		</div>
-	{/if}
-
-	<h2 class="section-title">Other Details</h2>
-
-	<div class="form-group">
-		<span class="field-label">Food Safety &amp; Certifications</span>
-		{@render checkboxGroup(
-			'foodSafetyCertifications',
-			FOOD_SAFETY_CERTIFICATIONS,
-			foodSafetyCertifications,
-			(next) => (foodSafetyCertifications = next),
-			true
-		)}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Optional: Farm Experiences &amp; Services</span>
-		{@render checkboxGroup(
-			'farmExperiences',
-			FARM_EXPERIENCES,
-			farmExperiences,
-			(next) => (farmExperiences = next),
-			false
-		)}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Optional: Farm Characteristics</span>
-		{@render checkboxGroup(
-			'farmCharacteristics',
-			FARM_CHARACTERISTICS,
-			farmCharacteristics,
-			(next) => (farmCharacteristics = next),
-			false
-		)}
-	</div>
-
-	<div class="form-group">
-		<span class="field-label">Optional: Farm to School Sales</span>
-		{@render checkboxGroup(
-			'farmToSchoolSales',
-			FARM_TO_SCHOOL_SALES,
-			farmToSchoolSales,
-			(next) => (farmToSchoolSales = next),
-			false
-		)}
-	</div>
-
-	{#if f2sSelected}
-		<div class="form-group">
-			<label class="field-label" for="f2s-experience"
-				>Previous Farm to School or ECE experience</label
-			>
-			<textarea
-				id="f2s-experience"
-				class="field"
-				class:input-error={touched.f2sExperience && errors.f2sExperience}
-				rows="3"
-				placeholder="N/A"
-				bind:value={f2sExperience}
-				onblur={() => (touched.f2sExperience = true)}
-			></textarea>
-			{#if touched.f2sExperience && errors.f2sExperience}
-				<span class="error-text">{errors.f2sExperience}</span>
-			{/if}
-		</div>
-
-		<div class="form-group">
-			<label class="field-label" for="minimum-order">Minimum order for schools/ECEs</label>
-			<input
-				id="minimum-order"
-				class="field"
-				class:input-error={touched.minimumOrder && errors.minimumOrder}
-				inputmode="numeric"
-				placeholder="30"
-				value={minimumOrder}
-				oninput={handleMinimumOrderInput}
-				onblur={() => (touched.minimumOrder = true)}
-			/>
-			{#if touched.minimumOrder && errors.minimumOrder}
-				<span class="error-text">{errors.minimumOrder}</span>
-			{/if}
-		</div>
-	{/if}
-
-	{#if deliverySelected}
-		<div class="form-group">
-			<label class="field-label" for="delivery-details"
-				>Delivery details (area, fees, minimums)</label
-			>
-			<textarea
-				id="delivery-details"
-				class="field"
-				class:input-error={touched.deliveryDetails && errors.deliveryDetails}
-				rows="3"
-				placeholder="Minimum order amount of $30"
-				bind:value={deliveryDetails}
-				onblur={() => (touched.deliveryDetails = true)}
-			></textarea>
-			{#if touched.deliveryDetails && errors.deliveryDetails}
-				<span class="error-text">{errors.deliveryDetails}</span>
-			{/if}
-		</div>
-	{/if}
-
-	<h2 class="section-title">Optional: Photos</h2>
-
-	<div class="form-group">
-		<p class="field-help">
-			Optional: Upload photos of your farm, operations, and/or products here for people to see when
-			they look at your farm up to 10 pics! Click a photo to make it your cover photo on the
-			dashboard view.
-		</p>
-
-		<FileUpload
-			accept={IMAGE_ACCEPT}
-			maxFiles={MAX_PHOTOS}
-			acceptedFiles={farmPhotos}
-			onFileChange={handlePhotosChange}
-		>
-			<FileUpload.Label class="sr-only">Upload farm photos</FileUpload.Label>
-			<FileUpload.Dropzone
-				class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
-			>
-				<svg
-					width="28"
-					height="28"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="#131927"
-					stroke-width="1.6"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<path d="M12 16V4" />
-					<path d="M8 8l4-4 4 4" />
-					<path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
-				</svg>
-				<FileUpload.Trigger
-					class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
-				>
-					Upload farm photos
-				</FileUpload.Trigger>
-				<span class="text-xs text-[#9aa0a6]">
-					JPG, PNG or HEIC, up to {MAX_PHOTOS} pics ({MAX_UPLOAD_LABEL} each)
-				</span>
-				<FileUpload.HiddenInput />
-			</FileUpload.Dropzone>
-
-			{#if preparingPhotos}
-				<p class="photo-status" role="status">Preparing photos…</p>
-			{/if}
-			{#each photoMessages as message (message)}
-				<p class="error-text photo-error" role="alert">{message}</p>
-			{/each}
-
-			{#if farmPhotos.length > 0}
-				<FileUpload.ItemGroup class="file-list">
-					{#each farmPhotos as file, index (`${index}-${file.name}-${file.size}-${file.lastModified}`)}
-						<FileUpload.Item {file} class={index === coverIndex ? 'cover-photo' : undefined}>
-							<button
-								class="tile-btn"
-								type="button"
-								aria-pressed={index === coverIndex}
-								aria-label={`Set ${file.name} as cover photo`}
-								onclick={() => (coverIndex = index)}
-							>
-								<img class="file-thumb" src={photoUrl(file)} alt="" />
-							</button>
-							<span class="file-name">{file.name}</span>
-							{#if index === coverIndex}
-								<span class="cover-badge">Cover</span>
-							{/if}
-							<FileUpload.ItemDeleteTrigger class="tile-delete" aria-label={`Remove ${file.name}`}>
-								<svg
-									width="12"
-									height="12"
-									viewBox="0 0 12 12"
-									fill="none"
-									stroke="currentColor"
-									stroke-width="1.8"
-									stroke-linecap="round"
-								>
-									<path d="M2 2l8 8" />
-									<path d="M10 2l-8 8" />
-								</svg>
-							</FileUpload.ItemDeleteTrigger>
-						</FileUpload.Item>
-					{/each}
-				</FileUpload.ItemGroup>
-			{/if}
-		</FileUpload>
-	</div>
-
-	<div class="submit-section">
-		{#if submitError}
-			<p class="submit-error" role="alert">{submitError}</p>
-		{/if}
-		<button
-			class="submit"
-			type="button"
-			onclick={handleSubmit}
-			disabled={submitted || submitting || preparingPhotos}
-		>
-			{submitting
-				? 'Submitting…'
-				: preparingPhotos
-					? 'Preparing photos…'
-					: 'Submit Farm Information'}
-		</button>
-	</div>
 </div>
 
 {#if showLeaveModal}
@@ -1370,13 +1138,23 @@
 		color: #9aa0a6;
 	}
 
-	.row {
-		display: flex;
-		gap: 20px;
+	.question-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 20px;
 	}
 
-	.row .form-group {
-		flex: 1;
+	.question-grid > .form-group {
+		grid-column: 1 / -1;
+	}
+
+	.question-grid > .form-group--half {
+		grid-column: span 1;
+	}
+
+	.form-load-error {
+		margin-bottom: 12px;
+		text-align: left;
 	}
 
 	.choice-list {
