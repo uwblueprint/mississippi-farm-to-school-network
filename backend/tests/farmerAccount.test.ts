@@ -185,6 +185,7 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
     });
 
     test('rejects a staff email address instead of demoting it to FARMER', async () => {
+      process.env.ADMIN_EMAIL_DOMAIN = 'mississippifarmtoschool.org';
       mockFirebaseGetUserByEmail.mockResolvedValue({
         uid: 'staff-uid',
         emailVerified: true,
@@ -192,9 +193,13 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
       });
       mockFirebaseGetUser.mockResolvedValue({ uid: 'staff-uid', metadata: {} });
 
-      await expect(
-        service.getOrCreateFarmerByEmail('staff@mississippifarmtoschool.org')
-      ).rejects.toThrow('not a farmer account');
+      try {
+        await expect(
+          service.getOrCreateFarmerByEmail('staff@mississippifarmtoschool.org')
+        ).rejects.toThrow('not a farmer account');
+      } finally {
+        delete process.env.ADMIN_EMAIL_DOMAIN;
+      }
     });
   });
 });

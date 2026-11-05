@@ -115,6 +115,54 @@ describe('UserService (Firestore)', () => {
     await expect(service.getUserById('firebase-uid-self')).rejects.toThrow('not found');
   });
 
+  test('updateUserById resets emailVerified in Firebase Auth when the email changes', async () => {
+    mockFirebaseCreateUser.mockResolvedValue({ uid: 'firebase-uid-email' });
+    await service.createUser(
+      { email: 'old@example.com', password: 'hunter2', role: Role.FARMER },
+      undefined,
+      SignUpMethod.PASSWORD
+    );
+
+    await service.updateUserById('firebase-uid-email', {
+      email: 'new@uwaterloo.ca',
+      role: Role.FARMER,
+    });
+
+    expect(mockFirebaseUpdateUser).toHaveBeenCalledWith('firebase-uid-email', {
+      email: 'new@uwaterloo.ca',
+      emailVerified: false,
+    });
+  });
+
+  test('completeUserProfile stores the role resolved from Firebase Auth, not input.email', async () => {
+    mockFirebaseCreateUser.mockResolvedValue({ uid: 'firebase-uid-complete' });
+    await service.createUser(
+      { email: 'farmer@gmail.com', password: 'hunter2', role: Role.FARMER },
+      undefined,
+      SignUpMethod.PASSWORD
+    );
+    const authUser = {
+      id: 'firebase-uid-complete',
+      firebase_uid: 'firebase-uid-complete',
+      email: 'farmer@gmail.com',
+      role: Role.FARMER,
+      is_verified: true,
+      firstName: null,
+      lastName: null,
+      phone: null,
+    };
+
+    const completed = await service.completeUserProfile(authUser, {
+      firebase_uid: 'firebase-uid-complete',
+      email: 'spoofed@mississippifarmtoschool.org',
+      firstName: 'Farm',
+      lastName: 'Er',
+      phone: '601-555-0100',
+    });
+
+    expect(completed.role).toBe(Role.FARMER);
+  });
+
   describe('updateMyProfile', () => {
     const authUser = {
       id: 'firebase-uid-profile',

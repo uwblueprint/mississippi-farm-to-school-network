@@ -65,9 +65,6 @@ export enum Role {
   FARMER = 'FARMER',
 }
 
-/** Emails on this domain are treated as ADMIN when no stored role says otherwise. */
-export const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
-
 export type Token = {
   accessToken: string;
   refreshToken: string;

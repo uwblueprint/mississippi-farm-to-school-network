@@ -3,7 +3,6 @@ import { AuthenticationError } from 'apollo-server';
 import * as firebaseAdmin from 'firebase-admin';
 import IUserService from '@/services/interfaces/userService';
 import {
-  ADMIN_EMAIL_DOMAIN,
   CompleteUserProfileInput,
   CreateUserDTO,
   FarmerAccountResult,
@@ -13,6 +12,7 @@ import {
   UpdateUserDTO,
   UserDTO,
 } from '@/types';
+import { isAdminEmail } from '@/utilities/adminEmail';
 import { getErrorMessage } from '@/utilities/errorUtils';
 import logger from '@/utilities/logger';
 import { Collections, getFirestore, toIso } from '@/utilities/firestore';
@@ -300,7 +300,7 @@ class UserService implements IUserService {
 
     // Same precedence as authHelpers: a role claim wins, then the admin email domain.
     const claimRole = (firebaseUser.customClaims ?? {}).role;
-    let role = email.endsWith(ADMIN_EMAIL_DOMAIN) ? Role.ADMIN : Role.FARMER;
+    let role = isAdminEmail(email) ? Role.ADMIN : Role.FARMER;
     if (claimRole === Role.ADMIN || claimRole === Role.FARMER) {
       role = claimRole;
     }
@@ -320,7 +320,11 @@ class UserService implements IUserService {
 
       if (user.email !== existing.email) {
         try {
-          await firebaseAdmin.auth().updateUser(existing.firebase_uid, { email: user.email });
+          // The Admin SDK keeps emailVerified on an email change; reset it so a new
+          // admin-domain address must be verified before it grants ADMIN.
+          await firebaseAdmin
+            .auth()
+            .updateUser(existing.firebase_uid, { email: user.email, emailVerified: false });
         } catch (error) {
           Logger.error(`Failed to update Firebase user. Reason = ${getErrorMessage(error)}`);
           throw error;
@@ -344,7 +348,7 @@ class UserService implements IUserService {
     }
   }
 
-  async completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO> {
+  async completeUserProfile(authUser: UserDTO, input: CompleteUserProfileInput): Promise<UserDTO> {
     try {
       if (
         !input.firebase_uid ||
@@ -377,14 +381,13 @@ class UserService implements IUserService {
         throw new Error(`User with firebase_uid ${input.firebase_uid} not found.`);
       }
 
-      const role = input.email.endsWith(ADMIN_EMAIL_DOMAIN) ? Role.ADMIN : Role.FARMER;
       const updated: UserDoc = {
         ...found.data,
         email: input.email,
         firstName: input.firstName,
         lastName: input.lastName,
         phone: digits,
-        role,
+        role: authUser.role,
         updatedAt: new Date().toISOString(),
       };
       await this.users().doc(found.id).set(updated);

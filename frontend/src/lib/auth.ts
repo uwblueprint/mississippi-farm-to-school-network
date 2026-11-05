@@ -15,7 +15,11 @@ import {
 import { getFirebaseAuth } from '$lib/firebase';
 import type { UserRole } from '$lib/types/admin';
 
-const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
+// Comma-separated domains, no "@" (must match the backend's ADMIN_EMAIL_DOMAIN).
+const ADMIN_EMAIL_DOMAINS: string[] = String(import.meta.env.VITE_PUBLIC_ADMIN_EMAIL_DOMAIN ?? '')
+	.split(',')
+	.map((domain) => domain.trim().toLowerCase())
+	.filter(Boolean);
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 /** Cookie name expected by SvelteKit server routes (`create-farm`, `new-farm` layout). */
 export const AUTH_TOKEN_COOKIE = 'token';
@@ -97,7 +101,8 @@ function isAuthError(error: unknown): error is AuthError {
 }
 
 export function isAdminEmail(email: string): boolean {
-	return email.toLowerCase().endsWith(ADMIN_EMAIL_DOMAIN);
+	const normalized = email.trim().toLowerCase();
+	return ADMIN_EMAIL_DOMAINS.some((domain) => normalized.endsWith(`@${domain}`));
 }
 
 export async function getPostAuthDestination(user: User): Promise<string> {
@@ -111,9 +116,14 @@ export async function getPostAuthDestination(user: User): Promise<string> {
 
 /**
  * Resolves the signed-in user's role. The `role` custom claim is authoritative once the
- * backend provisions it; until then we fall back to the admin email domain.
+ * backend provisions it; a verified admin-domain email is ADMIN, matching the backend.
+ * This only drives routing; the backend enforces access.
  */
 export async function resolveUserRole(user: User): Promise<UserRole> {
+	if (user.emailVerified && isAdminEmail(user.email ?? '')) {
+		return 'ADMIN';
+	}
+
 	const { claims } = await getIdTokenResult(user);
 	const claimedRole = typeof claims.role === 'string' ? claims.role.toUpperCase() : null;
 
@@ -121,7 +131,7 @@ export async function resolveUserRole(user: User): Promise<UserRole> {
 		return claimedRole;
 	}
 
-	return isAdminEmail(user.email ?? '') ? 'ADMIN' : 'FARMER';
+	return 'FARMER';
 }
 
 /** Best-effort display name for the signed-in admin, falling back to the email local part. */
