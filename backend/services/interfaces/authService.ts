@@ -50,6 +50,17 @@ interface IAuthService {
    * @throws Error if unable to generate link or send email
    */
   sendEmailVerificationLink(email: string): Promise<void>;
+
+  /**
+   * Tell a farmer that an admin added a farm to their account. When the farmer has no
+   * password yet the email carries a link to set one; otherwise it only points to the
+   * sign-in page, so their password is never touched.
+   * @param email the farmer's email
+   * @param farmName name of the farm that was added
+   * @param needsPasswordSetup whether the farmer still has to set a password
+   * @throws Error if unable to generate the link or send the email
+   */
+  sendFarmAddedEmail(email: string, farmName: string, needsPasswordSetup: boolean): Promise<void>;
 }
 
 export default IAuthService;

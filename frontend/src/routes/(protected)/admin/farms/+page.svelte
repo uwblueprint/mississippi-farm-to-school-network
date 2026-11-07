@@ -202,7 +202,7 @@
 					<img src="/images/admin/uploadIcon.svg" alt="" />
 					<span>Export</span>
 				</button>
-				<a class="farms-btn farms-btn--primary" href="/new-farm">
+				<a class="farms-btn farms-btn--primary" href="/admin/farms/new">
 					<span>Add Farm</span>
 					<img src="/images/admin/plusWhiteIcon.svg" alt="" />
 				</a>

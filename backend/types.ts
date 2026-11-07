@@ -85,9 +85,27 @@ export type CreateUserDTO = {
   email: string;
   role: Role;
   password?: string;
+  /** Mark the email as already verified (Firebase Auth and the user doc). Defaults to false. */
+  emailVerified?: boolean;
   firstName?: string;
   lastName?: string;
   phone?: string;
+};
+
+export type FarmerAccountResult = {
+  user: UserDTO;
+  /**
+   * True when the farmer has no password they know yet: the account was just created, or
+   * nobody has ever signed in to it. They need a set-password link instead of a sign-in link.
+   */
+  needsPasswordSetup: boolean;
+};
+
+export type CreateFarmForFarmerResult = {
+  farm: FarmDTO;
+  /** False when the farm was created but the farmer's email could not be sent. */
+  emailSent: boolean;
+  needsPasswordSetup: boolean;
 };
 
 export type UpdateUserDTO = {
