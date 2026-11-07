@@ -82,6 +82,19 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
       expect(second.length).toBeGreaterThanOrEqual(32);
       expect(first).not.toBe(second);
     });
+
+    test('rejects a staff email address instead of creating a farmer account', async () => {
+      process.env.ADMIN_EMAIL_DOMAIN = 'mississippifarmtoschool.org';
+
+      try {
+        await expect(
+          service.getOrCreateFarmerByEmail('new.staff@mississippifarmtoschool.org')
+        ).rejects.toThrow('staff email address');
+        expect(mockFirebaseCreateUser).not.toHaveBeenCalled();
+      } finally {
+        delete process.env.ADMIN_EMAIL_DOMAIN;
+      }
+    });
   });
 
   describe('existing farmer accounts', () => {
@@ -144,6 +157,51 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
         'not a farmer account'
       );
       expect(mockFirebaseCreateUser).not.toHaveBeenCalled();
+    });
+
+    describe('when the stored email has different casing', () => {
+      async function seedMixedCaseUser(role: Role) {
+        mockFirebaseGetUser.mockResolvedValue({
+          uid: 'mixed-uid',
+          metadata: { lastSignInTime: SIGNED_IN_AT },
+        });
+        await service.createUser(
+          {
+            email: 'Jane@Farm.com',
+            role,
+            emailVerified: true,
+            firstName: 'Jane',
+            lastName: 'Doe',
+            phone: '6015550100',
+          },
+          'mixed-uid'
+        );
+        mockFirebaseGetUserByEmail.mockResolvedValue({
+          uid: 'mixed-uid',
+          emailVerified: true,
+          customClaims: {},
+        });
+      }
+
+      test('reuses the farmer without overwriting their profile', async () => {
+        await seedMixedCaseUser(Role.FARMER);
+        const before = await service.getUserById('mixed-uid');
+
+        const result = await service.getOrCreateFarmerByEmail('jane@farm.com');
+
+        expect(result).toEqual({ user: before, needsPasswordSetup: false });
+        await expect(service.getUserById('mixed-uid')).resolves.toEqual(before);
+      });
+
+      test('rejects an admin without demoting them', async () => {
+        await seedMixedCaseUser(Role.ADMIN);
+        const before = await service.getUserById('mixed-uid');
+
+        await expect(service.getOrCreateFarmerByEmail('jane@farm.com')).rejects.toThrow(
+          'not a farmer account'
+        );
+        await expect(service.getUserById('mixed-uid')).resolves.toEqual(before);
+      });
     });
   });
 

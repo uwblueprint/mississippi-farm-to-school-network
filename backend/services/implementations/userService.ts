@@ -263,6 +263,12 @@ class UserService implements IUserService {
         return { user: existing, needsPasswordSetup: !hasSignedIn };
       }
 
+      // A verified staff-domain email always resolves to ADMIN (see authHelpers), so a farmer
+      // account for one would land its owner on /admin, away from the farm.
+      if (isAdminEmail(email)) {
+        throw new Error(`${email} is a staff email address and cannot be a farmer account.`);
+      }
+
       // Nobody knows this password; the farmer sets their own via a password reset link.
       const user = await this.createUser({
         email,
@@ -296,6 +302,13 @@ class UserService implements IUserService {
         return null;
       }
       throw error;
+    }
+
+    // Firestore keeps emails as entered but Firebase Auth lowercases them, so the email lookup
+    // above can miss a profile that exists. createUser overwrites, so never call it for one.
+    const profile = await this.findByFirebaseUid(firebaseUser.uid);
+    if (profile) {
+      return toUserDTO(profile.id, profile.data);
     }
 
     // Same precedence as authHelpers: a role claim wins, then the admin email domain.
