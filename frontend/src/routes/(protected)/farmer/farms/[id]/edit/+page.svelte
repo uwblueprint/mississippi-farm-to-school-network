@@ -383,7 +383,7 @@
 	<section class="section">
 		<h2 class="section__heading">Farm Basics</h2>
 
-		<TextInput size="lg" label="Farm ID#" value={farm.readableId} readonly />
+		<TextInput size="lg" label="Farm Number" value={farm.readableId} readonly />
 
 		<TextInput size="lg" label="Farm Name" bind:value={farm.name} />
 		<TextInput size="lg" label="Farm address" bind:value={farm.address} />

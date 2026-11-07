@@ -138,7 +138,7 @@
 				: !emailPattern.test(farmerEmail.trim())
 					? 'Enter a valid email address.'
 					: '',
-		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm ID is required.' : '',
+		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm Number is required.' : '',
 		farmName: farmName.trim() === '' ? 'Farm name is required.' : '',
 		farmAddress:
 			farmAddress.trim() === ''
@@ -617,7 +617,7 @@
 	<h2 class="section-title">Farm Basics</h2>
 
 	<div class="form-group">
-		<label class="field-label" for="usda-farm-id">Farm ID #</label>
+		<label class="field-label" for="usda-farm-id">Farm Number</label>
 		<input
 			id="usda-farm-id"
 			class="field"
