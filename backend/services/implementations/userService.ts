@@ -284,16 +284,13 @@ class UserService implements IUserService {
   }
 
   /**
-   * Looks the account up in Firestore, then in Firebase Auth. Accounts that only exist in
-   * Firebase Auth (created before profile docs existed) get their profile doc created here
-   * so the rest of the app can find them.
+   * Firebase Auth decides whether an account exists: it holds one user per email and ignores
+   * case, while Firestore can hold stale or differently cased copies of an email, so profiles
+   * are never looked up by email here. Accounts that only exist in Firebase Auth (created
+   * before profile docs existed) get their profile doc created so the rest of the app can
+   * find them.
    */
   private async findExistingAccount(email: string): Promise<UserDTO | null> {
-    const found = await this.findByEmail(email);
-    if (found) {
-      return toUserDTO(found.id, found.data);
-    }
-
     let firebaseUser: firebaseAdmin.auth.UserRecord;
     try {
       firebaseUser = await firebaseAdmin.auth().getUserByEmail(email);
@@ -304,8 +301,7 @@ class UserService implements IUserService {
       throw error;
     }
 
-    // Firestore keeps emails as entered but Firebase Auth lowercases them, so the email lookup
-    // above can miss a profile that exists. createUser overwrites, so never call it for one.
+    // createUser overwrites, so never call it for a profile that already exists.
     const profile = await this.findByFirebaseUid(firebaseUser.uid);
     if (profile) {
       return toUserDTO(profile.id, profile.data);

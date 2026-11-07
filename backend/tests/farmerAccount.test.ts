@@ -31,7 +31,21 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
   /** Puts a user in Firestore (the way createUser does for an existing Firebase uid). */
   async function seedUser(uid: string, email: string, role: Role) {
     mockFirebaseGetUser.mockResolvedValue({ uid, metadata: {} });
+    mockFirebaseGetUserByEmail.mockResolvedValue({ uid, emailVerified: true, customClaims: {} });
     await service.createUser({ email, role, emailVerified: true }, uid);
+  }
+
+  /** A leftover profile from before doc ids matched uids, whose Firebase user was deleted. */
+  async function seedStaleProfile(email: string) {
+    await mockFirestoreInstance.collection('users').doc('stale-doc').set({
+      firebase_uid: 'deleted-uid',
+      email,
+      role: Role.FARMER,
+      is_verified: false,
+      firstName: null,
+      lastName: null,
+      phone: null,
+    });
   }
 
   beforeEach(() => {
@@ -202,6 +216,32 @@ describe('UserService.getOrCreateFarmerByEmail', () => {
         );
         await expect(service.getUserById('mixed-uid')).resolves.toEqual(before);
       });
+    });
+  });
+
+  describe('stale profiles left in Firestore', () => {
+    test('uses the live account when a stale profile has the same email', async () => {
+      await seedStaleProfile('farmer@example.com');
+      await seedUser('live-uid', 'farmer@example.com', Role.FARMER);
+      mockFirebaseGetUser.mockImplementation(async (uid: string) => {
+        if (uid !== 'live-uid') throw { code: 'auth/user-not-found' };
+        return { uid, metadata: { lastSignInTime: SIGNED_IN_AT } };
+      });
+
+      const result = await service.getOrCreateFarmerByEmail('farmer@example.com');
+
+      expect(result).toMatchObject({ needsPasswordSetup: false, user: { id: 'live-uid' } });
+      expect(mockFirebaseCreateUser).not.toHaveBeenCalled();
+    });
+
+    test('creates a new account when only a stale profile has the email', async () => {
+      await seedStaleProfile('farmer@example.com');
+      mockFirebaseGetUserByEmail.mockRejectedValue({ code: 'auth/user-not-found' });
+      mockFirebaseCreateUser.mockResolvedValue({ uid: 'new-uid' });
+
+      const result = await service.getOrCreateFarmerByEmail('farmer@example.com');
+
+      expect(result).toMatchObject({ needsPasswordSetup: true, user: { id: 'new-uid' } });
     });
   });
 
