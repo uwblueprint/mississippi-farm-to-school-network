@@ -140,7 +140,7 @@ describe('farmResolvers.Mutation.createFarmForFarmer', () => {
       context
     );
 
-    expect(result).toBe(createdFarm);
+    expect(result).toEqual({ farm: createdFarm, emailSent: true, needsPasswordSetup: true });
     expect(mockAssertCanCreateFarm).toHaveBeenCalledWith(input);
     expect(mockGetOrCreateFarmerByEmail).toHaveBeenCalledWith('farmer@example.com');
     expect(mockCreateFarm).toHaveBeenCalledWith('farmer-uid', input);
@@ -199,11 +199,15 @@ describe('farmResolvers.Mutation.createFarmForFarmer', () => {
     expect(mockSendFarmAddedEmail).not.toHaveBeenCalled();
   });
 
-  test('still returns the farm when the farmer email fails to send', async () => {
-    mockSendFarmAddedEmail.mockRejectedValue(new Error('SMTP down'));
+  test.each([true, false])(
+    'still returns the farm and reports it when the email fails to send (needs password: %s)',
+    async (needsPasswordSetup) => {
+      mockGetOrCreateFarmerByEmail.mockResolvedValue({ ...farmer, needsPasswordSetup });
+      mockSendFarmAddedEmail.mockRejectedValue(new Error('SMTP down'));
 
-    await expect(
-      createFarmForFarmer(undefined, { email: 'farmer@example.com', input }, context)
-    ).resolves.toBe(createdFarm);
-  });
+      await expect(
+        createFarmForFarmer(undefined, { email: 'farmer@example.com', input }, context)
+      ).resolves.toEqual({ farm: createdFarm, emailSent: false, needsPasswordSetup });
+    }
+  );
 });

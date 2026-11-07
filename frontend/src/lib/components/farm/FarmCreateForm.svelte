@@ -462,29 +462,39 @@
 				return;
 			}
 
-			let photosFailed = false;
+			let photoFailure: string | null = null;
 			if (farmPhotos.length > 0) {
 				try {
 					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
 				} catch (photoError) {
-					photosFailed = true;
-					// Toast rather than submitError: we navigate away right after, and the
-					// layout's ToastHost survives the redirect.
 					const retryHint = isAdminMode
 						? 'You can add photos by editing the farm.'
 						: "You can add photos from the farm's edit page.";
-					showToast(
-						'error',
+					photoFailure =
 						photoError instanceof Error
 							? `${photoError.message} ${retryHint}`
-							: `Photo upload failed. ${retryHint}`,
-						'Farm created'
-					);
+							: `Photo upload failed. ${retryHint}`;
 				}
 			}
 
 			submitted = true;
-			if (isAdminMode && !photosFailed) {
+			// Toast rather than submitError: we navigate away right after, and the
+			// layout's ToastHost survives the redirect. Only one toast shows at a time,
+			// so an email failure carries any photo failure in the same message.
+			if (isAdminMode && result.emailSent === false) {
+				const address = farmerEmail.trim();
+				const nextStep = result.needsPasswordSetup
+					? `We couldn't email ${address}. Please tell them to go to the login page and use "Forgot password" with this email address to set a password.`
+					: `We couldn't notify ${address}. Their farm is on their dashboard the next time they sign in.`;
+				showToast(
+					'error',
+					photoFailure ? `${nextStep} ${photoFailure}` : nextStep,
+					"Farm created, but the email didn't send",
+					{ persist: true }
+				);
+			} else if (photoFailure) {
+				showToast('error', photoFailure, 'Farm created');
+			} else if (isAdminMode) {
 				showToast(
 					'success',
 					`${farmerEmail.trim()} will get an email with a link to access their farm.`,

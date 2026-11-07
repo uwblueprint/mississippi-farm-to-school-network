@@ -6,6 +6,7 @@ import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
 import IAuthService from '@/services/interfaces/authService';
 import {
+  CreateFarmForFarmerResult,
   CreateFarmInput,
   FarmDTO,
   FarmFilter,
@@ -192,7 +193,7 @@ const farmResolvers = {
       _parent: undefined,
       { email, input }: { email: string; input: CreateFarmInput },
       context: AuthContext
-    ): Promise<FarmDTO> => {
+    ): Promise<CreateFarmForFarmerResult> => {
       await authHelper.requireRole(context, [Role.ADMIN]);
 
       // The farm belongs to the farmer, not the admin; it stays PENDING_APPROVAL like any new farm.
@@ -201,6 +202,7 @@ const farmResolvers = {
       const farmer = await userService.getOrCreateFarmerByEmail(email);
       const createdFarm = await farmService.createFarm(farmer.user.id, input);
 
+      let emailSent = true;
       try {
         await authService.sendFarmAddedEmail(
           farmer.user.email,
@@ -209,12 +211,14 @@ const farmResolvers = {
         );
       } catch (error: unknown) {
         // The farm already exists; failing here would invite a retry that creates a duplicate.
+        // Report it in the result instead, so the admin can tell the farmer themselves.
+        emailSent = false;
         Logger.error(
           `Created farm ${createdFarm.id} for ${farmer.user.email} but failed to send the notification email. Reason = ${getErrorMessage(error)}`
         );
       }
 
-      return createdFarm;
+      return { farm: createdFarm, emailSent, needsPasswordSetup: farmer.needsPasswordSetup };
     },
 
     updateFarm: async (

@@ -5,15 +5,23 @@ import { gqlRequest, GqlOperationError } from '$lib/server/graphql';
 const CREATE_FARM_FOR_FARMER_MUTATION = `
 	mutation CreateFarmForFarmer($email: String!, $input: CreateFarmInput!) {
 		createFarmForFarmer(email: $email, input: $input) {
-			id
-			farm_name
-			status
+			farm {
+				id
+				farm_name
+				status
+			}
+			emailSent
+			needsPasswordSetup
 		}
 	}
 `;
 
 interface CreateFarmForFarmerResponse {
-	createFarmForFarmer: { id: string; farm_name: string; status: string };
+	createFarmForFarmer: {
+		farm: { id: string; farm_name: string; status: string };
+		emailSent: boolean;
+		needsPasswordSetup: boolean;
+	};
 }
 
 export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
@@ -38,7 +46,7 @@ export const POST: RequestHandler = async ({ request, fetch, cookies }) => {
 			token,
 			fetch
 		});
-		return json({ ok: true, farm: createFarmForFarmer });
+		return json({ ok: true, ...createFarmForFarmer });
 	} catch (err) {
 		// Only an operation rejected by the backend is the client's fault; let
 		// transport/server failures propagate as a 500.

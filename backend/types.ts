@@ -101,6 +101,13 @@ export type FarmerAccountResult = {
   needsPasswordSetup: boolean;
 };
 
+export type CreateFarmForFarmerResult = {
+  farm: FarmDTO;
+  /** False when the farm was created but the farmer's email could not be sent. */
+  emailSent: boolean;
+  needsPasswordSetup: boolean;
+};
+
 export type UpdateUserDTO = {
   email: string;
   role: Role;
