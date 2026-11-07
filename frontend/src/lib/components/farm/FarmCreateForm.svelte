@@ -153,8 +153,10 @@
 				: phone.length !== 10
 					? 'Enter a 10-digit phone number.'
 					: '',
-		email:
-			email.trim() === ''
+		// Admins only enter the farmer's email, which is also the farm's contact email.
+		email: isAdminMode
+			? ''
+			: email.trim() === ''
 				? 'Email address is required.'
 				: !emailPattern.test(email)
 					? 'Enter a valid email address.'
@@ -394,7 +396,7 @@
 			meat_products_detail: meatDetail.trim(),
 			other_products_detail: otherDetail.trim(),
 			primary_phone: phone,
-			primary_email: email.trim(),
+			primary_email: (isAdminMode ? farmerEmail : email).trim(),
 			website: website.trim() || null,
 			social_media: Object.keys(socialMedia).length > 0 ? socialMedia : null,
 			farm_address: farmAddress.trim(),
@@ -583,14 +585,6 @@
 			<img class="back-icon" src={leftArrow} alt="" />
 			Back
 		</button>
-		<button
-			class="save-btn"
-			type="button"
-			onclick={handleSubmit}
-			disabled={submitted || submitting || preparingPhotos}
-		>
-			{submitting ? 'Saving…' : 'Save Changes'}
-		</button>
 	</div>
 
 	<h1 class="page-title">Create a Farm</h1>
@@ -601,8 +595,9 @@
 		<div class="form-group">
 			<label class="field-label" for="farmer-email">Farmer's email address</label>
 			<p class="field-help">
-				The farm is added to this farmer's account. New farmers get an email with a link to set a
-				password; existing farmers get an email to sign in.
+				The farm is added to this farmer's account, and this is also the farm's contact email. New
+				farmers get an email with a link to set a password; existing farmers get an email to sign
+				in.
 			</p>
 			<input
 				id="farmer-email"
@@ -808,21 +803,23 @@
 			{/if}
 		</div>
 
-		<div class="form-group">
-			<label class="field-label" for="email">Email Address</label>
-			<input
-				id="email"
-				class="field"
-				class:input-error={touched.email && errors.email}
-				type="email"
-				placeholder="e.g. name@email.com"
-				bind:value={email}
-				onblur={() => (touched.email = true)}
-			/>
-			{#if touched.email && errors.email}
-				<span class="error-text">{errors.email}</span>
-			{/if}
-		</div>
+		{#if !isAdminMode}
+			<div class="form-group">
+				<label class="field-label" for="email">Email Address</label>
+				<input
+					id="email"
+					class="field"
+					class:input-error={touched.email && errors.email}
+					type="email"
+					placeholder="e.g. name@email.com"
+					bind:value={email}
+					onblur={() => (touched.email = true)}
+				/>
+				{#if touched.email && errors.email}
+					<span class="error-text">{errors.email}</span>
+				{/if}
+			</div>
+		{/if}
 	</div>
 
 	<div class="row">
@@ -1208,20 +1205,11 @@
 
 			<span class="leave-icon" aria-hidden="true">!</span>
 			<h2 id="leave-title" class="leave-title">You have unsaved changes.</h2>
-			<p class="leave-body">
-				You haven’t saved your changes yet. If you leave now, your changes will be lost.
-			</p>
+			<p class="leave-body">If you leave now, your changes will be lost.</p>
 
 			<div class="leave-actions">
 				<button class="leave-btn leave-discard" type="button" onclick={confirmLeave}>
 					Discard Changes
-				</button>
-				<button
-					class="leave-btn leave-outline"
-					type="button"
-					onclick={() => (showLeaveModal = false)}
-				>
-					Save Draft
 				</button>
 				<button
 					class="leave-btn leave-outline"
@@ -1275,22 +1263,6 @@
 	.back-icon {
 		width: 14px;
 		height: 14px;
-	}
-
-	.save-btn {
-		padding: 8px 18px;
-		border: none;
-		border-radius: 8px;
-		background: var(--mfsn-primary);
-		color: #fff;
-		font-size: 15px;
-		font-weight: 500;
-		font-family: inherit;
-		cursor: pointer;
-	}
-
-	.save-btn:hover {
-		background: var(--mfsn-primary-hover);
 	}
 
 	.section-title {
