@@ -71,8 +71,7 @@
 			error: 'Failed to archive farm.',
 			mutation: ARCHIVE_FARM_MUTATION,
 			toastTitle: (name) => `${name} has been archived!`,
-			toastMessage:
-				'The farm has been removed from the map and moved to Deleted & Archived Farms.',
+			toastMessage: 'The farm has been removed from the map and moved to Deleted & Archived Farms.',
 			failTitle: 'Archive Failed',
 			failMessage: 'There was an issue archiving this farm. Please try again.'
 		},
