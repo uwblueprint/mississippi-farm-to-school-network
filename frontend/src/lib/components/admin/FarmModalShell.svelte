@@ -4,6 +4,7 @@
 
 	import ConfirmDialog from '$lib/components/ConfirmDialog.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
+	import { showToast } from '$lib/state/toast.svelte';
 	import { ARCHIVE_FARM_MUTATION, DELETE_FARM_MUTATION } from '$lib/utils/pending-request-adapter';
 
 	interface Props {
@@ -51,21 +52,39 @@
 
 	const REMOVAL_COPY: Record<
 		RemovalAction,
-		{ title: string; label: string; pending: string; error: string; mutation: string }
+		{
+			title: string;
+			label: string;
+			pending: string;
+			error: string;
+			mutation: string;
+			toastTitle: (name: string) => string;
+			toastMessage: string;
+			failTitle: string;
+			failMessage: string;
+		}
 	> = {
 		archive: {
 			title: 'Archive this farm?',
 			label: 'Archive',
 			pending: 'Archiving…',
 			error: 'Failed to archive farm.',
-			mutation: ARCHIVE_FARM_MUTATION
+			mutation: ARCHIVE_FARM_MUTATION,
+			toastTitle: (name) => `${name} has been archived!`,
+			toastMessage: 'The farm has been removed from the map and moved to Deleted & Archived Farms.',
+			failTitle: 'Archive Failed',
+			failMessage: 'There was an issue archiving this farm. Please try again.'
 		},
 		delete: {
 			title: 'Delete this farm?',
 			label: 'Delete',
 			pending: 'Deleting…',
 			error: 'Failed to delete farm.',
-			mutation: DELETE_FARM_MUTATION
+			mutation: DELETE_FARM_MUTATION,
+			toastTitle: (name) => `${name} has been deleted!`,
+			toastMessage: 'You can restore it later from Deleted & Archived Farms.',
+			failTitle: 'Delete Failed',
+			failMessage: 'There was an issue deleting this farm. Please try again.'
 		}
 	};
 
@@ -128,15 +147,18 @@
 		if (removing) return;
 		removing = true;
 		removeError = null;
+		const copy = REMOVAL_COPY[action];
 
 		try {
-			await gqlClient(REMOVAL_COPY[action].mutation, { id: farmId });
+			await gqlClient(copy.mutation, { id: farmId });
 			confirmAction = null;
+			showToast('success', copy.toastMessage, copy.toastTitle(farmName));
 			onRemoved?.(farmId);
 			onClose();
 		} catch (error) {
 			confirmAction = null;
-			removeError = error instanceof Error ? error.message : REMOVAL_COPY[action].error;
+			removeError = error instanceof Error ? error.message : copy.error;
+			showToast('error', copy.failMessage, copy.failTitle);
 		} finally {
 			removing = false;
 		}
