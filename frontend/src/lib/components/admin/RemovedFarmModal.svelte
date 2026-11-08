@@ -6,6 +6,7 @@
 	import FarmRequestSections from '$lib/components/admin/FarmRequestSections.svelte';
 	import { MAP_TAG_MODIFIER, REMOVED_FARM_BADGE } from '$lib/constants/admin-request';
 	import { gqlClient } from '$lib/graphqlClient';
+	import { showToast } from '$lib/state/toast.svelte';
 	import type { RemovedFarm } from '$lib/types/admin';
 	import { buildReviewSections } from '$lib/utils/farm-request-sections';
 	import { pendingFarmMapTag } from '$lib/utils/pending-request-adapter';
@@ -52,11 +53,37 @@
 		try {
 			await gqlClient(mutation, { id: farm.id });
 			confirmDeleteOpen = false;
+			if (action === 'delete') {
+				showToast(
+					'success',
+					'The farm and its application history have been removed.',
+					`${farm.farm_name} has been permanently deleted!`
+				);
+			} else {
+				showToast(
+					'success',
+					'The farm is active again and visible on the map.',
+					`${farm.farm_name} has been restored!`
+				);
+			}
 			onResolved?.();
 			onClose();
 		} catch (error) {
 			confirmDeleteOpen = false;
 			actionError = error instanceof Error ? error.message : fallback;
+			if (action === 'delete') {
+				showToast(
+					'error',
+					'There was an issue permanently deleting this farm. Please try again.',
+					'Permanent Delete Failed'
+				);
+			} else {
+				showToast(
+					'error',
+					'There was an issue restoring this farm. Please try again.',
+					'Restore Failed'
+				);
+			}
 		} finally {
 			pendingAction = null;
 		}
