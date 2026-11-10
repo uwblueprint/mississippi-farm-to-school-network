@@ -11,7 +11,6 @@ import {
   ActiveFarmRejectionDTO,
   FarmRejectionResolutionType,
   FarmSnapshotDTO,
-  EmailChangeEntry,
 } from '@/types';
 import {
   GROWING_PRACTICES,
@@ -30,6 +29,15 @@ import IUserService from '@/services/interfaces/userService';
 import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import {
+  changesRequestedEmail,
+  editRequestEmail,
+  farmApprovedEmail,
+  farmRemovedEmail,
+  findFarmOwner,
+  findOwnerName,
+  newFarmEmail,
+} from '@/utilities/farmEmails';
 import logger from '@/utilities/logger';
 import type { Query } from 'firebase-admin/firestore';
 import {
@@ -261,18 +269,10 @@ class FarmService implements IFarmService {
       throw error;
     }
 
-    const subject = 'New Farm Application Submitted';
-    const emailBody = {
-      title: 'New Farm Application Submitted',
-      previewText: 'A new farm application is ready for review.',
-      body: `A new farm application has been submitted for ${createdFarm.farm_name}. Please review the application and approve or reject it.`,
-      ctaText: 'Review application',
-      ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
-      isFarmerEmail: false,
-    };
-
     try {
-      await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
+      const ownerName = await findOwnerName(userService, ownerUserId);
+      const { subject, template } = newFarmEmail(createdFarm.farm_name, ownerName);
+      await emailService.sendEmail(process.env.MAILER_USER!, subject, template);
     } catch (error: unknown) {
       Logger.warn(
         `Farm created but failed to send admin notification email. Reason = ${getErrorMessage(error)}`
@@ -395,7 +395,7 @@ class FarmService implements IFarmService {
       // The permission checks, usda_farm_id move, farm write and rejection
       // resolution all run in one transaction, so an edit can't overwrite a
       // concurrent delete/archive (or vice versa) with a stale copy of the farm.
-      const { farm, next, resubmissionDiff } = await getFirestore().runTransaction(async (tx) => {
+      const { next, resubmissionDiff } = await getFirestore().runTransaction(async (tx) => {
         const farmSnap = await tx.get(farmRef);
         if (!farmSnap.exists) {
           throw new Error(`Farm with id ${id} not found.`);
@@ -467,13 +467,12 @@ class FarmService implements IFarmService {
           }
         }
 
-        return { farm, next, resubmissionDiff };
+        return { next, resubmissionDiff };
       });
 
       const updatedFarm = this.convertToFarmDTO(id, next);
       if (resubmissionDiff.length > 0) {
-        const rejectionReason = this.getRejectionReason(farm);
-        void this.notifyAdminsAboutResubmission(updatedFarm, rejectionReason, resubmissionDiff);
+        void this.notifyAdminsAboutResubmission(updatedFarm);
       }
       return updatedFarm;
     } catch (error: unknown) {
@@ -511,23 +510,10 @@ class FarmService implements IFarmService {
       throw error;
     }
 
-    const subject = 'Your Farm Has Been Approved!';
-
     try {
-      const owner = await userService.getUserByFirebaseUid(updatedFarm.owner_user_id);
-      const greeting = owner.firstName
-        ? `Congratulations, ${owner.firstName}!`
-        : 'Congratulations!';
-      const emailBody = {
-        title: 'Your Farm Has Been Approved!',
-        previewText: 'Your farm is now live on the Mississippi Farm to School Network.',
-        recipientName: owner.firstName || undefined,
-        body: `${greeting} Your farm ${updatedFarm.farm_name} has been approved. Your farm is now live on the Mississippi Farm to School Network's Farm Fresh Map.`,
-        ctaText: 'View your farm',
-        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/farms/${updatedFarm.id}`,
-        isFarmerEmail: true,
-      };
-      await emailService.sendEmail(owner.email, subject, emailBody);
+      const owner = await findFarmOwner(userService, updatedFarm.owner_user_id);
+      const { subject, template } = farmApprovedEmail(updatedFarm.farm_name, owner.firstName);
+      await emailService.sendEmail(owner.email, subject, template);
     } catch (error: unknown) {
       Logger.warn(
         `Farm approved but failed to send approval email. Reason = ${getErrorMessage(error)}`
@@ -604,17 +590,13 @@ class FarmService implements IFarmService {
     }
 
     try {
-      const owner = await userService.getUserByFirebaseUid(farmDto.owner_user_id);
-      const greeting = owner.firstName ? `Hi ${owner.firstName},` : 'Hi,';
-      await emailService.sendEmail(owner.email, 'Changes requested for your farm application', {
-        title: 'Changes requested for your farm application',
-        previewText: 'Your farm application needs updates before it can be approved.',
-        recipientName: owner.firstName || undefined,
-        body: `${greeting} Your farm ${farmDto.farm_name} was not approved yet. Please update your application and resubmit.\n\nReason:\n${rejectionReason}`,
-        ctaText: 'Update your farm',
-        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:5173'}/farmer/farms`,
-        isFarmerEmail: true,
-      });
+      const owner = await findFarmOwner(userService, farmDto.owner_user_id);
+      const { subject, template } = changesRequestedEmail(
+        farmDto.farm_name,
+        owner.firstName,
+        rejectionReason
+      );
+      await emailService.sendEmail(owner.email, subject, template);
     } catch (error: unknown) {
       Logger.warn(
         `Farm rejected but failed to send rejection email. Reason = ${getErrorMessage(error)}`
@@ -949,6 +931,8 @@ class FarmService implements IFarmService {
   }
 
   async approveFarmDeletion(farmId: string): Promise<FarmDTO> {
+    let deletedFarm: FarmDTO;
+
     try {
       const farm = await this.writeFarmInTransaction(farmId, (data) => {
         if (!data.deletion_requested_at) {
@@ -964,11 +948,23 @@ class FarmService implements IFarmService {
           updatedAt: now,
         };
       });
-      return this.convertToFarmDTO(farmId, farm);
+      deletedFarm = this.convertToFarmDTO(farmId, farm);
     } catch (error: unknown) {
       Logger.error(`Failed to approve farm deletion. Reason = ${getErrorMessage(error)}`);
       throw error;
     }
+
+    try {
+      const owner = await findFarmOwner(userService, deletedFarm.owner_user_id);
+      const { subject, template } = farmRemovedEmail(deletedFarm.farm_name, owner.firstName);
+      await emailService.sendEmail(owner.email, subject, template);
+    } catch (error: unknown) {
+      Logger.warn(
+        `Farm deletion approved but failed to send confirmation email. Reason = ${getErrorMessage(error)}`
+      );
+    }
+
+    return deletedFarm;
   }
 
   async denyFarmDeletion(farmId: string): Promise<FarmDTO> {
@@ -1010,13 +1006,6 @@ class FarmService implements IFarmService {
       return farm.rejection_snapshot;
     }
     return farmBeforeUpdate;
-  }
-
-  private getRejectionReason(farm: FarmDoc): string {
-    if (typeof farm.rejection_reason === 'string' && farm.rejection_reason.trim().length > 0) {
-      return farm.rejection_reason.trim();
-    }
-    return 'Not provided';
   }
 
   private generateFieldLevelDiffAgainstPersisted(
@@ -1075,56 +1064,11 @@ class FarmService implements IFarmService {
     return JSON.stringify(value);
   }
 
-  private buildDiffEntries(diff: FarmFieldDiff[]): EmailChangeEntry[] {
-    if (diff.length === 0) {
-      return [{ field: 'Changes', previous: '', current: 'No field-level changes detected.' }];
-    }
-
-    return diff.map((change) => ({
-      field: this.formatFieldLabel(change.field),
-      previous: this.formatDiffValue(change.previous),
-      current: this.formatDiffValue(change.current),
-    }));
-  }
-
-  private formatFieldLabel(field: string): string {
-    return field
-      .split('_')
-      .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-      .join(' ');
-  }
-
-  private formatDiffValue(value: unknown): string {
-    if (value === null || value === undefined) {
-      return 'null';
-    }
-
-    if (typeof value === 'string') {
-      return value.length > 0 ? value : '(empty string)';
-    }
-
-    return this.stableSerialize(value);
-  }
-
-  private async notifyAdminsAboutResubmission(
-    farm: FarmDTO,
-    rejectionReason: string,
-    diff: FarmFieldDiff[]
-  ): Promise<void> {
-    const subject = `Farm Resubmitted: ${farm.farm_name}`;
-    const emailBody = {
-      title: 'Farm Resubmitted for Review',
-      previewText: 'A farm has been resubmitted with updates for admin review.',
-      body: `Farm: ${farm.farm_name}\nFarm ID: ${farm.id}\nPrevious rejection reason: ${rejectionReason}\n\nFarmer changes:`,
-      changes: this.buildDiffEntries(diff),
-      reasonText: `A farmer has updated the farm application after a rejection. Review the changes below.`,
-      ctaText: 'Review application',
-      ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
-      isFarmerEmail: false,
-    };
-
+  private async notifyAdminsAboutResubmission(farm: FarmDTO): Promise<void> {
     try {
-      await emailService.sendEmail(ADMIN_RESUBMISSION_EMAIL, subject, emailBody);
+      const ownerName = await findOwnerName(userService, farm.owner_user_id);
+      const { subject, template } = editRequestEmail(farm.farm_name, ownerName);
+      await emailService.sendEmail(ADMIN_RESUBMISSION_EMAIL, subject, template);
     } catch (error: unknown) {
       Logger.warn(
         `Farm resubmission email failed but update succeeded. Reason = ${getErrorMessage(error)}`
@@ -1219,7 +1163,9 @@ class FarmService implements IFarmService {
         return nextFarm;
       });
 
-      return this.convertToFarmDTO(farmId, next);
+      const resubmittedFarm = this.convertToFarmDTO(farmId, next);
+      await this.notifyAdminsAboutResubmission(resubmittedFarm);
+      return resubmittedFarm;
     } catch (error: unknown) {
       Logger.error(`Failed to resubmit farm. Reason = ${getErrorMessage(error)}`);
       throw error;

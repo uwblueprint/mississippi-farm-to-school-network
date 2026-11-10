@@ -13,6 +13,8 @@ const authType = gql`
     logout(userId: ID!): Boolean!
     resetPassword(email: String!): Boolean!
     sendEmailVerificationLink(email: String!): Boolean!
+    "Sends the signed-in user's verification email. Limited to one every 30 seconds."
+    sendMyVerificationEmail: Boolean!
   }
 
   type AuthDTO {
