@@ -19,6 +19,7 @@ import IEmailService from '@/services/interfaces/emailService';
 import nodemailerConfig from '@/nodemailer.config';
 import logger from '@/utilities/logger';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import { deletionRequestEmail, findOwnerName } from '@/utilities/farmEmails';
 import { createFileStorageService } from '@/utilities/fileStorage';
 import IFileStorageService from '@/services/interfaces/fileStorageService';
 
@@ -165,24 +166,7 @@ const farmResolvers = {
       context: AuthContext
     ): Promise<FarmDTO> => {
       const currentUser = await authHelper.requireRole(context, [Role.FARMER]);
-      const createdFarm = await farmService.createFarm(currentUser.id, input);
-
-      const subject = 'New Farm Application Submitted';
-      const emailBody = {
-        title: 'New Farm Application Submitted',
-        previewText: 'A new farm application is ready for review.',
-        body: `A new farm application has been submitted for ${input.farm_name}. Please review the application and approve or reject it.`,
-        ctaText: 'Review application',
-        ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin/farms`,
-        isFarmerEmail: false,
-      };
-      try {
-        await emailService.sendEmail(process.env.MAILER_USER!, subject, emailBody);
-      } catch {
-        // email failure should not fail the mutation
-      }
-
-      return createdFarm;
+      return farmService.createFarm(currentUser.id, input);
     },
 
     updateFarm: async (
@@ -306,20 +290,10 @@ const farmResolvers = {
       const updated = await farmService.requestFarmDeletion(id);
 
       if (!farm.deletion_requested_at) {
-        const emailBody = {
-          title: 'Farm Deletion Requested',
-          previewText: 'A farm has asked to be deleted.',
-          body: `${farm.farm_name} has asked for its farm profile to be deleted. Please review the request and approve or deny it.`,
-          ctaText: 'Review request',
-          ctaUrl: `${process.env.FRONTEND_URL ?? 'http://localhost:3000'}/admin`,
-          isFarmerEmail: false,
-        };
         try {
-          await emailService.sendEmail(
-            process.env.MAILER_USER!,
-            'Farm Deletion Requested',
-            emailBody
-          );
+          const ownerName = await findOwnerName(userService, farm.owner_user_id);
+          const { subject, template } = deletionRequestEmail(farm.farm_name, ownerName);
+          await emailService.sendEmail(process.env.MAILER_USER!, subject, template);
         } catch {
           // email failure should not fail the mutation
         }
