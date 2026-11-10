@@ -1163,7 +1163,9 @@ class FarmService implements IFarmService {
         return nextFarm;
       });
 
-      return this.convertToFarmDTO(farmId, next);
+      const resubmittedFarm = this.convertToFarmDTO(farmId, next);
+      await this.notifyAdminsAboutResubmission(resubmittedFarm);
+      return resubmittedFarm;
     } catch (error: unknown) {
       Logger.error(`Failed to resubmit farm. Reason = ${getErrorMessage(error)}`);
       throw error;
