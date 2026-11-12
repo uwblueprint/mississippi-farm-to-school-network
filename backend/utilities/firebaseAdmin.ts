@@ -47,7 +47,7 @@ export function initializeFirebaseAdmin(): boolean {
   console.warn(
     'Firebase Admin SDK not initialized — credentials not found. ' +
       'Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_PROJECT_ID + ' +
-      'FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL + FIREBASE_SVC_ACCOUNT_PRIVATE_KEY in backend/.env'
+      'FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL + FIREBASE_SVC_ACCOUNT_PRIVATE_KEY in the root .env'
   );
   return false;
 }

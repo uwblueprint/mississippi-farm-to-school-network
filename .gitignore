@@ -5,6 +5,7 @@
 
 # Environment variables
 **/.env
+**/.env.bak
 **/.env.local
 **/.env.*.local
 
@@ -43,9 +44,6 @@ Thumbs.db
 
 # Firebase
 **/firebaseServiceAccount.json
-
-#Docker
-docker-compose.override.yml
 
 # Database
 *.sqlite

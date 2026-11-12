@@ -1,5 +1,4 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import '../loadEnv';
 
 import * as admin from 'firebase-admin';
 import { initializeFirebaseAdmin } from '@/utilities/firebaseAdmin';
@@ -15,7 +14,7 @@ async function main() {
   }
 
   if (!initializeFirebaseAdmin()) {
-    throw new Error('Firebase Admin not initialized — check backend/.env credentials');
+    throw new Error('Firebase Admin not initialized — check the root .env credentials');
   }
 
   const auth = admin.auth();

@@ -7,8 +7,8 @@
 // +layout.server.ts) should keep using $lib/server/graphql instead.
 import { getFirebaseAuth } from '$lib/firebase';
 
-// Browser-reachable backend URL. Defaults to the docker-compose-exposed port for
-// local dev; override via VITE_PUBLIC_GRAPHQL_URL for other environments.
+// Browser-reachable backend URL. Defaults to local GraphQL; override via
+// VITE_PUBLIC_GRAPHQL_URL for other environments.
 const GRAPHQL_URL = import.meta.env.VITE_PUBLIC_GRAPHQL_URL ?? 'http://localhost:3000/graphql';
 const REQUEST_TIMEOUT_MS = 30_000;
 

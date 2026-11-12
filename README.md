@@ -11,7 +11,7 @@ This is a full-stack and mobile-friendly web application for the MFSN. Their foc
 - Backend: Express + GraphQL
 - Auth / files / app data: Firebase Auth, Cloud Storage, Cloud Firestore
 
-## Getting Started (local, no Docker)
+## Getting Started
 
 ### Dependencies
 
@@ -22,10 +22,10 @@ This is a full-stack and mobile-friendly web application for the MFSN. Their foc
 
 ### Install & run
 
-1. Backend env — copy [`backend/.env.example`](backend/.env.example) to `backend/.env` and set either:
+1. Copy [`.env.example`](.env.example) to `.env` at the **repo root** and fill in values. Set either:
    - `GOOGLE_APPLICATION_CREDENTIALS=/absolute/path/to/serviceAccount.json`, or
    - `FIREBASE_PROJECT_ID`, `FIREBASE_SVC_ACCOUNT_CLIENT_EMAIL`, `FIREBASE_SVC_ACCOUNT_PRIVATE_KEY`
-2. Frontend env — ensure `frontend/.env` includes Firebase web config and optional `GRAPHQL_URL=http://localhost:3000/graphql`.
+2. Use the Storage bucket id from Firebase Console → Storage (usually `*.firebasestorage.app`) for `FIREBASE_STORAGE_DEFAULT_BUCKET`.
 3. Start both processes:
 
 ```bash
@@ -47,8 +47,8 @@ Detailed onboarding notes: [Technical Onboarding](https://www.notion.so/uwbluepr
 
 ## Help
 
-* Backend logs `Firebase Admin SDK not initialized` → service-account credentials are missing/empty in `backend/.env`.
-* Frontend `TypeError: fetch failed` on `/api/farms` → backend not running, or `GRAPHQL_URL` still pointing at a Docker hostname.
+* Backend logs `Firebase Admin SDK not initialized` → service-account credentials are missing/empty in the root `.env`.
+* Frontend `TypeError: fetch failed` on `/api/farms` → backend not running, or `GRAPHQL_URL` is wrong.
 
 ## Authors
 

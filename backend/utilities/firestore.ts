@@ -27,7 +27,7 @@ export function getFirestore(): Firestore {
   if (!cachedDb) {
     if (!admin.apps.length) {
       throw new Error(
-        'Firebase Admin is not initialized. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SVC_ACCOUNT_* in backend/.env'
+        'Firebase Admin is not initialized. Set GOOGLE_APPLICATION_CREDENTIALS or FIREBASE_SVC_ACCOUNT_* in the root .env'
       );
     }
     cachedDb = admin.firestore();
