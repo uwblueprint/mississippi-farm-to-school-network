@@ -62,7 +62,7 @@
 			} else {
 				showToast(
 					'success',
-					'The farm is active again and visible on the map.',
+					'The farm has been restored to where it was before.',
 					`${farm.farm_name} has been restored!`
 				);
 			}
