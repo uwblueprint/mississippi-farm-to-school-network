@@ -1,3 +1,18 @@
+<script lang="ts" module>
+	import type { MobileNavItem } from '$lib/components/MobileNavMenu.svelte';
+
+	/** Farmer portal nav, shared by this sidebar and the phone dropdown menu. */
+	export const FARMER_NAV_ITEMS: MobileNavItem[] = [
+		{ label: 'Farms', href: '/farmer/farms' },
+		{ label: 'Map', href: '/farms' },
+		{
+			label: 'Contact MFSN',
+			href: 'https://www.mississippifarmtoschool.org/contact',
+			external: true
+		}
+	];
+</script>
+
 <script lang="ts">
 	import { page } from '$app/state';
 	import logoDefault from '$lib/assets/favicon.svg';
@@ -24,12 +39,8 @@
 		profileHref = '/farmer/settings'
 	}: Props = $props();
 
-	const navItems = [
-		{ label: 'Farms', href: '/farmer/farms' },
-		{ label: 'Map', href: '/farms' }
-	];
-
-	const CONTACT_URL = 'https://www.mississippifarmtoschool.org/contact';
+	const navItems = FARMER_NAV_ITEMS.filter((item) => !item.external);
+	const contactItem = FARMER_NAV_ITEMS.find((item) => item.external);
 
 	const path = $derived(page.url.pathname);
 	const isActive = (href: string) => path === href || path.startsWith(href + '/');
@@ -45,13 +56,20 @@
 
 		<nav class="sidebar__nav">
 			{#each navItems as item (item.href)}
-				<a href={item.href} class="sidebar__link" class:sidebar__link--active={isActive(item.href)}>
+				<a
+					href={item.href}
+					class="sidebar__link"
+					class:sidebar__link--active={isActive(item.href)}
+					aria-current={isActive(item.href) ? 'page' : undefined}
+				>
 					{item.label}
 				</a>
 			{/each}
-			<a href={CONTACT_URL} class="sidebar__link" target="_blank" rel="noopener noreferrer">
-				Contact MFSN
-			</a>
+			{#if contactItem}
+				<a href={contactItem.href} class="sidebar__link" target="_blank" rel="noopener noreferrer">
+					{contactItem.label}
+				</a>
+			{/if}
 		</nav>
 	</div>
 

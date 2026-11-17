@@ -208,6 +208,14 @@
 		line-height: normal;
 	}
 
+	/* iOS Safari zooms the page on focus when input text is under 16px. */
+	@media (max-width: 767px) {
+		.input,
+		.field--lg .input {
+			font-size: max(16px, 1rem);
+		}
+	}
+
 	.input::placeholder {
 		color: #9ca3af;
 	}

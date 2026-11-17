@@ -46,4 +46,21 @@
 		line-height: 2.375rem; /* 38px */
 		color: #000000;
 	}
+
+	@media (max-width: 767px) {
+		.brand-header {
+			gap: 1rem;
+		}
+
+		.logo {
+			width: 4.5rem;
+			height: 4.5rem;
+		}
+
+		.title {
+			font-size: 1.5rem;
+			line-height: 1.875rem;
+			text-wrap: balance;
+		}
+	}
 </style>

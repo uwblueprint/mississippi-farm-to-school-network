@@ -60,6 +60,15 @@
 		gap: 16px;
 		font-size: 21px;
 		width: fit-content;
+		cursor: pointer;
+	}
+
+	/* Phones: each row is a full-width, 44px-tall tap target. */
+	@media (max-width: 767px) {
+		.choice {
+			width: 100%;
+			min-height: 44px;
+		}
 	}
 
 	.choice span {

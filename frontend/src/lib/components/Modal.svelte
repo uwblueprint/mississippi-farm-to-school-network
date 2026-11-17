@@ -85,17 +85,43 @@
 		overflow-y: auto;
 	}
 
+	/* 44px tap target; the icon stays where the old 30px button drew it. */
 	.close {
 		position: absolute;
-		top: 24px;
-		right: 24px;
+		top: 17px;
+		right: 17px;
 		z-index: 1;
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		padding: 4px;
+		width: 44px;
+		height: 44px;
+		padding: 0;
 		border: none;
+		border-radius: 8px;
 		background: none;
 		cursor: pointer;
+	}
+
+	.close:focus-visible {
+		outline: 2px solid var(--mfsn-primary, #587244);
+		outline-offset: -2px;
+	}
+
+	/* Phones: 16px side margins instead of the desktop gutter, and keep clear
+	   of the notch / home indicator. */
+	@media (max-width: 767px) {
+		.overlay {
+			padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
+		}
+
+		.panel {
+			max-width: 100%;
+		}
+
+		.close {
+			top: 6px;
+			right: 6px;
+		}
 	}
 </style>
