@@ -847,4 +847,65 @@
 		margin-top: 14px;
 		font-size: 14px;
 	}
+
+	/* --- Phones: one column, 16px gutters, 44px tap targets --- */
+	@media (max-width: 767px) {
+		.edit-page {
+			padding: 16px 16px 0;
+			gap: 16px;
+		}
+
+		.edit-title {
+			font-size: 22px;
+			overflow-wrap: anywhere;
+		}
+
+		/* Phone/Email, Instagram/Facebook, Website/Other stack */
+		.field-grid {
+			grid-template-columns: 1fr;
+			gap: 16px;
+		}
+
+		/* 16px input text, or iOS Safari zooms in on focus */
+		.edit-page :global(.field--lg .input) {
+			min-height: 44px;
+			font-size: 16px;
+		}
+
+		/* full-width checkbox rows, label included in the tap target */
+		.edit-page :global(.choice) {
+			width: 100%;
+			min-height: 44px;
+		}
+
+		.edit-page :global(.action-bar .action-btn) {
+			height: 44px;
+		}
+
+		/* The bottom Back / Save bar sticks to the bottom of the screen so Save is
+		   always in reach on the long form. */
+		.edit-page > .action-bar:last-child {
+			position: sticky;
+			bottom: 0;
+			z-index: 4;
+			margin: 8px -16px 0;
+			padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+			border-top: 1px solid #ececec;
+			background: #fff;
+		}
+
+		.delete-confirm {
+			padding: 24px 20px 20px;
+		}
+
+		.delete-confirm__actions {
+			flex-direction: column-reverse;
+			align-items: stretch;
+		}
+
+		.delete-confirm__actions :global(.action-btn),
+		.delete-confirm__submit {
+			height: 44px;
+		}
+	}
 </style>

@@ -31,3 +31,24 @@
 	gap: 1.5rem; /* 24px */
 	width: 100%;
 }
+
+/* Phones: one full-width column with 16px side padding. Content starts at the
+   top (not vertically centered) so the form doesn't jump when the keyboard
+   opens, and the safe-area insets keep it clear of the notch / home bar. */
+@media (max-width: 767px) {
+	.auth-shell {
+		align-items: flex-start;
+		min-height: 100dvh;
+		padding: max(2rem, env(safe-area-inset-top)) 1rem max(2rem, env(safe-area-inset-bottom));
+		box-sizing: border-box;
+	}
+
+	.auth-shell__container {
+		gap: 2rem;
+	}
+
+	.auth-shell__body {
+		gap: 2rem;
+		width: 100%;
+	}
+}

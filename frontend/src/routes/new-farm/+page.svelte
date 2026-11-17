@@ -1702,4 +1702,91 @@
 	.leave-outline:hover {
 		background: var(--mfsn-primary-tint, #f0f5ec);
 	}
+
+	/* --- Phones: one column, 16px gutters, 44px tap targets, sticky submit --- */
+	@media (max-width: 767px) {
+		.container {
+			/* no bottom padding: the sticky submit bar is the last thing on the page */
+			padding: max(16px, env(safe-area-inset-top)) 16px 0;
+		}
+
+		.page-title {
+			font-size: 22px;
+		}
+
+		.back-btn,
+		.save-btn {
+			min-height: 44px;
+		}
+
+		/* Phone/Email, Instagram/Facebook, Website/Other stack */
+		.row {
+			flex-direction: column;
+			gap: 0;
+		}
+
+		/* 16px input text, or iOS Safari zooms in on focus */
+		.field {
+			min-height: 44px;
+			font-size: 16px;
+		}
+
+		/* full-width checkbox rows; the <label> wraps the box, so the text toggles it */
+		.choice {
+			width: 100%;
+			min-height: 44px;
+			gap: 12px;
+		}
+
+		.choice-list {
+			gap: 0;
+		}
+
+		:global(.file-list) {
+			grid-template-columns: repeat(2, 1fr);
+		}
+
+		/* Submit stays pinned to the bottom so farmers don't scroll the whole
+		   form to find it. Below the address dropdown (z-index 5). */
+		.submit-section {
+			position: sticky;
+			bottom: 0;
+			z-index: 4;
+			gap: 8px;
+			margin: 24px -16px 0;
+			padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+			border-top: 1px solid #ececec;
+			background: #fff;
+		}
+
+		.submit {
+			min-height: 48px;
+		}
+
+		.leave-overlay {
+			padding: 16px;
+		}
+
+		.leave-modal {
+			padding: 24px 20px;
+		}
+
+		.leave-close {
+			width: 44px;
+			height: 44px;
+			top: 6px;
+			right: 6px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+
+		.leave-title {
+			font-size: 22px;
+		}
+
+		.leave-btn {
+			min-height: 44px;
+		}
+	}
 </style>
