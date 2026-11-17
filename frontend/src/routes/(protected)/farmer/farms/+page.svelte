@@ -56,7 +56,9 @@
 	let farms = $state<FarmListItem[]>([]);
 	// A pending farm can't be edited until it's reviewed: tapping its card opens
 	// the pending-approval modal instead of the edit form.
-	let showPendingModal = $state(false);
+	// The pending farm whose popup is open; it still offers editing, so farmers can
+	// update it or request its deletion while it waits for review.
+	let pendingFarmId = $state<string | null>(null);
 	let loading = $state(true);
 	let errorMessage = $state('');
 
@@ -210,7 +212,7 @@
 					subtitle2={farm.county}
 					{status}
 					href={status === 'PENDING_APPROVAL' ? undefined : `/farmer/farms/${farm.id}/edit`}
-					onclick={status === 'PENDING_APPROVAL' ? () => (showPendingModal = true) : undefined}
+					onclick={status === 'PENDING_APPROVAL' ? () => (pendingFarmId = farm.id) : undefined}
 				/>
 			{/each}
 		</div>
@@ -226,9 +228,17 @@
 	/>
 {/if}
 
-{#if showPendingModal}
-	<Modal label="Application pending approval" onClose={() => (showPendingModal = false)}>
-		<PendingApprovalCard />
+{#if pendingFarmId}
+	{@const farmId = pendingFarmId}
+	<Modal label="Application pending approval" onClose={() => (pendingFarmId = null)}>
+		<PendingApprovalCard>
+			{#snippet actions()}
+				<ActionButton variant="outline" href={`/farmer/farms/${farmId}/edit`}
+					>Edit farm</ActionButton
+				>
+				<ActionButton variant="primary" onclick={() => (pendingFarmId = null)}>Close</ActionButton>
+			{/snippet}
+		</PendingApprovalCard>
 	</Modal>
 {:else if statusPopup?.kind === 'rejected'}
 	{@const popup = statusPopup}

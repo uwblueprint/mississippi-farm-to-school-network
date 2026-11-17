@@ -6,6 +6,8 @@ export type Toast = {
 	message: string;
 	/** Optional heading above the message (e.g. "CSV Export Complete"). */
 	title?: string;
+	/** Stays until the user closes it, for messages they need to act on. */
+	persist?: boolean;
 };
 
 const DISMISS_AFTER_MS = 4000;
@@ -20,10 +22,16 @@ export const toast = {
 	}
 };
 
-export function showToast(kind: ToastKind, message: string, title?: string) {
+export function showToast(
+	kind: ToastKind,
+	message: string,
+	title?: string,
+	{ persist = false }: { persist?: boolean } = {}
+) {
 	sequence += 1;
-	current = { id: sequence, kind, message, title };
+	current = { id: sequence, kind, message, title, persist };
 	clearTimeout(timer);
+	if (persist) return;
 	timer = setTimeout(() => {
 		current = null;
 	}, DISMISS_AFTER_MS);

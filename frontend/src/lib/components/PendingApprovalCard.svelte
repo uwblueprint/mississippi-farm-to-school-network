@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
 	/**
 	 * "Application pending" card, shown inside a Modal when a farmer taps a farm
 	 * that is still awaiting admin review. Same shell as ApprovedCard.
@@ -6,11 +8,13 @@
 	interface Props {
 		title?: string;
 		subtitle?: string;
+		actions?: Snippet;
 	}
 
 	let {
 		title = 'Your application is pending approval.',
-		subtitle = 'Applications are typically reviewed within 1-2 weeks. We will notify you once your application has been reviewed.'
+		subtitle = 'Applications are typically reviewed within 1-2 weeks. We will notify you once your application has been reviewed.',
+		actions
 	}: Props = $props();
 </script>
 
@@ -31,6 +35,10 @@
 
 	<h2 class="title">{title}</h2>
 	<p class="subtitle">{subtitle}</p>
+
+	{#if actions}
+		<div class="actions">{@render actions()}</div>
+	{/if}
 </div>
 
 <style>
@@ -99,5 +107,13 @@
 		.subtitle {
 			font-size: 16px;
 		}
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 28px;
 	}
 </style>
