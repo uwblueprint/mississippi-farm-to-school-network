@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { cubicOut } from 'svelte/easing';
 	import { fade, type TransitionConfig } from 'svelte/transition';
-	import { toast } from '$lib/state/toast.svelte';
+	import { dismissToast, toast } from '$lib/state/toast.svelte';
 	import checkIcon from '$lib/assets/announcements/check.svg';
 	import trashIcon from '$lib/assets/announcements/trash.svg';
 	import alertIcon from '$lib/assets/alert-circle.svg';
@@ -49,6 +49,12 @@
 				</div>
 			{:else}
 				<p class="toast-message">{t.message}</p>
+			{/if}
+
+			{#if t.persist}
+				<button class="toast-close" type="button" aria-label="Dismiss" onclick={dismissToast}>
+					&times;
+				</button>
 			{/if}
 		</div>
 	{/key}
@@ -116,6 +122,18 @@
 		flex-shrink: 0;
 		width: 1.25rem;
 		height: 1.25rem;
+	}
+
+	.toast-close {
+		flex-shrink: 0;
+		margin-left: auto;
+		padding: 0;
+		border: none;
+		background: none;
+		font-size: 1.25rem;
+		line-height: 1.25rem;
+		color: var(--color-text-secondary, #4f545e);
+		cursor: pointer;
 	}
 
 	.toast-copy {

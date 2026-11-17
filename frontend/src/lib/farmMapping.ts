@@ -85,7 +85,7 @@ function splitList(value: string): string[] {
 /** Map a backend FarmDTO onto the edit page's form model. Pure. */
 export function farmToFormModel(farm: FarmDTO): FarmFormModel {
 	return {
-		// usda_farm_id is the human-readable "Farm ID#" shown on the page.
+		// usda_farm_id is the human-readable "Farm Number" shown on the page.
 		readableId: farm.usda_farm_id ?? '',
 		name: farm.farm_name ?? '',
 		address: farm.farm_address ?? '',

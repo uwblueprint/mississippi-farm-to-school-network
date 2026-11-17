@@ -1,0 +1,1533 @@
+<script lang="ts">
+	import { onDestroy, onMount, tick, untrack } from 'svelte';
+	import { beforeNavigate, goto } from '$app/navigation';
+	import { FileUpload } from '@skeletonlabs/skeleton-svelte';
+	import leftArrow from '$lib/assets/left-arrow.svg';
+	import { getFirebaseAuth } from '$lib/firebase';
+	import { attachFarmPhotos } from '$lib/utils/farm-image-upload';
+	import { preparePhotos } from '$lib/utils/prepare-photo';
+	import { IMAGE_ACCEPT, MAX_UPLOAD_LABEL } from '$lib/fileDrop';
+	import { refreshAuthTokenCookie } from '$lib/auth';
+	import { showToast } from '$lib/state/toast.svelte';
+	import { COUNTIES } from '$lib/data/msCounties';
+	import { gqlClient } from '$lib/graphqlClient';
+	import type { FormAnswers, FormQuestion, FormVersion } from '$lib/types/form';
+	import {
+		PUBLISHED_FORM_QUERY,
+		answerErrors,
+		answersPayload,
+		displayLabel,
+		isEmptyAnswer,
+		isQuestionVisible,
+		toggleOption
+	} from '$lib/utils/form-answers';
+
+	interface FormUser {
+		email?: string;
+		phone?: string;
+	}
+
+	/**
+	 * `farmer`: a farmer submits their own farm.
+	 * `admin`: an admin creates the farm for a farmer, identified by email. That email is
+	 * also the farm's contact email, so the locked Email question isn't shown.
+	 */
+	let { user = null, mode = 'farmer' }: { user?: FormUser | null; mode?: 'farmer' | 'admin' } =
+		$props();
+
+	const isAdminMode = $derived(mode === 'admin');
+
+	interface AddressSuggestion {
+		placeId: string;
+		primary: string;
+		secondary: string;
+	}
+
+	let farmerEmail = $state('');
+	let usdaFarmId = $state('');
+	let farmName = $state('');
+	let farmAddress = $state('');
+	let addressFocused = $state(false);
+	let addressLoading = $state(false);
+	let addressSuggestions = $state<AddressSuggestion[]>([]);
+	let addressLat = $state<number | null>(null);
+	let addressLng = $state<number | null>(null);
+	let addressTimer: ReturnType<typeof setTimeout> | undefined;
+	let addressSearched = $state(false);
+	let addressActiveIndex = $state(-1);
+	let addressSelectError = $state('');
+	// Mapbox bills suggest+retrieve per session; a new one starts after each selection.
+	let addressSession = crypto.randomUUID();
+	let addressRequestSeq = 0;
+	let county = $state('');
+	let countyFocused = $state(false);
+
+	let phone = $state(untrack(() => user?.phone ?? ''));
+	let email = $state(untrack(() => user?.email ?? ''));
+	/** The pre-filled email, so filling it in doesn't count as an unsaved edit. */
+	let prefilledEmail = $state(untrack(() => user?.email ?? ''));
+
+	// Every other question comes from the published form, keyed by question id.
+	let form = $state<FormVersion | null>(null);
+	let formLoadError = $state<string | null>(null);
+	let answers = $state<FormAnswers>({});
+
+	let farmPhotos = $state<File[]>([]);
+	// Kept apart: the picker reports rejections in a separate change event that
+	// can land while an earlier batch is still being prepared.
+	let photoRejectMessages = $state<string[]>([]);
+	let photoPrepareMessages = $state<string[]>([]);
+	const photoMessages = $derived([...photoRejectMessages, ...photoPrepareMessages]);
+	let preparingPhotos = $state(false);
+	const MAX_PHOTOS = 10;
+	let coverIndex = $state(0);
+
+	let submitted = $state(false);
+	let submitting = $state(false);
+	let submitError = $state<string | null>(null);
+	let showLeaveModal = $state(false);
+	let allowLeave = $state(false);
+	let pendingUrl = $state<URL | null>(null);
+
+	onMount(() => {
+		// When the layout auth bypass is active, still prefill from the Firebase session.
+		// Never in admin mode: the session belongs to the admin, not the farm's contact.
+		if (!isAdminMode && !email) {
+			const currentEmail = getFirebaseAuth().currentUser?.email;
+			if (currentEmail) email = prefilledEmail = currentEmail;
+		}
+		void loadForm();
+	});
+
+	async function loadForm() {
+		formLoadError = null;
+		try {
+			const result = await gqlClient<{ publishedForm: FormVersion }>(PUBLISHED_FORM_QUERY);
+			form = result.publishedForm;
+		} catch (err) {
+			formLoadError = err instanceof Error ? err.message : 'Could not load the form.';
+		}
+	}
+
+	const MS_COUNTIES = COUNTIES;
+
+	const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+	let touched = $state<Record<string, boolean>>({});
+
+	const filteredCounties = $derived(
+		MS_COUNTIES.filter((name) => name.toLowerCase().includes(county.trim().toLowerCase()))
+	);
+
+	// What would be submitted; also decides which conditional questions show.
+	const submittedAnswers = $derived(form ? answersPayload(form, answers) : {});
+	const questionErrors = $derived(form ? answerErrors(form, answers) : {});
+
+	const errors = $derived({
+		farmerEmail: !isAdminMode
+			? ''
+			: farmerEmail.trim() === ''
+				? "Farmer's email address is required."
+				: !emailPattern.test(farmerEmail.trim())
+					? 'Enter a valid email address.'
+					: '',
+		usdaFarmId: usdaFarmId.trim() === '' ? 'Farm Number is required.' : '',
+		farmName: farmName.trim() === '' ? 'Farm name is required.' : '',
+		farmAddress:
+			farmAddress.trim() === ''
+				? 'Farm address is required.'
+				: addressLat === null || addressLng === null
+					? 'Select an address from the suggestions.'
+					: '',
+		county: county.trim() === '' ? 'County is required.' : '',
+		phone:
+			phone === ''
+				? 'Phone number is required.'
+				: phone.length !== 10
+					? 'Enter a 10-digit phone number.'
+					: '',
+		// Admins only enter the farmer's email, which is also the farm's contact email.
+		email: isAdminMode
+			? ''
+			: email.trim() === ''
+				? 'Email address is required.'
+				: !emailPattern.test(email)
+					? 'Enter a valid email address.'
+					: ''
+	});
+
+	const isValid = $derived(
+		form !== null &&
+			[...Object.values(errors), ...Object.values(questionErrors)].every(
+				(message) => message === ''
+			)
+	);
+
+	const isDirty = $derived(
+		farmerEmail !== '' ||
+			usdaFarmId !== '' ||
+			farmName !== '' ||
+			farmAddress !== '' ||
+			county !== '' ||
+			phone !== (user?.phone ?? '') ||
+			email !== prefilledEmail ||
+			Object.values(answers).some((value) => !isEmptyAnswer(value)) ||
+			farmPhotos.length > 0
+	);
+
+	function digitsOnly(value: string) {
+		return value.replace(/\D/g, '');
+	}
+
+	function handlePhoneInput(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const cleaned = digitsOnly(input.value).slice(0, 10);
+		phone = cleaned;
+		input.value = cleaned;
+	}
+
+	function handleNumberInput(question: FormQuestion, event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const cleaned = digitsOnly(input.value);
+		answers[question.id] = cleaned;
+		input.value = cleaned;
+	}
+
+	function textAnswer(question: FormQuestion): string {
+		const value = answers[question.id];
+		return typeof value === 'string' || typeof value === 'number' ? String(value) : '';
+	}
+
+	function checkedOptions(question: FormQuestion): string[] {
+		const value = answers[question.id];
+		return Array.isArray(value) ? value : [];
+	}
+
+	function isHalfWidth(question: FormQuestion): boolean {
+		return (
+			question.type === 'TEXT' ||
+			question.type === 'URL' ||
+			question.lockedField === 'PRIMARY_PHONE' ||
+			question.lockedField === 'PRIMARY_EMAIL'
+		);
+	}
+
+	function handleAddressInput() {
+		addressFocused = true;
+		addressLat = null;
+		addressLng = null;
+
+		if (addressTimer) {
+			clearTimeout(addressTimer);
+		}
+
+		addressSelectError = '';
+		addressActiveIndex = -1;
+		const query = farmAddress.trim();
+
+		if (query.length < 2) {
+			addressRequestSeq++;
+			addressSuggestions = [];
+			addressSearched = false;
+			addressLoading = false;
+			return;
+		}
+
+		addressLoading = true;
+		addressTimer = setTimeout(() => fetchAddressSuggestions(query), 200);
+	}
+
+	async function fetchAddressSuggestions(query: string) {
+		const seq = ++addressRequestSeq;
+		let results: AddressSuggestion[] = [];
+		try {
+			const params = new URLSearchParams({ text: query, session: addressSession });
+			const res = await fetch(`/api/address-autocomplete?${params}`);
+			if (res.ok) results = (await res.json()).results ?? [];
+		} catch {
+			// treated as no results
+		}
+
+		// a slower, older request must not overwrite results for newer input
+		if (seq !== addressRequestSeq) return;
+		addressSuggestions = results;
+		addressSearched = true;
+		addressLoading = false;
+	}
+
+	async function selectAddress(suggestion: AddressSuggestion) {
+		addressRequestSeq++;
+		farmAddress = [suggestion.primary, suggestion.secondary].filter(Boolean).join(', ');
+		addressSuggestions = [];
+		addressSearched = false;
+		addressLoading = false;
+		addressFocused = false;
+		addressActiveIndex = -1;
+		touched.farmAddress = true;
+
+		try {
+			const params = new URLSearchParams({ id: suggestion.placeId, session: addressSession });
+			const res = await fetch(`/api/address-autocomplete/retrieve?${params}`);
+			if (!res.ok) throw new Error();
+			const place: { formatted: string; lat: number; lon: number } = await res.json();
+			farmAddress = place.formatted;
+			addressLat = place.lat;
+			addressLng = place.lon;
+		} catch {
+			addressSelectError = "Couldn't load that address. Please pick it again.";
+		} finally {
+			addressSession = crypto.randomUUID();
+		}
+	}
+
+	function handleAddressKeydown(event: KeyboardEvent) {
+		const count = addressSuggestions.length;
+		if (event.key === 'Escape') {
+			addressFocused = false;
+			return;
+		}
+		if (!count) return;
+
+		if (event.key === 'ArrowDown') {
+			event.preventDefault();
+			addressFocused = true;
+			addressActiveIndex = (addressActiveIndex + 1) % count;
+		} else if (event.key === 'ArrowUp') {
+			event.preventDefault();
+			addressActiveIndex = addressActiveIndex <= 0 ? count - 1 : addressActiveIndex - 1;
+		} else if (event.key === 'Enter' && addressActiveIndex >= 0) {
+			event.preventDefault();
+			void selectAddress(addressSuggestions[addressActiveIndex]);
+		}
+	}
+
+	function selectCounty(name: string) {
+		county = name;
+		countyFocused = false;
+		touched.county = true;
+	}
+
+	const photoUrls = new Map<File, string>();
+
+	function photoUrl(file: File) {
+		let url = photoUrls.get(file);
+		if (!url) {
+			url = URL.createObjectURL(file);
+			photoUrls.set(file, url);
+		}
+		return url;
+	}
+
+	onDestroy(() => {
+		for (const url of photoUrls.values()) {
+			URL.revokeObjectURL(url);
+		}
+	});
+
+	function setFarmPhotos(next: File[]) {
+		for (const [file, url] of photoUrls) {
+			if (!next.includes(file)) {
+				URL.revokeObjectURL(url);
+				photoUrls.delete(file);
+			}
+		}
+		const previousCover = farmPhotos[coverIndex];
+		farmPhotos = next;
+		const nextIndex = previousCover ? farmPhotos.indexOf(previousCover) : -1;
+		coverIndex = nextIndex === -1 ? 0 : nextIndex;
+	}
+
+	function rejectionMessage({ file, errors }: { file: File; errors: string[] }): string {
+		if (errors.includes('TOO_MANY_FILES')) {
+			return `“${file.name}” was skipped — you can add up to ${MAX_PHOTOS} photos.`;
+		}
+		if (errors.includes('FILE_EXISTS')) return `“${file.name}” is already added.`;
+		return `“${file.name}” isn't a JPG, PNG or HEIC photo.`;
+	}
+
+	// New picks are checked (size limit) and HEIC-converted before they join the
+	// list, so thumbnails render and the upload only ever sends JPG/PNG.
+	async function handlePhotosChange(details: {
+		acceptedFiles: File[];
+		rejectedFiles: { file: File; errors: string[] }[];
+	}) {
+		photoRejectMessages = details.rejectedFiles.map(rejectionMessage);
+		const incoming = details.acceptedFiles.filter((file) => !farmPhotos.includes(file));
+		setFarmPhotos(farmPhotos.filter((file) => details.acceptedFiles.includes(file)));
+		if (incoming.length === 0) return;
+
+		photoPrepareMessages = [];
+		preparingPhotos = true;
+		const { photos, errors } = await preparePhotos(incoming);
+		preparingPhotos = false;
+		setFarmPhotos([...farmPhotos, ...photos].slice(0, MAX_PHOTOS));
+		photoPrepareMessages = errors;
+	}
+
+	function buildFarmPayload(currentForm: FormVersion) {
+		return {
+			usda_farm_id: usdaFarmId.trim(),
+			farm_name: farmName.trim(),
+			primary_phone: phone,
+			primary_email: (isAdminMode ? farmerEmail : email).trim(),
+			farm_address: farmAddress.trim(),
+			county: county.trim(),
+			location: { lat: addressLat, lng: addressLng },
+			cover_photo: null,
+			carousel_photos: [],
+			formVersionId: currentForm.id,
+			answers: answersPayload(currentForm, answers)
+		};
+	}
+
+	async function handleSubmit() {
+		// The farm already exists; another submit would create a duplicate.
+		if (submitted || !form) return;
+		for (const key of [...Object.keys(errors), ...Object.keys(questionErrors)]) {
+			touched[key] = true;
+		}
+		if (submitting || preparingPhotos) return;
+		if (!isValid) {
+			await tick();
+			document
+				.querySelector('.input-error, .error-text')
+				?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+			return;
+		}
+
+		submitting = true;
+		submitError = null;
+
+		const payload = buildFarmPayload(form);
+
+		try {
+			await refreshAuthTokenCookie();
+			const res = await fetch(
+				isAdminMode ? '/api/admin/create-farm-for-farmer' : '/api/create-farm',
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(
+						isAdminMode ? { email: farmerEmail.trim(), input: payload } : payload
+					),
+					signal: AbortSignal.timeout(30_000)
+				}
+			);
+			const result = await res.json().catch(() => ({ ok: false }));
+
+			if (!result.ok) {
+				submitError = result.errors?.[0]?.message ?? 'Failed to create farm. Please try again.';
+				return;
+			}
+
+			const farmId = result.farm?.id as string | undefined;
+			if (!farmId) {
+				submitError = 'Farm was created but no id was returned.';
+				return;
+			}
+
+			let photoFailure: string | null = null;
+			if (farmPhotos.length > 0) {
+				try {
+					await attachFarmPhotos(farmId, farmPhotos, coverIndex);
+				} catch (photoError) {
+					const retryHint = isAdminMode
+						? 'You can add photos by editing the farm.'
+						: "You can add photos from the farm's edit page.";
+					photoFailure =
+						photoError instanceof Error
+							? `${photoError.message} ${retryHint}`
+							: `Photo upload failed. ${retryHint}`;
+				}
+			}
+
+			submitted = true;
+			showCreatedToast(result, photoFailure);
+		} catch (err) {
+			submitError =
+				err instanceof DOMException && err.name === 'TimeoutError'
+					? 'The server took too long to respond. Check your dashboard before submitting again — the farm may already have been created.'
+					: 'Network error. Check your connection, then check your dashboard before submitting again.';
+		} finally {
+			submitting = false;
+		}
+
+		// Once the farm exists, always leave: re-submitting would create a duplicate,
+		// and missing photos can be added from the farm's edit page.
+		if (submitted) await goto(isAdminMode ? '/admin/farms' : '/farmer');
+	}
+
+	// Toast rather than submitError: we navigate away right after, and the layout's
+	// ToastHost survives the redirect. Only one toast shows at a time, so an email
+	// failure carries any photo failure in the same message.
+	function showCreatedToast(
+		result: { emailSent?: boolean; needsPasswordSetup?: boolean },
+		photoFailure: string | null
+	) {
+		if (isAdminMode && result.emailSent === false) {
+			const address = farmerEmail.trim();
+			const nextStep = result.needsPasswordSetup
+				? `We couldn't email ${address}. Please tell them to go to the login page and use "Forgot password" with this email address to set a password.`
+				: `We couldn't notify ${address}. Their farm is on their dashboard the next time they sign in.`;
+			showToast(
+				'error',
+				photoFailure ? `${nextStep} ${photoFailure}` : nextStep,
+				"Farm created, but the email didn't send",
+				{ persist: true }
+			);
+		} else if (photoFailure) {
+			showToast('error', photoFailure, 'Farm created');
+		} else if (isAdminMode) {
+			showToast(
+				'success',
+				`${farmerEmail.trim()} will get an email with a link to access their farm.`,
+				'Farm created'
+			);
+		}
+	}
+
+	beforeNavigate((navigation) => {
+		if (allowLeave || submitted || !isDirty) return;
+		navigation.cancel();
+		if (navigation.willUnload) return;
+		pendingUrl = navigation.to?.url ?? null;
+		showLeaveModal = true;
+	});
+
+	async function confirmLeave() {
+		allowLeave = true;
+		showLeaveModal = false;
+		if (pendingUrl) {
+			await goto(pendingUrl);
+		} else {
+			history.back();
+		}
+	}
+</script>
+
+{#snippet answerField(question: FormQuestion)}
+	{@const fieldId = `question-${question.id}`}
+	{@const invalid = Boolean(touched[question.id] && questionErrors[question.id])}
+	<div class="form-group" class:form-group--half={isHalfWidth(question)}>
+		{#if question.type === 'CHECKBOX'}
+			<span class="field-label">{displayLabel(question)}</span>
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+			<div class="choice-list" class:group-error={invalid}>
+				{#each question.options as option (option.id)}
+					<label class="choice">
+						<input
+							type="checkbox"
+							checked={checkedOptions(question).includes(option.id)}
+							onchange={(e) => {
+								answers[question.id] = toggleOption(
+									question,
+									answers[question.id],
+									option.id,
+									e.currentTarget.checked
+								);
+								touched[question.id] = true;
+							}}
+						/>
+						<span>{option.label}</span>
+					</label>
+				{/each}
+			</div>
+		{:else}
+			<label class="field-label" for={fieldId}>{displayLabel(question)}</label>
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+			{#if question.type === 'TEXTAREA'}
+				<textarea
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					rows="3"
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
+					onblur={() => (touched[question.id] = true)}
+				></textarea>
+			{:else if question.type === 'NUMBER'}
+				<input
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					inputmode="numeric"
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => handleNumberInput(question, e)}
+					onblur={() => (touched[question.id] = true)}
+				/>
+			{:else}
+				<input
+					id={fieldId}
+					class="field"
+					class:input-error={invalid}
+					placeholder={question.placeholder ?? ''}
+					value={textAnswer(question)}
+					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
+					onblur={() => (touched[question.id] = true)}
+				/>
+			{/if}
+		{/if}
+		{#if invalid}
+			<span class="error-text">{questionErrors[question.id]}</span>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet lockedQuestion(question: FormQuestion)}
+	{#if question.lockedField === 'USDA_FARM_ID'}
+		<div class="form-group">
+			<label class="field-label" for="usda-farm-id">{question.label}</label>
+			<input
+				id="usda-farm-id"
+				class="field"
+				class:input-error={touched.usdaFarmId && errors.usdaFarmId}
+				placeholder={question.placeholder ?? ''}
+				bind:value={usdaFarmId}
+				onblur={() => (touched.usdaFarmId = true)}
+			/>
+			{#if touched.usdaFarmId && errors.usdaFarmId}
+				<span class="error-text">{errors.usdaFarmId}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'FARM_NAME'}
+		<div class="form-group">
+			<label class="field-label" for="farm-name">{question.label}</label>
+			<input
+				id="farm-name"
+				class="field"
+				class:input-error={touched.farmName && errors.farmName}
+				placeholder={question.placeholder ?? ''}
+				bind:value={farmName}
+				onblur={() => (touched.farmName = true)}
+			/>
+			{#if touched.farmName && errors.farmName}
+				<span class="error-text">{errors.farmName}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'FARM_ADDRESS'}
+		<div class="form-group">
+			<label class="field-label" for="farm-address">{question.label}</label>
+			<div class="combobox">
+				<div class="search-field">
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="11" cy="11" r="7" />
+						<path d="M21 21l-4.35-4.35" />
+					</svg>
+					<input
+						id="farm-address"
+						class="field"
+						class:input-error={touched.farmAddress && errors.farmAddress}
+						placeholder={question.placeholder ?? ''}
+						autocomplete="off"
+						role="combobox"
+						aria-autocomplete="list"
+						aria-controls="farm-address-options"
+						aria-expanded={addressFocused && addressSuggestions.length > 0}
+						aria-activedescendant={addressActiveIndex >= 0
+							? `farm-address-option-${addressActiveIndex}`
+							: undefined}
+						bind:value={farmAddress}
+						oninput={handleAddressInput}
+						onkeydown={handleAddressKeydown}
+						onfocus={() => (addressFocused = true)}
+						onblur={() => {
+							touched.farmAddress = true;
+							addressFocused = false;
+						}}
+					/>
+				</div>
+				{#if addressFocused && (addressLoading || addressSearched)}
+					<ul class="combobox-list" id="farm-address-options" role="listbox">
+						{#if addressLoading && addressSuggestions.length === 0}
+							<li class="combobox-empty">Searching…</li>
+						{:else if addressSuggestions.length === 0}
+							<li class="combobox-empty">No matching Mississippi addresses</li>
+						{/if}
+						{#each addressSuggestions as suggestion, i (suggestion.placeId)}
+							<li
+								id={`farm-address-option-${i}`}
+								role="option"
+								aria-selected={i === addressActiveIndex}
+							>
+								<button
+									type="button"
+									tabindex="-1"
+									class="combobox-option"
+									class:combobox-option--active={i === addressActiveIndex}
+									onmouseenter={() => (addressActiveIndex = i)}
+									onmousedown={(e) => {
+										e.preventDefault();
+										void selectAddress(suggestion);
+									}}
+								>
+									<span class="addr-primary">{suggestion.primary}</span>
+									{#if suggestion.secondary}
+										<span class="addr-secondary">{suggestion.secondary}</span>
+									{/if}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			{#if addressSelectError}
+				<span class="error-text">{addressSelectError}</span>
+			{:else if touched.farmAddress && errors.farmAddress}
+				<span class="error-text">{errors.farmAddress}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'COUNTY'}
+		<div class="form-group">
+			<label class="field-label" for="county">{question.label}</label>
+			<div class="combobox">
+				<div class="search-field">
+					<svg
+						width="18"
+						height="18"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<circle cx="11" cy="11" r="7" />
+						<path d="M21 21l-4.35-4.35" />
+					</svg>
+					<input
+						id="county"
+						class="field"
+						class:input-error={touched.county && errors.county}
+						placeholder={question.placeholder ?? ''}
+						autocomplete="off"
+						bind:value={county}
+						oninput={() => (countyFocused = true)}
+						onfocus={() => (countyFocused = true)}
+						onblur={() => {
+							touched.county = true;
+							countyFocused = false;
+						}}
+					/>
+				</div>
+				{#if countyFocused && filteredCounties.length > 0}
+					<ul class="combobox-list">
+						{#each filteredCounties as name}
+							<li>
+								<button
+									type="button"
+									class="combobox-option"
+									onmousedown={(e) => {
+										e.preventDefault();
+										selectCounty(name);
+									}}
+								>
+									{name}
+								</button>
+							</li>
+						{/each}
+					</ul>
+				{/if}
+			</div>
+			{#if touched.county && errors.county}
+				<span class="error-text">{errors.county}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PRIMARY_PHONE'}
+		<div class="form-group form-group--half">
+			<label class="field-label" for="phone">{question.label}</label>
+			<input
+				id="phone"
+				class="field"
+				class:input-error={touched.phone && errors.phone}
+				inputmode="numeric"
+				placeholder={question.placeholder ?? ''}
+				value={phone}
+				oninput={handlePhoneInput}
+				onblur={() => (touched.phone = true)}
+			/>
+			{#if touched.phone && errors.phone}
+				<span class="error-text">{errors.phone}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PRIMARY_EMAIL' && !isAdminMode}
+		<div class="form-group form-group--half">
+			<label class="field-label" for="email">{question.label}</label>
+			<input
+				id="email"
+				class="field"
+				class:input-error={touched.email && errors.email}
+				type="email"
+				placeholder={question.placeholder ?? ''}
+				bind:value={email}
+				onblur={() => (touched.email = true)}
+			/>
+			{#if touched.email && errors.email}
+				<span class="error-text">{errors.email}</span>
+			{/if}
+		</div>
+	{:else if question.lockedField === 'PHOTOS'}
+		<div class="form-group">
+			{#if question.helpText}
+				<p class="field-help">{question.helpText}</p>
+			{/if}
+
+			<FileUpload
+				accept={IMAGE_ACCEPT}
+				maxFiles={MAX_PHOTOS}
+				acceptedFiles={farmPhotos}
+				onFileChange={handlePhotosChange}
+			>
+				<FileUpload.Label class="sr-only">Upload farm photos</FileUpload.Label>
+				<FileUpload.Dropzone
+					class="flex min-h-36 cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#d8d8d8] bg-white p-6 text-center"
+				>
+					<svg
+						width="28"
+						height="28"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="#131927"
+						stroke-width="1.6"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+					>
+						<path d="M12 16V4" />
+						<path d="M8 8l4-4 4 4" />
+						<path d="M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+					</svg>
+					<FileUpload.Trigger
+						class="cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-[#131927]"
+					>
+						Upload farm photos
+					</FileUpload.Trigger>
+					<span class="text-xs text-[#9aa0a6]">
+						JPG, PNG or HEIC, up to {MAX_PHOTOS} pics ({MAX_UPLOAD_LABEL} each)
+					</span>
+					<FileUpload.HiddenInput />
+				</FileUpload.Dropzone>
+
+				{#if preparingPhotos}
+					<p class="photo-status" role="status">Preparing photos…</p>
+				{/if}
+				{#each photoMessages as message (message)}
+					<p class="error-text photo-error" role="alert">{message}</p>
+				{/each}
+
+				{#if farmPhotos.length > 0}
+					<FileUpload.ItemGroup class="file-list">
+						{#each farmPhotos as file, index (`${index}-${file.name}-${file.size}-${file.lastModified}`)}
+							<FileUpload.Item {file} class={index === coverIndex ? 'cover-photo' : undefined}>
+								<button
+									class="tile-btn"
+									type="button"
+									aria-pressed={index === coverIndex}
+									aria-label={`Set ${file.name} as cover photo`}
+									onclick={() => (coverIndex = index)}
+								>
+									<img class="file-thumb" src={photoUrl(file)} alt="" />
+								</button>
+								<span class="file-name">{file.name}</span>
+								{#if index === coverIndex}
+									<span class="cover-badge">Cover</span>
+								{/if}
+								<FileUpload.ItemDeleteTrigger
+									class="tile-delete"
+									aria-label={`Remove ${file.name}`}
+								>
+									<svg
+										width="12"
+										height="12"
+										viewBox="0 0 12 12"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="1.8"
+										stroke-linecap="round"
+									>
+										<path d="M2 2l8 8" />
+										<path d="M10 2l-8 8" />
+									</svg>
+								</FileUpload.ItemDeleteTrigger>
+							</FileUpload.Item>
+						{/each}
+					</FileUpload.ItemGroup>
+				{/if}
+			</FileUpload>
+		</div>
+	{/if}
+{/snippet}
+
+<div class="container">
+	<div class="topbar">
+		<button class="back-btn" type="button" onclick={() => history.back()}>
+			<img class="back-icon" src={leftArrow} alt="" />
+			Back
+		</button>
+	</div>
+
+	<h1 class="page-title">Create a Farm</h1>
+
+	{#if isAdminMode}
+		<h2 class="section-title">Farmer Account</h2>
+
+		<div class="form-group">
+			<label class="field-label" for="farmer-email">Farmer's email address</label>
+			<p class="field-help">
+				The farm is added to this farmer's account, and this is also the farm's contact email. New
+				farmers get an email with a link to set a password; existing farmers get an email to sign
+				in.
+			</p>
+			<input
+				id="farmer-email"
+				class="field"
+				class:input-error={touched.farmerEmail && errors.farmerEmail}
+				type="email"
+				placeholder="e.g. farmer@email.com"
+				bind:value={farmerEmail}
+				onblur={() => (touched.farmerEmail = true)}
+			/>
+			{#if touched.farmerEmail && errors.farmerEmail}
+				<span class="error-text">{errors.farmerEmail}</span>
+			{/if}
+		</div>
+	{/if}
+
+	{#if !form}
+		{#if formLoadError}
+			<p class="submit-error form-load-error" role="alert">{formLoadError}</p>
+			<button class="back-btn" type="button" onclick={loadForm}>Try again</button>
+		{:else}
+			<p class="field-help" role="status">Loading form…</p>
+		{/if}
+	{:else}
+		{#each form.sections as section (section.id)}
+			<h2 class="section-title">{section.title}</h2>
+
+			<div class="question-grid">
+				{#each section.questions as question (question.id)}
+					{#if question.type === 'LOCKED'}
+						{@render lockedQuestion(question)}
+					{:else if isQuestionVisible(question, submittedAnswers)}
+						{@render answerField(question)}
+					{/if}
+				{/each}
+			</div>
+		{/each}
+
+		<div class="submit-section">
+			{#if submitError}
+				<p class="submit-error" role="alert">{submitError}</p>
+			{/if}
+			<button
+				class="submit"
+				type="button"
+				onclick={handleSubmit}
+				disabled={submitted || submitting || preparingPhotos}
+			>
+				{submitting
+					? 'Submitting…'
+					: preparingPhotos
+						? 'Preparing photos…'
+						: 'Submit Farm Information'}
+			</button>
+		</div>
+	{/if}
+</div>
+
+{#if showLeaveModal}
+	<div class="leave-overlay">
+		<button
+			class="leave-backdrop"
+			type="button"
+			aria-label="Keep editing"
+			onclick={() => (showLeaveModal = false)}
+		></button>
+		<div class="leave-modal" role="dialog" aria-modal="true" aria-labelledby="leave-title">
+			<button
+				class="leave-close"
+				type="button"
+				aria-label="Close"
+				onclick={() => (showLeaveModal = false)}
+			>
+				<svg
+					width="20"
+					height="20"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+				>
+					<path d="M18 6 6 18M6 6l12 12" />
+				</svg>
+			</button>
+
+			<span class="leave-icon" aria-hidden="true">!</span>
+			<h2 id="leave-title" class="leave-title">You have unsaved changes.</h2>
+			<p class="leave-body">If you leave now, your changes will be lost.</p>
+
+			<div class="leave-actions">
+				<button class="leave-btn leave-discard" type="button" onclick={confirmLeave}>
+					Discard Changes
+				</button>
+				<button
+					class="leave-btn leave-outline"
+					type="button"
+					onclick={() => (showLeaveModal = false)}
+				>
+					Keep Editing
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+<style>
+	.container {
+		font-family: 'DM Sans', sans-serif;
+		max-width: 760px;
+		margin: 0 auto;
+		padding: 40px 24px 64px;
+		color: #131927;
+	}
+
+	.topbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		margin-bottom: 20px;
+	}
+
+	.page-title {
+		font-size: 26px;
+		font-weight: 500;
+		margin: 0 0 8px;
+	}
+
+	.back-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		padding: 8px 16px;
+		border: 1px solid #d8d8d8;
+		border-radius: 8px;
+		background: #fff;
+		font-size: 15px;
+		font-family: inherit;
+		color: #131927;
+		cursor: pointer;
+	}
+
+	.back-icon {
+		width: 14px;
+		height: 14px;
+	}
+
+	.section-title {
+		font-size: 20px;
+		font-weight: 500;
+		margin: 28px 0 16px;
+	}
+
+	.form-group {
+		margin-bottom: 18px;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.field-label {
+		font-size: 15px;
+		font-weight: 500;
+		margin-bottom: 6px;
+		color: #131927;
+	}
+
+	.field-help {
+		margin: 0 0 8px;
+		font-size: 14px;
+		color: #666;
+		line-height: 1.4;
+	}
+
+	.field {
+		width: 100%;
+		box-sizing: border-box;
+		padding: 8px 16px;
+		border: 1px solid #d8d8d8;
+		border-radius: 8px;
+		background: #fff;
+		font-size: 14px;
+		font-family: inherit;
+		color: #131927;
+	}
+
+	.field::placeholder {
+		color: #9aa0a6;
+	}
+
+	.field:focus {
+		outline: none;
+		border-color: var(--mfsn-primary);
+	}
+
+	textarea.field {
+		resize: vertical;
+	}
+
+	.input-error {
+		border-color: #d23b3b;
+	}
+
+	.input-error:focus {
+		border-color: #d23b3b;
+	}
+
+	.error-text {
+		margin-top: 6px;
+		font-size: 12px;
+		color: #d23b3b;
+	}
+
+	.photo-error {
+		display: block;
+		margin: 8px 0 0;
+		font-size: 13px;
+	}
+
+	.photo-status {
+		margin: 8px 0 0;
+		font-size: 13px;
+		color: #666;
+	}
+
+	.search-field {
+		position: relative;
+	}
+
+	.search-field svg {
+		position: absolute;
+		left: 12px;
+		top: 50%;
+		transform: translateY(-50%);
+		color: #9aa0a6;
+		pointer-events: none;
+	}
+
+	.search-field .field {
+		padding-left: 40px;
+	}
+
+	.combobox {
+		position: relative;
+	}
+
+	.combobox-list {
+		position: absolute;
+		z-index: 5;
+		top: calc(100% + 4px);
+		left: 0;
+		right: 0;
+		max-height: 220px;
+		overflow-y: auto;
+		margin: 0;
+		padding: 4px;
+		list-style: none;
+		background: #fff;
+		border: 1px solid #d8d8d8;
+		border-radius: 8px;
+		box-shadow: 0 8px 24px rgba(20, 28, 16, 0.12);
+	}
+
+	.combobox-option {
+		display: block;
+		width: 100%;
+		text-align: left;
+		padding: 8px 10px;
+		border: none;
+		border-radius: 6px;
+		background: none;
+		font-family: inherit;
+		font-size: 14px;
+		color: #131927;
+		cursor: pointer;
+	}
+
+	.addr-primary {
+		color: #131927;
+	}
+
+	.addr-secondary {
+		margin-left: 6px;
+		color: #9aa0a6;
+	}
+
+	.combobox-option:hover,
+	.combobox-option--active {
+		background: var(--mfsn-primary-tint, #f0f5ec);
+	}
+
+	.combobox-empty {
+		padding: 8px 10px;
+		font-size: 14px;
+		color: #9aa0a6;
+	}
+
+	.question-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		column-gap: 20px;
+	}
+
+	.question-grid > .form-group {
+		grid-column: 1 / -1;
+	}
+
+	.question-grid > .form-group--half {
+		grid-column: span 1;
+	}
+
+	.form-load-error {
+		margin-bottom: 12px;
+		text-align: left;
+	}
+
+	.choice-list {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-top: 4px;
+	}
+
+	.choice {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: fit-content;
+		font-size: 15px;
+		cursor: pointer;
+	}
+
+	.choice input[type='checkbox'] {
+		appearance: none;
+		-webkit-appearance: none;
+		display: inline-grid;
+		place-content: center;
+		flex-shrink: 0;
+		width: 16px;
+		height: 16px;
+		margin: 0;
+		border: 1px solid #9ea0ad;
+		border-radius: 2px;
+		background: #fff;
+		cursor: pointer;
+		transition:
+			background-color 120ms ease,
+			border-color 120ms ease;
+	}
+
+	.choice input[type='checkbox']::before {
+		content: '';
+		width: 10px;
+		height: 10px;
+		transform: scale(0);
+		transition: transform 120ms ease;
+		background: #fff;
+		clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+	}
+
+	.choice input[type='checkbox']:hover {
+		background: #e2e8d9;
+	}
+
+	.choice input[type='checkbox']:checked {
+		background: #455d32;
+		border-color: #455d32;
+	}
+
+	.choice input[type='checkbox']:checked::before {
+		transform: scale(1);
+	}
+
+	.group-error input {
+		outline: 1.5px solid #d23b3b;
+		outline-offset: 2px;
+	}
+
+	:global(.file-list) {
+		list-style: none;
+		margin: 10px 0 0;
+		padding: 0;
+		display: grid;
+		grid-template-columns: repeat(4, 1fr);
+		gap: 10px;
+	}
+
+	:global(.file-list li) {
+		display: block;
+		position: relative;
+		aspect-ratio: 1;
+		padding: 0;
+		border: 1px solid #d8d8d8;
+		border-radius: 10px;
+		overflow: hidden;
+		background: #fff;
+		transition:
+			border-color 120ms ease,
+			box-shadow 120ms ease;
+	}
+
+	:global(.file-list li.cover-photo) {
+		border-color: var(--mfsn-primary);
+		box-shadow: 0 0 0 2px var(--mfsn-primary);
+	}
+
+	:global(.file-list li:not(.cover-photo):hover:not(:has(.tile-delete:hover))),
+	:global(.file-list li:not(.cover-photo):has(.tile-btn:focus-visible)) {
+		border-color: color-mix(in srgb, var(--mfsn-primary) 55%, transparent);
+		box-shadow: 0 0 0 1px color-mix(in srgb, var(--mfsn-primary) 55%, transparent);
+	}
+
+	.tile-btn {
+		display: block;
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		border: none;
+		background: none;
+		cursor: pointer;
+	}
+
+	.file-thumb {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		object-position: center;
+	}
+
+	.file-name {
+		position: absolute;
+		right: 0;
+		bottom: 0;
+		left: 0;
+		padding: 16px 8px 6px;
+		background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+		color: #fff;
+		font-size: 11px;
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		pointer-events: none;
+	}
+
+	.cover-badge {
+		position: absolute;
+		top: 6px;
+		left: 6px;
+		padding: 2px 10px;
+		border-radius: 999px;
+		background: var(--mfsn-primary);
+		color: #fff;
+		font-size: 11px;
+		font-weight: 600;
+	}
+
+	:global(.tile-delete) {
+		position: absolute;
+		top: 6px;
+		right: 6px;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		padding: 0;
+		border: none;
+		border-radius: 50%;
+		background: rgba(19, 25, 39, 0.55);
+		color: #fff;
+		cursor: pointer;
+		opacity: 0;
+		pointer-events: none;
+		transition:
+			background 120ms ease,
+			transform 120ms ease,
+			opacity 120ms ease;
+	}
+
+	:global(.file-list li:hover .tile-delete),
+	:global(.tile-delete:focus-visible) {
+		opacity: 1;
+		pointer-events: auto;
+	}
+
+	:global(.tile-delete:hover),
+	:global(.tile-delete:focus-visible) {
+		background: #d23b3b;
+		transform: scale(1.1);
+	}
+
+	.submit-section {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 14px;
+		margin-top: 40px;
+	}
+
+	.submit-error {
+		margin: 0;
+		max-width: 100%;
+		color: #b42318;
+		font-size: 14px;
+		text-align: center;
+	}
+
+	.submit {
+		width: 100%;
+		padding: 14px 24px;
+		border: none;
+		border-radius: 8px;
+		background: var(--mfsn-primary);
+		color: #fff;
+		font-size: 15px;
+		font-weight: 500;
+		font-family: inherit;
+		cursor: pointer;
+	}
+
+	.submit:hover:not(:disabled) {
+		background: var(--mfsn-primary-hover);
+	}
+
+	.submit:disabled {
+		opacity: 0.7;
+		cursor: not-allowed;
+	}
+
+	.leave-overlay {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: grid;
+		place-items: center;
+		box-sizing: border-box;
+		padding: 1.5rem;
+	}
+
+	.leave-backdrop {
+		position: fixed;
+		inset: 0;
+		padding: 0;
+		border: none;
+		cursor: default;
+		background: rgba(18, 24, 14, 0.45);
+	}
+
+	.leave-modal {
+		position: relative;
+		z-index: 1;
+		box-sizing: border-box;
+		width: 520px;
+		max-width: 100%;
+		padding: 28px;
+		background: #fff;
+		border-radius: 16px;
+		box-shadow: 0 24px 70px rgba(20, 28, 16, 0.28);
+		font-family: 'DM Sans', sans-serif;
+	}
+
+	.leave-close {
+		position: absolute;
+		top: 20px;
+		right: 20px;
+		display: inline-flex;
+		padding: 0;
+		border: none;
+		background: none;
+		color: #414141;
+		cursor: pointer;
+	}
+
+	.leave-icon {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: #fdece9;
+		color: #c0341c;
+		font-size: 22px;
+		font-weight: 700;
+		line-height: 1;
+	}
+
+	.leave-title {
+		margin: 16px 0 8px;
+		font-size: 26px;
+		font-weight: 500;
+		color: #131927;
+	}
+
+	.leave-body {
+		margin: 0 0 22px;
+		font-size: 15px;
+		line-height: 1.5;
+		color: #131927;
+	}
+
+	.leave-actions {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.leave-btn {
+		width: 100%;
+		padding: 9px 16px;
+		border: 1.5px solid transparent;
+		border-radius: 10px;
+		font-family: inherit;
+		font-size: 15px;
+		font-weight: 500;
+		cursor: pointer;
+	}
+
+	.leave-discard {
+		background: #c0341c;
+		color: #fff;
+		border-color: #c0341c;
+	}
+
+	.leave-discard:hover {
+		background: #a82c17;
+		border-color: #a82c17;
+	}
+
+	.leave-outline {
+		background: #fff;
+		color: var(--mfsn-primary);
+		border-color: var(--mfsn-primary);
+	}
+
+	.leave-outline:hover {
+		background: var(--mfsn-primary-tint, #f0f5ec);
+	}
+</style>

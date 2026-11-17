@@ -51,7 +51,7 @@ const locked = (
 
 /** The fixed questions every form version must contain, in their canonical form. */
 export const LOCKED_QUESTIONS: Record<LockedFormField, FormQuestion> = {
-  [LockedFormField.USDA_FARM_ID]: locked(LockedFormField.USDA_FARM_ID, 'Farm ID #', {
+  [LockedFormField.USDA_FARM_ID]: locked(LockedFormField.USDA_FARM_ID, 'Farm Number', {
     placeholder: 'e.g. 32486126374',
   }),
   [LockedFormField.FARM_NAME]: locked(LockedFormField.FARM_NAME, 'Farm Name', {

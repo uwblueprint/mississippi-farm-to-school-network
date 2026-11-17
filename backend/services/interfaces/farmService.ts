@@ -19,6 +19,17 @@ interface IFarmService {
   createFarm(ownerUserId: string, input: CreateFarmInput): Promise<FarmDTO>;
 
   /**
+   * Check, without writing anything, that `createFarm` would accept this input: it is on
+   * the published form version, its answers are valid for that version, and its USDA farm
+   * ID is unused. Lets callers fail before doing other work (like creating an account).
+   * `createFarm` still enforces all of these, so a change in the meantime cannot slip
+   * through.
+   * @param input farm details to check
+   * @throws Error if the input is invalid or the USDA farm ID is already in use
+   */
+  assertCanCreateFarm(input: CreateFarmInput): Promise<void>;
+
+  /**
    * Farm search within radius of certain point
    * @param lat latitude of position
    * @param lng longitude of position

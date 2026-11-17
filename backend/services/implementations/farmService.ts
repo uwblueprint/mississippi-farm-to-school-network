@@ -13,6 +13,7 @@ import {
   FarmSnapshotDTO,
   EmailChangeEntry,
   FormAnswers,
+  FormVersionDTO,
 } from '@/types';
 import {
   GROWING_PRACTICES,
@@ -69,6 +70,8 @@ const EXCLUDED_RESUBMISSION_DIFF_FIELDS = new Set([
   'carousel_photos',
 ]);
 const FORM_SOCIAL_MEDIA_KEYS = ['instagram', 'facebook', 'other'];
+const STALE_FARM_FORM_MESSAGE =
+  'The farm form has been updated since you opened it. Reload the page to see the latest questions.';
 
 type FarmFieldDiff = {
   field: string;
@@ -233,6 +236,30 @@ class FarmService implements IFarmService {
     };
   }
 
+  /**
+   * Checks a new farm against the published form: it must be on the latest form
+   * version, and its answers must be valid for it. Returns that form and the
+   * cleaned answers. Writes nothing.
+   */
+  private async checkNewFarmAnswers(
+    input: CreateFarmInput
+  ): Promise<{ form: FormVersionDTO; answers: FormAnswers }> {
+    const form = await formService.getPublishedForm();
+    if (input.formVersionId !== form.id) {
+      throw new UserInputError(STALE_FARM_FORM_MESSAGE);
+    }
+    return { form, answers: validateAnswers(form.sections, input.answers) };
+  }
+
+  async assertCanCreateFarm(input: CreateFarmInput): Promise<void> {
+    await this.checkNewFarmAnswers(input);
+
+    const usdaIdSnap = await this.farmUsdaIds().doc(input.usda_farm_id).get();
+    if (usdaIdSnap.exists) {
+      throw new Error('Farm with that USDA farm ID already exists.');
+    }
+  }
+
   private buildUpdateValues(
     farm: FarmDoc,
     input: UpdateFarmInput,
@@ -262,13 +289,7 @@ class FarmService implements IFarmService {
     let createdFarm: FarmDTO;
 
     try {
-      const form = await formService.getPublishedForm();
-      if (input.formVersionId !== form.id) {
-        throw new UserInputError(
-          'The farm form has been updated since you opened it. Reload the page to see the latest questions.'
-        );
-      }
-      const answers = validateAnswers(form.sections, input.answers);
+      const { form, answers } = await this.checkNewFarmAnswers(input);
       const { social_media, ...fields } = legacyFarmFields(form.sections, answers);
 
       const id = newId();
@@ -305,9 +326,7 @@ class FarmService implements IFarmService {
           }
           // Re-checked here so a form published after the check above can't be skipped.
           if ((await formService.getPublishedForm(tx)).id !== form.id) {
-            throw new UserInputError(
-              'The farm form has been updated since you opened it. Reload the page to see the latest questions.'
-            );
+            throw new UserInputError(STALE_FARM_FORM_MESSAGE);
           }
           tx.create(usdaIdRef, { farm_id: id });
           tx.set(this.farms().doc(id), data);

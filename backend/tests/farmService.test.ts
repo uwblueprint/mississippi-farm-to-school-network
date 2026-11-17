@@ -162,6 +162,93 @@ describe('FarmService (Firestore)', () => {
     });
   });
 
+  describe('assertCanCreateFarm', () => {
+    test('accepts a farm with an unused usda_farm_id', async () => {
+      await expect(service.assertCanCreateFarm(baseInput)).resolves.toBeUndefined();
+    });
+
+    test('writes nothing, so the same farm can still be created afterwards', async () => {
+      await service.assertCanCreateFarm(baseInput);
+
+      await expect(service.createFarm('owner-1', baseInput)).resolves.toMatchObject({
+        usda_farm_id: 'usda-1',
+      });
+    });
+
+    test('rejects a usda_farm_id that is already taken', async () => {
+      await service.createFarm('owner-1', baseInput);
+
+      await expect(
+        service.assertCanCreateFarm({ ...baseInput, farm_name: 'Other Farm' })
+      ).rejects.toThrow('Farm with that USDA farm ID already exists.');
+    });
+
+    test('rejects answers with a choice the form does not have', async () => {
+      const badInput = {
+        ...baseInput,
+        answers: { ...baseInput.answers, growing_practices: ['Not a real practice'] },
+      };
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        "choices that don't exist"
+      );
+    });
+
+    test('rejects answers that leave a required question empty', async () => {
+      const badInput = {
+        ...baseInput,
+        answers: { food_safety_certifications: ['None of the above'] },
+      };
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        'Please answer: Growing Practices'
+      );
+    });
+
+    test('rejects answers to a question the form does not have', async () => {
+      const badInput = {
+        ...baseInput,
+        answers: { ...baseInput.answers, not_a_question: 'hello' },
+      };
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        'Unknown questions in answers: not_a_question'
+      );
+    });
+
+    test('rejects a farm filled in on a form version that is no longer published', async () => {
+      const formService = new FormService();
+      const v1 = await formService.getPublishedForm();
+      await formService.saveForm('admin-1', v1.id, DEFAULT_FORM_SECTIONS);
+
+      await expect(service.assertCanCreateFarm(baseInput)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
+    });
+
+    test('accepts a farm filled in on the newly published form version', async () => {
+      const formService = new FormService();
+      const v1 = await formService.getPublishedForm();
+      const v2 = await formService.saveForm('admin-1', v1.id, DEFAULT_FORM_SECTIONS);
+
+      await expect(
+        service.assertCanCreateFarm({ ...baseInput, formVersionId: v2.id })
+      ).resolves.toBeUndefined();
+    });
+
+    test('checks the form before the USDA farm ID, so both errors are reported the same way as createFarm', async () => {
+      await service.createFarm('owner-1', baseInput);
+      const staleAndTaken = { ...baseInput, formVersionId: 'v0' };
+
+      await expect(service.assertCanCreateFarm(staleAndTaken)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
+      await expect(service.createFarm('owner-2', staleAndTaken)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
+    });
+  });
+
   describe('createFarmRejection', () => {
     test('cannot reject a farm that is already approved', async () => {
       const farm = await service.createFarm('owner-1', baseInput);
