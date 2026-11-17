@@ -2,9 +2,8 @@
 	export type MobileNavItem = {
 		href: string;
 		label: string;
-		/** Only highlight on an exact path match (e.g. the `/admin` index). */
+		/** Only active on an exact path match. */
 		exact?: boolean;
-		/** Opens in a new tab (e.g. Contact MFSN). */
 		external?: boolean;
 	};
 </script>
@@ -17,16 +16,10 @@
 	import { logout } from '$lib/auth';
 	import { clearProfile } from '$lib/state/profile.svelte';
 
-	/**
-	 * Phone-only (< 768px) top bar for the farmer and admin portals. Replaces the
-	 * persistent sidebar: the menu button drops a full-width menu down from under
-	 * the bar with the same nav links, plus the account actions that live in the
-	 * sidebar's profile block on desktop. Hidden by CSS at 768px and up.
-	 */
+	/** Phone-only (< 768px) top bar with a dropdown nav menu. */
 	interface Props {
 		items: MobileNavItem[];
 		logoSrc: string;
-		/** Where tapping the logo goes. */
 		homeHref: string;
 		profileName: string;
 		profileRole: string;
@@ -70,13 +63,12 @@
 		}
 	}
 
-	// Any route change (link tap, browser back) closes the menu.
 	afterNavigate(() => close());
 
 	onMount(() => {
 		reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-		// Growing past the breakpoint hides this bar; don't leave the scroll lock on.
+		// Don't leave the scroll lock on if the screen grows past the breakpoint.
 		const desktop = window.matchMedia('(min-width: 768px)');
 		const onChange = (event: MediaQueryListEvent) => {
 			if (event.matches) close();
@@ -85,7 +77,6 @@
 		return () => desktop.removeEventListener('change', onChange);
 	});
 
-	// Lock the page behind the open menu.
 	$effect(() => {
 		if (!open) return;
 		const previousOverflow = document.body.style.overflow;
@@ -121,7 +112,6 @@
 			onclick={() => (open ? close() : (open = true))}
 		>
 			{#if open}
-				<!-- lucide "x" -->
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<path
 						d="M18 6L6 18M6 6L18 18"
@@ -132,7 +122,6 @@
 					/>
 				</svg>
 			{:else}
-				<!-- lucide "menu" -->
 				<svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
 					<path
 						d="M4 6H20M4 12H20M4 18H20"
@@ -234,7 +223,7 @@
 		height: var(--mobile-nav-height);
 		padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0
 			max(16px, env(safe-area-inset-left));
-		border-bottom: 1.5px solid #f5f6f8; /* --Neutral-200, matches the sidebar border */
+		border-bottom: 1.5px solid #f5f6f8;
 		background: #fff;
 	}
 
@@ -272,8 +261,7 @@
 		outline-offset: -2px;
 	}
 
-	/* Overlay and menu sit under the bar so the X stays tappable, and below
-	   modals / onboarding (50) and toasts (60). */
+	/* Under the bar (so X stays tappable) but below modals (50) and toasts (60). */
 	.mobile-nav__overlay {
 		position: fixed;
 		inset: 0;

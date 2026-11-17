@@ -848,7 +848,6 @@
 		font-size: 14px;
 	}
 
-	/* --- Phones: one column, 16px gutters, 44px tap targets --- */
 	@media (max-width: 767px) {
 		.edit-page {
 			padding: 16px 16px 0;
@@ -860,19 +859,17 @@
 			overflow-wrap: anywhere;
 		}
 
-		/* Phone/Email, Instagram/Facebook, Website/Other stack */
 		.field-grid {
 			grid-template-columns: 1fr;
 			gap: 16px;
 		}
 
-		/* 16px input text, or iOS Safari zooms in on focus */
+		/* iOS Safari zooms on focus below 16px */
 		.edit-page :global(.field--lg .input) {
 			min-height: 44px;
 			font-size: 16px;
 		}
 
-		/* full-width checkbox rows, label included in the tap target */
 		.edit-page :global(.choice) {
 			width: 100%;
 			min-height: 44px;
@@ -882,8 +879,6 @@
 			height: 44px;
 		}
 
-		/* The bottom Back / Save bar sticks to the bottom of the screen so Save is
-		   always in reach on the long form. */
 		.edit-page > .action-bar:last-child {
 			position: sticky;
 			bottom: 0;

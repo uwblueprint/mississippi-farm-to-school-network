@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	import type { MobileNavItem } from '$lib/components/MobileNavMenu.svelte';
 
-	/** Farmer portal nav, shared by this sidebar and the phone dropdown menu. */
+	/** Shared with the phone dropdown menu. */
 	export const FARMER_NAV_ITEMS: MobileNavItem[] = [
 		{ label: 'Farms', href: '/farmer/farms' },
 		{ label: 'Map', href: '/farms' },

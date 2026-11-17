@@ -1,8 +1,5 @@
 <script lang="ts">
-	/**
-	 * "Application pending" card, shown inside a Modal when a farmer taps a farm
-	 * that is still awaiting admin review. Same shell as ApprovedCard.
-	 */
+	/** Shown in a Modal when a farmer taps a farm still awaiting review. */
 	interface Props {
 		title?: string;
 		subtitle?: string;
@@ -16,7 +13,6 @@
 
 <div class="card">
 	<span class="icon" aria-hidden="true">
-		<!-- lucide "clock" -->
 		<svg width="34" height="34" viewBox="0 0 24 24" fill="none">
 			<circle cx="12" cy="12" r="9" stroke="#B26B12" stroke-width="2.25" />
 			<path
@@ -58,7 +54,7 @@
 		height: 64px;
 		margin-bottom: 26px;
 		border-radius: 50%;
-		background: #fdf1dd; /* the Pending badge's background (farmStatus.ts) */
+		background: #fdf1dd;
 	}
 
 	.title {
@@ -81,7 +77,6 @@
 
 	@media (max-width: 767px) {
 		.card {
-			/* the Modal's 44px close button sits in the top-right corner */
 			padding: 56px 24px 40px;
 			border-radius: 12px;
 		}

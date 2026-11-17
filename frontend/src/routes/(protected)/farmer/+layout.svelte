@@ -33,8 +33,6 @@
 	});
 </script>
 
-<!-- Both navs are always rendered; CSS picks one at the md breakpoint (768px)
-     so nothing re-mounts on resize. -->
 <FarmerMobileHeader {profileName} {profileRole} />
 <div class="dashboard">
 	<div class="dashboard__sidebar">
@@ -56,8 +54,7 @@
 		background: var(--mfsn-surface, #ffffff);
 	}
 
-	/* display: contents keeps the sidebar a direct flex child of .dashboard, so
-	   its position: sticky behaves exactly as before on desktop. */
+	/* display: contents keeps the sticky sidebar working on desktop. */
 	.dashboard__sidebar {
 		display: contents;
 	}
@@ -69,8 +66,6 @@
 		container-type: inline-size;
 	}
 
-	/* Below md: hide the persistent sidebar and clear the fixed mobile header
-	   (56px, see FarmerMobileHeader). */
 	@media (max-width: 767px) {
 		.dashboard {
 			display: block;

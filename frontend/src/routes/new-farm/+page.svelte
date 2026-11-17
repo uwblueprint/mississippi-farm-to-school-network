@@ -1703,10 +1703,8 @@
 		background: var(--mfsn-primary-tint, #f0f5ec);
 	}
 
-	/* --- Phones: one column, 16px gutters, 44px tap targets, sticky submit --- */
 	@media (max-width: 767px) {
 		.container {
-			/* no bottom padding: the sticky submit bar is the last thing on the page */
 			padding: max(16px, env(safe-area-inset-top)) 16px 0;
 		}
 
@@ -1719,19 +1717,17 @@
 			min-height: 44px;
 		}
 
-		/* Phone/Email, Instagram/Facebook, Website/Other stack */
 		.row {
 			flex-direction: column;
 			gap: 0;
 		}
 
-		/* 16px input text, or iOS Safari zooms in on focus */
+		/* iOS Safari zooms on focus below 16px */
 		.field {
 			min-height: 44px;
 			font-size: 16px;
 		}
 
-		/* full-width checkbox rows; the <label> wraps the box, so the text toggles it */
 		.choice {
 			width: 100%;
 			min-height: 44px;
@@ -1746,8 +1742,7 @@
 			grid-template-columns: repeat(2, 1fr);
 		}
 
-		/* Submit stays pinned to the bottom so farmers don't scroll the whole
-		   form to find it. Below the address dropdown (z-index 5). */
+		/* Sticky submit; below the address dropdown (z-index 5). */
 		.submit-section {
 			position: sticky;
 			bottom: 0;

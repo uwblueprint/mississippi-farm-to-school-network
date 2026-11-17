@@ -62,7 +62,6 @@
 		cursor: pointer;
 	}
 
-	/* Phones: each row is a full-width, 44px-tall tap target. */
 	@media (max-width: 767px) {
 		.choice {
 			width: 100%;

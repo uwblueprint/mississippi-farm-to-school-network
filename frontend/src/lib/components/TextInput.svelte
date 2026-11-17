@@ -208,7 +208,7 @@
 		line-height: normal;
 	}
 
-	/* iOS Safari zooms the page on focus when input text is under 16px. */
+	/* iOS Safari zooms on focus below 16px. */
 	@media (max-width: 767px) {
 		.input,
 		.field--lg .input {

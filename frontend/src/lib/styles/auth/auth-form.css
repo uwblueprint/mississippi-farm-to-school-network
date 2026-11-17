@@ -101,8 +101,6 @@
 	margin-top: 3.375rem; /* 54px + form gap 20px = 74px from fields to button */
 }
 
-/* Phones: full-width fields/button, and a shorter gap so "Log In" sits right
-   under the password field and stays reachable with the keyboard open. */
 @media (max-width: 767px) {
 	.auth-form-section--start,
 	.auth-form-section--start .auth-form-actions {

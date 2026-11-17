@@ -85,7 +85,6 @@
 		overflow-y: auto;
 	}
 
-	/* 44px tap target; the icon stays where the old 30px button drew it. */
 	.close {
 		position: absolute;
 		top: 17px;
@@ -108,8 +107,6 @@
 		outline-offset: -2px;
 	}
 
-	/* Phones: 16px side margins instead of the desktop gutter, and keep clear
-	   of the notch / home indicator. */
 	@media (max-width: 767px) {
 		.overlay {
 			padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
