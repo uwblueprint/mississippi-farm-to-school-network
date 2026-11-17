@@ -3,7 +3,6 @@ import {
   Button,
   Container,
   Head,
-  Heading,
   Html,
   Img,
   Preview,
@@ -14,14 +13,42 @@ import { render } from '@react-email/render';
 import nodemailer, { Transporter } from 'nodemailer';
 import React from 'react';
 import IEmailService from '@/services/interfaces/emailService';
-import { EmailServiceOptions, EmailTemplateData, NodemailerConfig } from '@/types';
+import { EmailParagraph, EmailServiceOptions, EmailTemplateData, NodemailerConfig } from '@/types';
+import { frontendUrl } from '@/utilities/farmEmails';
 import logger from '@/utilities/logger';
 
 const Logger = logger(__filename);
 
+const SENDER_NAME = 'Mississippi Farm to School Network';
+const SUPPORT_EMAIL = 'info@uwblueprint.org';
+const CONTACT_FORM_URL = 'https://www.mississippifarmtoschool.org/contact';
+const CONTACT_FORM_LABEL = 'mississippifarmtoschool.org/contact';
+const FONT_STYLESHEET_URL =
+  'https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap';
+const HERO_IMAGE_URL =
+  'https://firebasestorage.googleapis.com/v0/b/mississippi-farm-to-scho-11069.firebasestorage.app/o/hero.png?alt=media&token=8a60b1b2-a1d6-43c5-a062-e72bf425c5bb';
+
 export interface EmailLayoutProps extends EmailTemplateData {
   brandName?: string;
 }
+
+const renderParagraphs = (paragraphs: EmailParagraph[] = []) =>
+  paragraphs.map((paragraph) => (
+    <Text
+      key={paragraph.map((part) => (typeof part === 'string' ? part : part.bold)).join('')}
+      style={bodyText}
+    >
+      {paragraph.map((part) =>
+        typeof part === 'string' ? (
+          <React.Fragment key={part}>{part}</React.Fragment>
+        ) : (
+          <strong key={part.bold} style={boldText}>
+            {part.bold}
+          </strong>
+        )
+      )}
+    </Text>
+  ));
 
 export const EmailLayout = (props: EmailLayoutProps) => {
   const {
@@ -29,94 +56,85 @@ export const EmailLayout = (props: EmailLayoutProps) => {
     title = 'Hello',
     previewText,
     body,
+    paragraphs,
+    paragraphsAfterReason,
     reasonText,
     ctaText,
     ctaUrl,
     actionButton,
+    closingText,
     isFarmerEmail = true,
-    changes,
   } = props;
 
   const resolvedCtaText = ctaText ?? actionButton?.label;
   const resolvedCtaUrl = ctaUrl ?? actionButton?.href;
-  const heroImageUrl =
-    'https://firebasestorage.googleapis.com/v0/b/mississippi-farm-to-scho-11069.firebasestorage.app/o/hero.png?alt=media&token=8a60b1b2-a1d6-43c5-a062-e72bf425c5bb';
+  const year = new Date().getFullYear();
 
   return (
     <Html lang="en">
       <Head>
         <title>{title}</title>
+        <link href={FONT_STYLESHEET_URL} rel="stylesheet" />
       </Head>
       {previewText && <Preview>{previewText}</Preview>}
       <Body style={main}>
         <Container style={container}>
           <Section style={heroSection}>
-            <Img
-              src={heroImageUrl}
-              alt="Mississippi Farm to School Network"
-              width="600"
-              style={heroImage}
-            />
+            <Img src={HERO_IMAGE_URL} alt={SENDER_NAME} width="600" style={heroImage} />
           </Section>
 
           <Section style={contentSection}>
-            {recipientName && <Text style={recipientStyle}>Hi {recipientName},</Text>}
-            {title && <Heading style={heading}>{title}</Heading>}
+            {recipientName && <Text style={bodyText}>Hi {recipientName},</Text>}
             {body && <Text style={bodyText}>{body}</Text>}
-            {previewText && <Text style={previewStyle}>{previewText}</Text>}
+            {renderParagraphs(paragraphs)}
 
-            {changes && changes.length > 0 && (
-              <Section style={changesList}>
-                {changes.map((change) => (
-                  <Text key={change.field} style={changeRow}>
-                    <strong>{change.field}</strong>: {change.previous} &rarr; {change.current}
-                  </Text>
-                ))}
-              </Section>
-            )}
-
-            {reasonText && <Section style={reasonBox}>{reasonText}</Section>}
+            {reasonText && <Text style={reasonBox}>{reasonText}</Text>}
+            {renderParagraphs(paragraphsAfterReason)}
 
             {resolvedCtaText && resolvedCtaUrl && (
               <Section style={ctaContainer}>
                 <Button style={button} href={resolvedCtaUrl}>
-                  {resolvedCtaText} &rarr;
+                  {resolvedCtaText}
+                  <span style={buttonArrow}>&nbsp;&rarr;</span>
                 </Button>
               </Section>
             )}
+
+            {closingText && <Text style={closingTextStyle}>{closingText}</Text>}
           </Section>
 
           <Section style={footer}>
             {isFarmerEmail ? (
               <>
-                <Text style={footerText}>
+                <Text style={{ ...farmerFooterText, margin: '0 0 24px 0' }}>
                   You&apos;re receiving this email because you&apos;re a registered farmer on the
                   MFSN Farm Fresh Map. Contact support at{' '}
-                  <a href="mailto:info@uwblueprint.org" style={footerLink}>
-                    info@uwblueprint.org
+                  <a href={CONTACT_FORM_URL} style={footerLink}>
+                    {CONTACT_FORM_LABEL}
                   </a>
                 </Text>
-                <Text style={footerText}>
-                  MFSN Farm Fresh Map &ndash;{' '}
-                  <a href="https://yourmaplink.com" style={footerLink}>
+                <Text style={{ ...farmerFooterText, margin: '0 0 8px 0' }}>
+                  <strong style={boldText}>MFSN Farm Fresh Map - </strong>
+                  <a href={frontendUrl('/farms')} style={{ ...footerLink, fontWeight: 400 }}>
                     View Map
                   </a>
-                  <br />
-                  &copy; {new Date().getFullYear()} Mississippi Farm to School Network
+                </Text>
+                <Text style={farmerFooterText}>
+                  &copy; {year} {SENDER_NAME}
                 </Text>
               </>
             ) : (
               <>
-                <Text style={{ ...footerText, fontWeight: 'bold', marginBottom: '8px' }}>
+                <Text style={{ ...adminFooterText, fontWeight: 700, margin: '0 0 8px 0' }}>
                   MFSN Farm Fresh Map
                 </Text>
-                <Text style={{ ...footerText, marginBottom: '8px' }}>
-                  &copy; {new Date().getFullYear()} Mississippi Farm to School Network
+                <Text style={{ ...adminFooterText, margin: '0 0 16px 0' }}>
+                  &copy; {year} {SENDER_NAME}
                 </Text>
-                <Text style={footerText}>
+                <Text style={adminFooterText}>
                   Contact support at{' '}
-                  <a href="mailto:info@uwblueprint.org" style={footerLink}>
-                    info@uwblueprint.org
+                  <a href={`mailto:${SUPPORT_EMAIL}`} style={footerLink}>
+                    {SUPPORT_EMAIL}
                   </a>
                 </Text>
               </>
@@ -137,17 +155,12 @@ class EmailService implements IEmailService {
 
   constructor(
     nodemailerConfig: NodemailerConfig,
-    displayName?: string,
+    displayName: string = SENDER_NAME,
     options?: EmailServiceOptions
   ) {
     this.transporter = nodemailer.createTransport(nodemailerConfig);
-    this.brandName = options?.brandName ?? displayName ?? 'Mississippi Farm to School Network';
-
-    if (displayName) {
-      this.sender = `${displayName} <${nodemailerConfig.auth.user}>`;
-    } else {
-      this.sender = nodemailerConfig.auth.user;
-    }
+    this.brandName = options?.brandName ?? displayName;
+    this.sender = `${displayName} <${nodemailerConfig.auth.user}>`;
   }
 
   async renderTemplate(template: EmailTemplateData): Promise<string> {
@@ -185,11 +198,21 @@ class EmailService implements IEmailService {
 
 export default EmailService;
 
+const FONT_FAMILY =
+  '"DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif';
+
 const main = {
   backgroundColor: '#ffffff00',
-  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+  fontFamily: FONT_FAMILY,
   margin: '0',
   padding: '40px 0',
+};
+
+const container = {
+  backgroundColor: '#ffffff',
+  margin: '0 auto',
+  width: '600px',
+  maxWidth: '600px',
 };
 
 const heroSection = {
@@ -205,102 +228,85 @@ const heroImage = {
 };
 
 const contentSection = {
-  padding: '32px 40px',
+  padding: '32px',
   backgroundColor: '#ffffff',
 };
 
-const recipientStyle = {
-  margin: '0 0 16px 0',
-  fontSize: '16px',
-  lineHeight: '1.5',
-  color: '#000',
-};
-
-const heading = {
-  fontFamily: '"DM Sans", sans-serif',
-  fontSize: '16px',
-  fontStyle: 'normal',
-  lineHeight: '24px',
-  color: '#000000',
-  margin: '0 0 24px 0',
-};
-
 const bodyText = {
-  fontFamily: '"DM Sans", sans-serif',
+  fontFamily: FONT_FAMILY,
   fontSize: '16px',
-  fontStyle: 'normal',
+  fontWeight: 500,
   lineHeight: '24px',
   color: '#000000',
   margin: '0 0 24px 0',
 };
 
-const previewStyle = {
-  margin: '0 0 16px 0',
-  fontSize: '13px',
-  color: '#4b5563',
-};
-
-const changesList = {
-  margin: '0 0 24px 0',
-};
-
-const changeRow = {
-  fontFamily: '"DM Sans", sans-serif',
-  fontSize: '14px',
-  lineHeight: '20px',
-  color: '#000000',
-  margin: '0 0 8px 0',
+const boldText = {
+  fontWeight: 700,
 };
 
 const reasonBox = {
-  backgroundColor: '#f0f4ec',
-  borderLeft: '4px solid #557541',
+  backgroundColor: '#e2e8d9',
+  borderLeft: '4px solid #587244',
   padding: '16px',
   margin: '0 0 24px 0',
-  borderRadius: '4px',
-  fontSize: '15px',
-  color: '#333333',
+  fontFamily: FONT_FAMILY,
+  fontSize: '14px',
+  fontWeight: 500,
+  lineHeight: '16px',
+  color: '#263d13',
+  whiteSpace: 'pre-wrap' as const,
 };
 
 const ctaContainer = {
   textAlign: 'center' as const,
-  margin: '32px 0 24px 0',
 };
 
 const button = {
   backgroundColor: '#587244',
   color: '#ffffff',
-  padding: '12px 24px',
+  padding: '13px 12px',
   textDecoration: 'none',
-  borderRadius: '12px',
-  fontWeight: '600',
+  borderRadius: '8px',
+  fontFamily: FONT_FAMILY,
+  fontWeight: 500,
+  fontSize: '14px',
+  lineHeight: '21px',
   display: 'inline-block',
-  fontSize: '15px',
+};
+
+const buttonArrow = {
+  fontSize: '20px',
+  lineHeight: '20px',
+  verticalAlign: 'middle',
+};
+
+const closingTextStyle = {
+  ...bodyText,
+  margin: '24px 0 0 0',
 };
 
 const footer = {
-  backgroundColor: '#f8f9fa',
-  padding: '24px 40px',
-  fontSize: '13px',
-  color: '#666666',
-  borderTop: '1px solid #eeeeee',
+  backgroundColor: '#f5f6f8',
+  borderTop: '2px solid #f5f6f8',
+  padding: '32px',
 };
 
-const footerText = {
-  margin: '0 0 12px 0',
+const adminFooterText = {
+  fontFamily: FONT_FAMILY,
+  fontSize: '14px',
+  fontWeight: 500,
+  lineHeight: '16px',
+  color: '#696c78',
+  margin: '0',
+};
+
+const farmerFooterText = {
+  ...adminFooterText,
   lineHeight: '1.4',
-  color: '#666666',
 };
 
 const footerLink = {
-  color: '#557541',
+  color: '#587244',
   textDecoration: 'underline',
-};
-
-const container = {
-  backgroundColor: '#ffffff',
-  margin: '0 auto',
-  width: '600px',
-  maxWidth: '600px',
-  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
 };

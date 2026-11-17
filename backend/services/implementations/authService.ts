@@ -4,6 +4,7 @@ import IEmailService from '@/services/interfaces/emailService';
 import IUserService from '@/services/interfaces/userService';
 import { AuthDTO, Role, SignUpMethod, Token } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
+import { frontendUrl, verificationEmail } from '@/utilities/farmEmails';
 import FirebaseRestClient from '@/utilities/firebaseRestClient';
 import logger from '@/utilities/logger';
 import { isAdminEmail } from '@/utilities/adminEmail';
@@ -129,18 +130,12 @@ class AuthService implements IAuthService {
     }
 
     try {
-      const emailVerificationLink = await firebaseAdmin.auth().generateEmailVerificationLink(email);
-      const emailBody = {
-        recipientName: email,
-        title: 'Verify your email',
-        previewText: 'Complete your email verification to activate your account.',
-        body: `Please click the button below to verify your email and activate your account. This link is only valid for 1 hour.`,
-        ctaText: 'Verify email',
-        ctaUrl: emailVerificationLink,
-        isFarmerEmail: true,
-      };
+      const emailVerificationLink = await firebaseAdmin
+        .auth()
+        .generateEmailVerificationLink(email, { url: frontendUrl('/verify-email/success') });
+      const { subject, template } = verificationEmail(emailVerificationLink);
 
-      await this.emailService.sendEmail(email, 'Verify your email', emailBody);
+      await this.emailService.sendEmail(email, subject, template);
     } catch (error) {
       Logger.error(
         `Failed to generate email verification link for user with email ${email} ${error}`

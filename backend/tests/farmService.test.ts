@@ -105,6 +105,21 @@ describe('FarmService (Firestore)', () => {
   });
 
   describe('resubmitFarm', () => {
+    test('emails the admins about the resubmission', async () => {
+      const farm = await service.createFarm('owner-1', baseInput);
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+      mockSendEmail.mockClear();
+
+      await service.resubmitFarm(farm.id, 'owner-1', { farm_name: 'Updated Farm Name' }, false);
+
+      expect(mockSendEmail).toHaveBeenCalledTimes(1);
+      expect(mockSendEmail).toHaveBeenCalledWith(
+        'mfsn@uwblueprint.org',
+        '[ACTION REQUIRED] Farm Fresh Map - Edit request for Updated Farm Name',
+        expect.objectContaining({ ctaText: 'Review edit request', isFarmerEmail: false })
+      );
+    });
+
     test('moves a rejected farm back to PENDING_APPROVAL and resolves open rejections atomically', async () => {
       const farm = await service.createFarm('owner-1', baseInput);
       // createFarmRejection both records the rejection and flips the farm to REJECTED

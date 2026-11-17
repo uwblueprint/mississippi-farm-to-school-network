@@ -13,6 +13,19 @@ const userService: IUserService = new UserService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 const authService: IAuthService = new AuthService(userService, emailService);
 
+const VERIFICATION_EMAIL_COOLDOWN_MS = 30_000;
+const lastVerificationEmailAt = new Map<string, number>();
+
+const claimVerificationEmailSlot = (userId: string): boolean => {
+  const now = Date.now();
+  lastVerificationEmailAt.forEach((sentAt, id) => {
+    if (now - sentAt >= VERIFICATION_EMAIL_COOLDOWN_MS) lastVerificationEmailAt.delete(id);
+  });
+  if (lastVerificationEmailAt.has(userId)) return false;
+  lastVerificationEmailAt.set(userId, now);
+  return true;
+};
+
 const authResolvers = {
   Query: {},
   Mutation: {
@@ -72,6 +85,22 @@ const authResolvers = {
     ): Promise<boolean> => {
       await userService.getUserByEmail(email);
       await authService.sendEmailVerificationLink(email);
+      return true;
+    },
+    sendMyVerificationEmail: async (
+      _parent: undefined,
+      _args: undefined,
+      context: AuthContext
+    ): Promise<boolean> => {
+      const user = await authHelper.requireAuth(context);
+      if (user.is_verified || !claimVerificationEmailSlot(user.id)) return true;
+
+      try {
+        await authService.sendEmailVerificationLink(user.email);
+      } catch (error) {
+        lastVerificationEmailAt.delete(user.id);
+        throw error;
+      }
       return true;
     },
   },

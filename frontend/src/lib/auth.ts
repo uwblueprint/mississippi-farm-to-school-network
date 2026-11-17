@@ -13,6 +13,7 @@ import {
 	type UserCredential
 } from 'firebase/auth';
 import { getFirebaseAuth } from '$lib/firebase';
+import { gqlClient } from '$lib/graphqlClient';
 import type { UserRole } from '$lib/types/admin';
 
 // Comma-separated domains, no "@" (must match the backend's ADMIN_EMAIL_DOMAIN).
@@ -150,6 +151,14 @@ export async function signupWithEmail(email: string, password: string): Promise<
 }
 
 export async function sendEmailVerificationHandler(user?: User) {
+	const sentByBackend = await gqlClient(
+		'mutation SendMyVerificationEmail { sendMyVerificationEmail }'
+	).then(
+		() => true,
+		() => false
+	);
+	if (sentByBackend) return;
+
 	const auth = getFirebaseAuth();
 	const targetUser = user ?? auth.currentUser;
 
