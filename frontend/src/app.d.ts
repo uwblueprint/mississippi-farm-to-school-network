@@ -7,6 +7,7 @@ interface ImportMetaEnv {
 	readonly VITE_FIREBASE_PROJECT_ID: string;
 	readonly VITE_FIREBASE_STORAGE_BUCKET: string;
 	readonly VITE_MAPBOX_ACCESS_TOKEN: string;
+	readonly VITE_PUBLIC_ADMIN_EMAIL_DOMAIN?: string;
 }
 
 interface ImportMeta {

@@ -6,6 +6,7 @@ import { getErrorMessage } from '@/utilities/errorUtils';
 import IUserService from '@/services/interfaces/userService';
 import UserService from '@/services/implementations/userService';
 import logger from '@/utilities/logger';
+import { isAdminEmail } from '@/utilities/adminEmail';
 
 const Logger = logger(__filename);
 const userService: IUserService = new UserService();
@@ -16,41 +17,37 @@ const EMAIL_VERIFICATION_REQUIRED_MESSAGE = 'You must verify your email to acces
 const PERMISSION_DENIED_MESSAGE = 'You do not have permission to access this resource.';
 const OWNERSHIP_REQUIRED_MESSAGE = 'You do not have permission to access or modify this resource.';
 
-const ADMIN_EMAIL_DOMAIN = '@mississippifarmtoschool.org';
-
-function resolveRoleFromClaimsOrEmail(
-  email: string | undefined,
-  customClaims?: Record<string, unknown> | null
-): Role {
+function resolveRoleFromClaims(customClaims?: Record<string, unknown> | null): Role {
   const claimRole = customClaims?.role;
   if (claimRole === Role.ADMIN || claimRole === Role.FARMER) {
     return claimRole;
-  }
-  if (email?.toLowerCase().endsWith(ADMIN_EMAIL_DOMAIN)) {
-    return Role.ADMIN;
   }
   return Role.FARMER;
 }
 
 /**
- * Role promotions (e.g. via updateUser) are only ever written to the Firestore
- * `users.role` field, never to Firebase Auth custom claims, so that must be the
- * primary source of truth. Custom claims / email domain remain a fallback for
- * requests that arrive before a Firestore profile doc exists.
+ * A verified admin-domain email is always ADMIN (promote-only, so password signups are
+ * promoted as soon as they verify). Otherwise the Firestore `users.role` field is the
+ * source of truth, since promotions via updateUser are only written there. Custom claims
+ * remain a fallback for requests that arrive before a Firestore profile doc exists.
  */
 async function resolveRole(
   firebaseUid: string,
   email: string | undefined,
+  emailVerified: boolean,
   customClaims?: Record<string, unknown> | null
 ): Promise<Role> {
+  if (emailVerified && isAdminEmail(email)) {
+    return Role.ADMIN;
+  }
   try {
     const user = await userService.getUserByFirebaseUid(firebaseUid);
     return user.role;
   } catch (error: unknown) {
     Logger.info(
-      `No Firestore profile found for firebase_uid ${firebaseUid}, falling back to claims/email for role resolution. Reason = ${getErrorMessage(error)}`
+      `No Firestore profile found for firebase_uid ${firebaseUid}, falling back to claims for role resolution. Reason = ${getErrorMessage(error)}`
     );
-    return resolveRoleFromClaimsOrEmail(email, customClaims);
+    return resolveRoleFromClaims(customClaims);
   }
 }
 
@@ -85,7 +82,7 @@ async function userFromFirebaseAuth(firebaseUid: string): Promise<UserDTO> {
       id: authUser.uid,
       firebase_uid: authUser.uid,
       email,
-      role: await resolveRole(authUser.uid, email, claims),
+      role: await resolveRole(authUser.uid, email, Boolean(authUser.emailVerified), claims),
       is_verified: Boolean(authUser.emailVerified),
       firstName: typeof claims.firstName === 'string' ? claims.firstName : firstName,
       lastName: typeof claims.lastName === 'string' ? claims.lastName : lastName,
@@ -130,8 +127,8 @@ const AuthHelper = {
 
   /**
    * Ensures the request is authenticated and the user has one of the allowed roles.
-   * Role comes from the Firestore user profile, falling back to Auth custom claims
-   * or admin email domain when no profile exists yet.
+   * Role is ADMIN for a verified admin-domain email, else the Firestore user profile,
+   * falling back to Auth custom claims when no profile exists yet.
    */
   requireRole: async (context: AuthContext, roles: Role[]): Promise<UserDTO> => {
     const user = await AuthHelper.requireEmailVerified(context);

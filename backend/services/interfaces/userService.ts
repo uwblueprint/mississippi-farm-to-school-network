@@ -1,6 +1,7 @@
 import {
   CompleteUserProfileInput,
   CreateUserDTO,
+  FarmerAccountResult,
   Role,
   UpdateMyProfileInput,
   UpdateUserDTO,
@@ -79,6 +80,18 @@ interface IUserService {
   createUser(user: CreateUserDTO, authId?: string, signUpMethod?: SignUpMethod): Promise<UserDTO>;
 
   /**
+   * Find the farmer account for an email, creating it if there is none. A new account gets
+   * the FARMER role, a random password nobody knows (the farmer sets their own through a
+   * password reset link) and a pre-verified email. An existing account is returned as is:
+   * its password and details are never changed.
+   * @param email the farmer's email
+   * @returns the account, and whether the farmer still needs a link to set a password
+   * (the account is new, or has never been signed in to)
+   * @throws Error if the email is invalid or belongs to a non-farmer account
+   */
+  getOrCreateFarmerByEmail(email: string): Promise<FarmerAccountResult>;
+
+  /**
    * Update a user. Only mutable profile fields belong here; role is immutable after account
    * creation. Note: the password cannot be updated using this method, use IAuthService.resetPassword
    * instead.
@@ -113,11 +126,12 @@ interface IUserService {
 
   /*
    * Complete user's profile during onboarding, updates user record
+   * @param authUser the authenticated user; its resolved role is stored on the profile
    * @param CompleteUserProfileInput includes firebase_uid, email, firstname, lastname, phone
    * @returns updated UserDTO
    * @throws Error if user not found or improper/missing inputs
    */
-  completeUserProfile(input: CompleteUserProfileInput): Promise<UserDTO>;
+  completeUserProfile(authUser: UserDTO, input: CompleteUserProfileInput): Promise<UserDTO>;
 
   /**
    * Update the signed-in user's own editable profile fields (name and phone). Email and
