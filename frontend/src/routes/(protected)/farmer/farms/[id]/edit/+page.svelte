@@ -21,7 +21,8 @@
 		answerableQuestions,
 		answersPayload,
 		displayLabel,
-		isQuestionVisible
+		isQuestionVisible,
+		placeholderFor
 	} from '$lib/utils/form-answers';
 
 	let { data }: { data: PageData } = $props();
@@ -478,7 +479,7 @@
 								<TextInput
 									size="lg"
 									label={displayLabel(question)}
-									placeholder={question.placeholder ?? undefined}
+									placeholder={placeholderFor(question)}
 									multiline={question.type === 'TEXTAREA'}
 									inputmode={question.type === 'NUMBER' ? 'numeric' : undefined}
 									{error}

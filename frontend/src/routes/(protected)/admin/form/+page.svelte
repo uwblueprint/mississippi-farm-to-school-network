@@ -6,9 +6,11 @@
 	import {
 		FORM_VERSION_FIELDS,
 		PUBLISHED_FORM_QUERY,
+		DEFAULT_PLACEHOLDERS,
 		allQuestions,
 		isPhotosSection,
-		photosLast
+		photosLast,
+		placeholderFor
 	} from '$lib/utils/form-answers';
 
 	const SAVE_FORM_MUTATION = `
@@ -98,7 +100,7 @@
 			type: 'TEXT',
 			label: 'New question',
 			required: false,
-			placeholder: null,
+			placeholder: DEFAULT_PLACEHOLDERS.TEXT,
 			helpText: null,
 			options: [],
 			exclusiveOptionId: null,
@@ -117,8 +119,15 @@
 		selectedId = null;
 	}
 
+	const defaultPlaceholders: string[] = Object.values(DEFAULT_PLACEHOLDERS);
+
 	function changeType(question: FormQuestion, type: FormQuestionType) {
 		question.type = type;
+		// Swap in the new type's example text, unless the admin wrote their own.
+		if (!question.placeholder || defaultPlaceholders.includes(question.placeholder)) {
+			question.placeholder =
+				type === 'CHECKBOX' || type === 'LOCKED' ? null : DEFAULT_PLACEHOLDERS[type];
+		}
 		question.exclusiveOptionId = null;
 		question.options = type === 'CHECKBOX' ? [{ id: newId('opt'), label: 'Choice 1' }] : [];
 	}
@@ -220,6 +229,22 @@
 								{/each}
 							</select>
 						</label>
+
+						{#if question.type !== 'CHECKBOX'}
+							<label class="editor__field">
+								<span>Example text</span>
+								<input
+									class="editor__input"
+									placeholder={placeholderFor({ ...question, placeholder: null })}
+									value={question.placeholder ?? ''}
+									oninput={(e) => (question.placeholder = e.currentTarget.value || null)}
+								/>
+								<small class="form-admin__hint">
+									Shown inside the answer box so farmers know what to enter. Left empty, farmers see
+									the example above.
+								</small>
+							</label>
+						{/if}
 
 						<label class="editor__check">
 							<input type="checkbox" bind:checked={question.required} />

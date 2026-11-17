@@ -43,6 +43,23 @@ export const PUBLISHED_FORM_QUERY = `
 	}
 `;
 
+type TypedAnswerType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'URL';
+
+/** Example text shown inside an answer box when the question has none of its own. */
+export const DEFAULT_PLACEHOLDERS: Record<TypedAnswerType, string> = {
+	TEXT: 'Enter words, e.g. a short answer',
+	TEXTAREA: 'Enter a few words or sentences',
+	NUMBER: 'Enter a number, e.g. 25',
+	URL: 'Enter a website link, e.g. https://example.com'
+};
+
+/** The question's own example text, or the default for its answer type. */
+export function placeholderFor(question: FormQuestion): string {
+	return (
+		question.placeholder?.trim() || DEFAULT_PLACEHOLDERS[question.type as TypedAnswerType] || ''
+	);
+}
+
 /** True for the section that holds the Photos question. */
 export function isPhotosSection(section: FormSection): boolean {
 	return section.questions.some((question) => question.lockedField === 'PHOTOS');

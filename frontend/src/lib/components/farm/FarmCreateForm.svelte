@@ -20,6 +20,7 @@
 		isEmptyAnswer,
 		isQuestionVisible,
 		photosLast,
+		placeholderFor,
 		toggleOption
 	} from '$lib/utils/form-answers';
 
@@ -546,7 +547,7 @@
 					class="field"
 					class:input-error={invalid}
 					rows="3"
-					placeholder={question.placeholder ?? ''}
+					placeholder={placeholderFor(question)}
 					value={textAnswer(question)}
 					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
 					onblur={() => (touched[question.id] = true)}
@@ -557,7 +558,7 @@
 					class="field"
 					class:input-error={invalid}
 					inputmode="numeric"
-					placeholder={question.placeholder ?? ''}
+					placeholder={placeholderFor(question)}
 					value={textAnswer(question)}
 					oninput={(e) => handleNumberInput(question, e)}
 					onblur={() => (touched[question.id] = true)}
@@ -567,7 +568,7 @@
 					id={fieldId}
 					class="field"
 					class:input-error={invalid}
-					placeholder={question.placeholder ?? ''}
+					placeholder={placeholderFor(question)}
 					value={textAnswer(question)}
 					oninput={(e) => (answers[question.id] = e.currentTarget.value)}
 					onblur={() => (touched[question.id] = true)}
