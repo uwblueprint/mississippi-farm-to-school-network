@@ -1,12 +1,10 @@
 import * as path from 'path';
 
-import dotenv from 'dotenv';
+import '../loadEnv';
 import { Sequelize } from 'sequelize-typescript';
 import Farm from './farm.model';
 import FarmRejection from './farm_rejection.model';
 import User from './user.model';
-
-dotenv.config();
 
 const DATABASE_URL =
   process.env.NODE_ENV === 'production'

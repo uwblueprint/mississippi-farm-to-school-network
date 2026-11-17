@@ -1,12 +1,11 @@
-import dotenv from 'dotenv';
-dotenv.config();
+import '../loadEnv';
 
 import { initializeFirebaseAdmin } from '@/utilities/firebaseAdmin';
 import { Collections, getFirestore, newId } from '@/utilities/firestore';
 
 async function main() {
   if (!initializeFirebaseAdmin()) {
-    throw new Error('Firebase Admin not initialized — check backend/.env credentials');
+    throw new Error('Firebase Admin not initialized — check the root .env credentials');
   }
 
   const db = getFirestore();

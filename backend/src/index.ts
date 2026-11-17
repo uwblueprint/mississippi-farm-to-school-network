@@ -1,6 +1,6 @@
-// Must stay the first import: the resolver modules imported below read process.env
-// (e.g. the storage bucket name) when they load.
-import 'dotenv/config';
+// Load root .env before any other local imports that read process.env at module load.
+import '../loadEnv';
+
 import { ApolloServer } from 'apollo-server';
 import * as admin from 'firebase-admin';
 
@@ -40,7 +40,7 @@ server.listen({ port: Number(PORT) }).then(({ url }: { url: string }) => {
     console.log('Firebase Admin initialized (Auth + Firestore + Storage).');
   } else {
     console.warn(
-      'Firebase Admin missing credentials — Auth/Firestore calls will fail until backend/.env is configured.'
+      'Firebase Admin missing credentials — Auth/Firestore calls will fail until the root .env is configured.'
     );
   }
 });
