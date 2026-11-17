@@ -1,3 +1,15 @@
+<script lang="ts" module>
+	import type { MobileNavItem } from '$lib/components/MobileNavMenu.svelte';
+
+	/** Admin nav, shared by this sidebar and the phone dropdown menu. */
+	export const ADMIN_NAV_ITEMS: MobileNavItem[] = [
+		{ href: '/admin', label: 'Pending Requests', exact: true },
+		{ href: '/admin/farms', label: 'Farms' },
+		{ href: '/admin/announcements', label: 'Manage Announcements' },
+		{ href: '/admin/archived', label: 'Deleted & Archived Farms' }
+	];
+</script>
+
 <script lang="ts">
 	import { page } from '$app/state';
 	import ProfileMenu from '$lib/components/ProfileMenu.svelte';
@@ -8,12 +20,7 @@
 
 	let { adminName }: Props = $props();
 
-	const NAV_ITEMS = [
-		{ href: '/admin', label: 'Pending Requests' },
-		{ href: '/admin/farms', label: 'Farms' },
-		{ href: '/admin/announcements', label: 'Manage Announcements' },
-		{ href: '/admin/archived', label: 'Deleted & Archived Farms' }
-	];
+	const NAV_ITEMS = ADMIN_NAV_ITEMS;
 
 	function isCurrent(href: string): boolean {
 		return href === '/admin' ? page.url.pathname === '/admin' : page.url.pathname.startsWith(href);
