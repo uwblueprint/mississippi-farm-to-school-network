@@ -41,8 +41,6 @@
 </script>
 
 {#if isAdmin}
-	<!-- Below 768px the sidebar is hidden (admin.css) and this top bar's dropdown
-	     menu takes over the nav. -->
 	<MobileNavMenu
 		items={ADMIN_NAV_ITEMS}
 		logoSrc="/images/mfsnLogo.svg"

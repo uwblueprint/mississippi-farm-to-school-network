@@ -1749,9 +1749,7 @@
 	cursor: default;
 }
 
-/* --- Phones (< 768px) ---
-   The sidebar is replaced by MobileNavMenu's fixed top bar (56px) and its
-   dropdown menu, so the shell stacks and clears the bar. */
+/* Phones (< 768px): MobileNavMenu replaces the sidebar. */
 @media (max-width: 47.9375rem) {
 	.admin-shell {
 		display: block;
@@ -1783,8 +1781,6 @@
 		font-size: 1.125rem;
 	}
 
-	/* Search full width, filter pills on one swipeable row, sort under them
-	   (right-aligned so its menu, anchored right, stays on screen). */
 	.admin-toolbar {
 		flex-direction: column;
 		align-items: stretch;
@@ -1829,7 +1825,6 @@
 		align-self: flex-end;
 	}
 
-	/* Request cards */
 	.admin-request-list {
 		gap: 1rem;
 	}
@@ -1864,7 +1859,6 @@
 		white-space: nowrap;
 	}
 
-	/* Review modal: near full screen with small gutters */
 	.farm-request-overlay {
 		padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
 			max(0.75rem, env(safe-area-inset-bottom));
@@ -1872,7 +1866,6 @@
 
 	.farm-request-modal {
 		max-height: calc(100dvh - 1.5rem);
-		/* top room for the close / menu toolbar pinned in the corner */
 		padding: 3.5rem 1rem 1.25rem;
 		border-radius: 1rem;
 	}
@@ -1896,9 +1889,7 @@
 		min-height: 44px;
 	}
 
-	/* Farms table: the pinned checkbox + name columns eat most of a phone's
-	   width and the other columns slide under them, so unpin them here and
-	   let the whole row scroll together. */
+	/* Unpin columns so the whole row scrolls together. */
 	.farms-table__cell--pin-check,
 	.farms-table__cell--pin-name {
 		position: static;

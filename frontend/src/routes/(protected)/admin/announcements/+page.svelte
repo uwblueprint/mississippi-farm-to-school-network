@@ -90,7 +90,6 @@
 		height: 13.67px;
 	}
 
-	/* Phones: 16px gutters; the page sits under the 56px mobile top bar. */
 	@media (max-width: 767px) {
 		.announcements-page {
 			min-height: auto;

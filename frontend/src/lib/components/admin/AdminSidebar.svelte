@@ -1,7 +1,7 @@
 <script lang="ts" module>
 	import type { MobileNavItem } from '$lib/components/MobileNavMenu.svelte';
 
-	/** Admin nav, shared by this sidebar and the phone dropdown menu. */
+	/** Shared with the phone dropdown menu. */
 	export const ADMIN_NAV_ITEMS: MobileNavItem[] = [
 		{ href: '/admin', label: 'Pending Requests', exact: true },
 		{ href: '/admin/farms', label: 'Farms' },
