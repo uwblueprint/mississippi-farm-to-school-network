@@ -1,4 +1,5 @@
 import { INTEREST_ECE, INTEREST_K12 } from '$lib/utils/admin-farms';
+import type { GeolocationStatus } from '$lib/state/geolocation.svelte';
 import { distanceInMiles } from '$lib/utils/distance';
 import { getFarmProducts, getFarmTags } from '$lib/utils/farm-tags';
 import type { FarmLocation, FarmTag, FoodCategorySection, MapFarm } from '$lib/types/farm';
@@ -39,9 +40,33 @@ export const PRODUCT_OPTIONS: FilterOption<FoodCategorySection>[] = [
 	{ value: 'Other', label: 'Other Products' }
 ];
 
+export const SORT_OPTIONS: FilterOption<FarmSortKey>[] = [
+	{ value: 'distance', label: 'Distance' },
+	{ value: 'name-asc', label: 'Name (A–Z)' },
+	{ value: 'name-desc', label: 'Name (Z–A)' }
+];
+
 export const TAG_OPTIONS: FilterOption<FarmTag>[] = (
 	['Processing', 'Pickup Location', 'CSA Farm', 'Farmers Market', 'Field Trips'] as FarmTag[]
 ).map((tag) => ({ value: tag, label: tag }));
+
+export function getLocationNote(status: GeolocationStatus): string | undefined {
+	switch (status) {
+		case 'granted':
+			return undefined;
+		case 'denied':
+			return 'Allow location access in your browser to filter and sort by distance.';
+		case 'unavailable':
+			return "Your browser doesn't support location, so distance can't be used.";
+		default:
+			return 'Waiting for your location…';
+	}
+}
+
+export function toggleSelection<T>(selected: T[], value: T, multiple: boolean): T[] {
+	if (selected.includes(value)) return selected.filter((item) => item !== value);
+	return multiple ? [...selected, value] : [value];
+}
 
 export function hasActiveFilters(filters: FarmFilters): boolean {
 	return (

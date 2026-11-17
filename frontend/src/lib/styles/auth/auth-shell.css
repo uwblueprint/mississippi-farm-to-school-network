@@ -32,6 +32,9 @@
 	width: 100%;
 }
 
+/* Phones: one full-width column with 16px side padding. Content starts at the
+   top (not vertically centered) so the form doesn't jump when the keyboard
+   opens, and the safe-area insets keep it clear of the notch / home bar. */
 @media (max-width: 767px) {
 	.auth-shell {
 		align-items: flex-start;

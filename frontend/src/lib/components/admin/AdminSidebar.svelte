@@ -6,6 +6,7 @@
 		{ href: '/admin', label: 'Pending Requests', exact: true },
 		{ href: '/admin/farms', label: 'Farms' },
 		{ href: '/admin/announcements', label: 'Manage Announcements' },
+		{ href: '/admin/form', label: 'Farmer Form' },
 		{ href: '/admin/archived', label: 'Deleted & Archived Farms' }
 	];
 </script>

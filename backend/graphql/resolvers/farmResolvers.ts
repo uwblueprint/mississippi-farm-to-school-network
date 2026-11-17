@@ -1,9 +1,14 @@
 import { AuthenticationError, ForbiddenError, UserInputError } from 'apollo-server';
 import FarmService from '@/services/implementations/farmService';
+import FormService from '@/services/implementations/formService';
+import IFormService from '@/services/interfaces/formService';
 import UserService from '@/services/implementations/userService';
+import AuthService from '@/services/implementations/authService';
 import IFarmService from '@/services/interfaces/farmService';
 import IUserService from '@/services/interfaces/userService';
+import IAuthService from '@/services/interfaces/authService';
 import {
+  CreateFarmForFarmerResult,
   CreateFarmInput,
   FarmDTO,
   FarmFilter,
@@ -11,6 +16,7 @@ import {
   UpdateFarmInput,
   Role,
   ActiveFarmRejectionDTO,
+  FormVersionDTO,
 } from '@/types';
 import { AuthContext } from '@/middlewares/auth';
 import authHelper from '@/utilities/authHelpers';
@@ -26,10 +32,12 @@ const Logger = logger(__filename);
 const farmService: IFarmService = new FarmService();
 const fileStorageService: IFileStorageService = createFileStorageService();
 const userService: IUserService = new UserService();
+const formService: IFormService = new FormService();
 const emailService: IEmailService = new EmailService(nodemailerConfig);
 
-const MAX_FARMS_PAGE_SIZE = 100;
+const authService: IAuthService = new AuthService(userService, emailService);
 
+const MAX_FARMS_PAGE_SIZE = 100;
 const farmResolvers = {
   Query: {
     farmsByProximity: async (
@@ -183,6 +191,38 @@ const farmResolvers = {
       }
 
       return createdFarm;
+    },
+
+    createFarmForFarmer: async (
+      _parent: undefined,
+      { email, input }: { email: string; input: CreateFarmInput },
+      context: AuthContext
+    ): Promise<CreateFarmForFarmerResult> => {
+      await authHelper.requireRole(context, [Role.ADMIN]);
+
+      // The farm belongs to the farmer, not the admin; it stays PENDING_APPROVAL like any new farm.
+      // Reject a bad farm before any account exists, so a failure leaves nothing behind.
+      await farmService.assertCanCreateFarm(input);
+      const farmer = await userService.getOrCreateFarmerByEmail(email);
+      const createdFarm = await farmService.createFarm(farmer.user.id, input);
+
+      let emailSent = true;
+      try {
+        await authService.sendFarmAddedEmail(
+          farmer.user.email,
+          input.farm_name,
+          farmer.needsPasswordSetup
+        );
+      } catch (error: unknown) {
+        // The farm already exists; failing here would invite a retry that creates a duplicate.
+        // Report it in the result instead, so the admin can tell the farmer themselves.
+        emailSent = false;
+        Logger.error(
+          `Created farm ${createdFarm.id} for ${farmer.user.email} but failed to send the notification email. Reason = ${getErrorMessage(error)}`
+        );
+      }
+
+      return { farm: createdFarm, emailSent, needsPasswordSetup: farmer.needsPasswordSetup };
     },
 
     updateFarm: async (
@@ -348,6 +388,8 @@ const farmResolvers = {
   },
 
   FarmDTO: {
+    formVersion: (farm: FarmDTO): Promise<FormVersionDTO> =>
+      formService.getFormVersion(farm.formVersionId),
     owner: async (farm: FarmDTO, _args: unknown, context: AuthContext) => {
       try {
         await authHelper.requireRole(context, [Role.ADMIN]);

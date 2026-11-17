@@ -23,7 +23,10 @@
 		status?: FarmDisplayStatus;
 		/** When set, the whole card becomes a link to this href (e.g. the edit page). */
 		href?: string;
-		/** Without `href`, makes the whole card a button. */
+		/**
+		 * Without `href`, makes the whole card a button that runs this instead
+		 * (e.g. the dashboard opens the pending-approval modal for pending farms).
+		 */
 		onclick?: () => void;
 		/** Extra classes passed through to the card shell. */
 		class?: string;
@@ -58,7 +61,10 @@
 	}
 </script>
 
-<!-- Clickable card: a link with `href`, a button with `onclick`, else a plain div. -->
+<!-- The action buttons were removed from the design; when `href` is provided the
+     whole card is the click target (link). With `onclick` instead it's a
+     role="button" div (a real <button> can't hold the card's block content);
+     otherwise a plain div. -->
 <svelte:element
 	this={href ? 'a' : 'div'}
 	class="farm-card {className}"
@@ -112,7 +118,7 @@
 		text-decoration: none;
 	}
 
-	/* Hover affordance only when the card is clickable. */
+	/* Hover affordance only when the card is clickable (link or button). */
 	a.farm-card,
 	.farm-card--button {
 		transition:
@@ -150,6 +156,7 @@
 		/* background + color set inline per status (see farmStatus.ts) */
 	}
 
+	/* Smaller badge inset on phones so it stays tucked in the image corner. */
 	@media (max-width: 767px) {
 		.farm-card__status {
 			top: 12px;

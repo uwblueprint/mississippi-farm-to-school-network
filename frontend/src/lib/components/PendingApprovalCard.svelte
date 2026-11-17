@@ -1,18 +1,26 @@
 <script lang="ts">
-	/** Shown in a Modal when a farmer taps a farm still awaiting review. */
+	import type { Snippet } from 'svelte';
+
+	/**
+	 * "Application pending" card, shown inside a Modal when a farmer taps a farm
+	 * that is still awaiting admin review. Same shell as ApprovedCard.
+	 */
 	interface Props {
 		title?: string;
 		subtitle?: string;
+		actions?: Snippet;
 	}
 
 	let {
 		title = 'Your application is pending approval.',
-		subtitle = 'Applications are typically reviewed within 1-2 weeks. We will notify you once your application has been reviewed.'
+		subtitle = 'Applications are typically reviewed within 1-2 weeks. We will notify you once your application has been reviewed.',
+		actions
 	}: Props = $props();
 </script>
 
 <div class="card">
 	<span class="icon" aria-hidden="true">
+		<!-- lucide "clock" -->
 		<svg width="34" height="34" viewBox="0 0 24 24" fill="none">
 			<circle cx="12" cy="12" r="9" stroke="#B26B12" stroke-width="2.25" />
 			<path
@@ -27,6 +35,10 @@
 
 	<h2 class="title">{title}</h2>
 	<p class="subtitle">{subtitle}</p>
+
+	{#if actions}
+		<div class="actions">{@render actions()}</div>
+	{/if}
 </div>
 
 <style>
@@ -54,7 +66,7 @@
 		height: 64px;
 		margin-bottom: 26px;
 		border-radius: 50%;
-		background: #fdf1dd;
+		background: #fdf1dd; /* the Pending badge's background (farmStatus.ts) */
 	}
 
 	.title {
@@ -77,6 +89,7 @@
 
 	@media (max-width: 767px) {
 		.card {
+			/* the Modal's 44px close button sits in the top-right corner */
 			padding: 56px 24px 40px;
 			border-radius: 12px;
 		}
@@ -94,5 +107,13 @@
 		.subtitle {
 			font-size: 16px;
 		}
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		justify-content: center;
+		gap: 14px;
+		margin-top: 28px;
 	}
 </style>

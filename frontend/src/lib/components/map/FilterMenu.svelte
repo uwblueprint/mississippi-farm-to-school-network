@@ -1,6 +1,6 @@
 <script lang="ts" generics="T extends string | number">
 	import FilterPill from '$lib/components/FilterPill.svelte';
-	import type { FilterOption } from '$lib/utils/farm-filters';
+	import { toggleSelection, type FilterOption } from '$lib/utils/farm-filters';
 
 	interface Props {
 		label: string;
@@ -8,28 +8,45 @@
 		selected?: T[];
 		multiple?: boolean;
 		note?: string;
+		variant?: 'dropdown' | 'sheet';
+		title?: string;
+		showBadge?: boolean;
 	}
 
-	let { label, options, selected = $bindable([]), multiple = true, note }: Props = $props();
+	let {
+		label,
+		options,
+		selected = $bindable([]),
+		multiple = true,
+		note,
+		variant = 'dropdown',
+		title = label,
+		showBadge = true
+	}: Props = $props();
 
 	let open = $state(false);
 	let root = $state<HTMLDivElement | null>(null);
+	let dialog = $state<HTMLDialogElement | null>(null);
 
 	const menuId = `filter-menu-${Math.random().toString(36).slice(2, 9)}`;
 	const activeCount = $derived(selected.length);
 
 	function toggleOption(value: T) {
-		if (multiple) {
-			selected = selected.includes(value)
-				? selected.filter((item) => item !== value)
-				: [...selected, value];
-		} else {
-			selected = selected.includes(value) ? [] : [value];
-		}
+		selected = toggleSelection(selected, value, multiple);
 	}
 
 	function clear() {
 		selected = [];
+	}
+
+	$effect(() => {
+		if (!dialog) return;
+		if (open && !dialog.open) dialog.showModal();
+		if (!open && dialog.open) dialog.close();
+	});
+
+	function handleBackdropClick(event: MouseEvent) {
+		if (event.target === dialog) open = false;
 	}
 
 	function handleWindowClick(event: MouseEvent) {
@@ -53,15 +70,59 @@
 	<FilterPill
 		{label}
 		active={activeCount > 0}
-		badge={activeCount}
+		badge={showBadge ? activeCount : 0}
 		showChevron
 		chevronOpen={open}
 		aria-expanded={open}
 		aria-controls={menuId}
+		aria-haspopup={variant === 'sheet' ? 'dialog' : undefined}
 		onclick={() => (open = !open)}
 	/>
 
-	{#if open}
+	{#if variant === 'sheet'}
+		<dialog
+			bind:this={dialog}
+			id={menuId}
+			class="filter-menu__sheet"
+			aria-labelledby="{menuId}-title"
+			onclose={() => (open = false)}
+			onclick={handleBackdropClick}
+		>
+			<div class="filter-menu__sheet-inner">
+				<header class="filter-menu__sheet-header">
+					<h2 id="{menuId}-title" class="filter-menu__sheet-title">{title}</h2>
+					<button type="button" class="filter-menu__done" onclick={() => (open = false)}>
+						Done
+					</button>
+				</header>
+
+				{#if note}
+					<p class="filter-menu__note">{note}</p>
+				{/if}
+
+				{#each options as option (option.value)}
+					<label class="filter-menu__option">
+						<input
+							type={multiple ? 'checkbox' : 'radio'}
+							name={menuId}
+							checked={selected.includes(option.value)}
+							onclick={() => toggleOption(option.value)}
+						/>
+						<span>{option.label}</span>
+					</label>
+				{/each}
+
+				<button
+					type="button"
+					class="filter-menu__clear"
+					class:filter-menu__clear--hidden={activeCount === 0}
+					onclick={clear}
+				>
+					Clear
+				</button>
+			</div>
+		</dialog>
+	{:else if open}
 		<fieldset id={menuId} class="filter-menu__panel">
 			<legend class="filter-menu__legend">{label}</legend>
 
@@ -165,5 +226,92 @@
 		color: #587244;
 		text-decoration: underline;
 		cursor: pointer;
+	}
+
+	.filter-menu__clear--hidden {
+		visibility: hidden;
+	}
+
+	.filter-menu__sheet {
+		width: 100%;
+		max-width: 100%;
+		max-height: 80dvh;
+		margin: auto 0 0;
+		padding: 0;
+		border: none;
+		border-radius: 1rem 1rem 0 0;
+		background: #fff;
+		box-shadow: 0 -2px 12px rgba(19, 25, 39, 0.15);
+		overscroll-behavior: contain;
+	}
+
+	.filter-menu__sheet::backdrop {
+		background: rgba(19, 25, 39, 0.4);
+	}
+
+	.filter-menu__sheet-inner {
+		display: flex;
+		flex-direction: column;
+		gap: 0.25rem;
+		padding: 1rem 1rem calc(1rem + env(safe-area-inset-bottom));
+	}
+
+	.filter-menu__sheet-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		margin-bottom: 0.5rem;
+	}
+
+	.filter-menu__sheet-title {
+		margin: 0;
+		font-family: 'Figtree', 'DM Sans', sans-serif;
+		font-size: 1.25rem;
+		font-weight: 500;
+		color: #111;
+	}
+
+	.filter-menu__done {
+		min-height: 2.75rem;
+		padding: 0 0.5rem;
+		border: none;
+		background: none;
+		font-family: inherit;
+		font-size: 1rem;
+		font-weight: 600;
+		color: #587244;
+		cursor: pointer;
+	}
+
+	.filter-menu__sheet .filter-menu__note {
+		margin-bottom: 0.5rem;
+		padding: 0.625rem 0.75rem;
+		font-size: 0.875rem;
+		line-height: 1.35;
+	}
+
+	.filter-menu__sheet .filter-menu__option {
+		gap: 0.875rem;
+		min-height: 3rem;
+		padding: 0 0.25rem;
+		border-radius: 0;
+		border-bottom: 1px solid #f0f0f0;
+		font-size: 1rem;
+	}
+
+	.filter-menu__sheet .filter-menu__option:hover {
+		background: none;
+	}
+
+	.filter-menu__sheet .filter-menu__option input {
+		width: 1.25rem;
+		height: 1.25rem;
+	}
+
+	.filter-menu__sheet .filter-menu__clear {
+		align-self: flex-start;
+		min-height: 2.75rem;
+		padding: 0 0.25rem;
+		font-size: 0.9375rem;
 	}
 </style>

@@ -3,6 +3,7 @@
 	import MobileNavMenu from '$lib/components/MobileNavMenu.svelte';
 	import { FARMER_NAV_ITEMS } from '$lib/components/Sidebar.svelte';
 
+	/** Farmer portal's phone top bar + dropdown menu (hidden at 768px and up). */
 	interface Props {
 		profileName?: string;
 		profileRole?: string;
