@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { mount, onMount, onDestroy, unmount } from 'svelte';
+	import { mount, onMount, onDestroy, unmount, untrack } from 'svelte';
 	import mapboxgl from 'mapbox-gl';
 	import type { Map as MapboxMap, MapboxGeoJSONFeature } from 'mapbox-gl';
 
@@ -16,9 +16,18 @@
 		selectedFarmId?: string | null;
 		onSelectFarm?: (farm: MapFarm | null) => void;
 		onMapReady?: (map: MapboxMap) => void;
+		selectionStyle?: 'popup' | 'highlight';
+		bottomInset?: number;
 	}
 
-	let { farms, selectedFarmId = $bindable(null), onSelectFarm, onMapReady }: Props = $props();
+	let {
+		farms,
+		selectedFarmId = $bindable(null),
+		onSelectFarm,
+		onMapReady,
+		selectionStyle = 'popup',
+		bottomInset = 0
+	}: Props = $props();
 
 	let mapContainer = $state<HTMLDivElement | null>(null);
 	let map = $state<MapboxMap | null>(null);
@@ -30,6 +39,7 @@
 	let farmPopupFarmId: string | null = null;
 
 	const POPUP_OFFSET = 18;
+	const CLUSTER_MAX_ZOOM = 12;
 
 	function clearFarmPopup() {
 		if (farmPopupMount) {
@@ -85,7 +95,7 @@
 			type: 'geojson',
 			data: farmsToGeoJSON(farms),
 			cluster: true,
-			clusterMaxZoom: 12,
+			clusterMaxZoom: CLUSTER_MAX_ZOOM,
 			clusterRadius: 50
 		});
 
@@ -143,6 +153,21 @@
 				'circle-stroke-color': '#ffffff'
 			}
 		});
+
+		if (selectionStyle === 'highlight') {
+			activeMap.addLayer({
+				id: 'selected-point',
+				type: 'circle',
+				source: 'farms',
+				filter: ['==', ['get', 'id'], selectedFarmId ?? ''],
+				paint: {
+					'circle-color': 'rgba(0, 0, 0, 0)',
+					'circle-radius': 15,
+					'circle-stroke-width': 4,
+					'circle-stroke-color': '#131927'
+				}
+			});
+		}
 	}
 
 	function wireMapEvents(activeMap: MapboxMap) {
@@ -223,6 +248,11 @@
 	});
 
 	$effect(() => {
+		if (!map || !farmsSourceReady || selectionStyle !== 'highlight') return;
+		map.setFilter('selected-point', ['==', ['get', 'id'], selectedFarmId ?? '']);
+	});
+
+	$effect(() => {
 		if (!map || !selectedFarmId) {
 			clearFarmPopup();
 			return;
@@ -234,13 +264,17 @@
 			return;
 		}
 
+		const inset = untrack(() => bottomInset);
 		map.flyTo({
 			center: [farm.location.lng, farm.location.lat],
-			zoom: Math.max(map.getZoom(), 11),
+			zoom: Math.max(map.getZoom(), selectionStyle === 'highlight' ? CLUSTER_MAX_ZOOM + 1 : 11),
+			offset: [0, -inset / 2],
 			essential: true
 		});
 
-		showFarmPopup(map, farm);
+		if (selectionStyle === 'popup') {
+			showFarmPopup(map, farm);
+		}
 	});
 
 	onDestroy(() => {
