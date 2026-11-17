@@ -73,11 +73,11 @@ const input = {
   farm_address: '123 Farm Rd',
   county: 'Hinds',
   location: { lat: 32.3, lng: -90.18 },
-  seasonal_products: [],
-  meat_products: [],
-  other_products: [],
-  growing_practices: [],
-  food_safety_certifications: [],
+  formVersionId: 'v1',
+  answers: {
+    growing_practices: ['Conventional'],
+    food_safety_certifications: ['None of the above'],
+  },
 } as CreateFarmInput;
 
 const farmer = {

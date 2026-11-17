@@ -1,4 +1,11 @@
-import { CreateFarmInput, FarmRejectionResolutionType, FarmStatus, Role } from '@/types';
+import { DEFAULT_FORM_SECTIONS } from '@/constants/defaultForm';
+import {
+  CreateFarmInput,
+  FarmRejectionResolutionType,
+  FarmStatus,
+  FormQuestionType,
+  Role,
+} from '@/types';
 import { FakeFirestore } from './helpers/fakeFirestore';
 
 let mockFirestoreInstance: FakeFirestore;
@@ -23,6 +30,7 @@ jest.mock('@/services/implementations/userService', () => ({
 }));
 
 import FarmService from '@/services/implementations/farmService';
+import FormService from '@/services/implementations/formService';
 
 const baseInput: CreateFarmInput = {
   farm_name: 'Test Farm',
@@ -32,11 +40,11 @@ const baseInput: CreateFarmInput = {
   usda_farm_id: 'usda-1',
   county: 'Hinds',
   location: { lat: 32.3, lng: -90.18 },
-  seasonal_products: [],
-  meat_products: [],
-  other_products: [],
-  growing_practices: [],
-  food_safety_certifications: [],
+  formVersionId: 'v1',
+  answers: {
+    growing_practices: ['Conventional'],
+    food_safety_certifications: ['None of the above'],
+  },
 };
 
 describe('FarmService (Firestore)', () => {
@@ -175,14 +183,69 @@ describe('FarmService (Firestore)', () => {
       ).rejects.toThrow('Farm with that USDA farm ID already exists.');
     });
 
-    test('rejects option values that are not allowed', async () => {
-      // GraphQL only types these as strings, so a bad value can reach the service.
+    test('rejects answers with a choice the form does not have', async () => {
       const badInput = {
         ...baseInput,
-        growing_practices: ['Not a real practice'],
-      } as unknown as CreateFarmInput;
+        answers: { ...baseInput.answers, growing_practices: ['Not a real practice'] },
+      };
 
-      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow();
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        "choices that don't exist"
+      );
+    });
+
+    test('rejects answers that leave a required question empty', async () => {
+      const badInput = {
+        ...baseInput,
+        answers: { food_safety_certifications: ['None of the above'] },
+      };
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        'Please answer: Growing Practices'
+      );
+    });
+
+    test('rejects answers to a question the form does not have', async () => {
+      const badInput = {
+        ...baseInput,
+        answers: { ...baseInput.answers, not_a_question: 'hello' },
+      };
+
+      await expect(service.assertCanCreateFarm(badInput)).rejects.toThrow(
+        'Unknown questions in answers: not_a_question'
+      );
+    });
+
+    test('rejects a farm filled in on a form version that is no longer published', async () => {
+      const formService = new FormService();
+      const v1 = await formService.getPublishedForm();
+      await formService.saveForm('admin-1', v1.id, DEFAULT_FORM_SECTIONS);
+
+      await expect(service.assertCanCreateFarm(baseInput)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
+    });
+
+    test('accepts a farm filled in on the newly published form version', async () => {
+      const formService = new FormService();
+      const v1 = await formService.getPublishedForm();
+      const v2 = await formService.saveForm('admin-1', v1.id, DEFAULT_FORM_SECTIONS);
+
+      await expect(
+        service.assertCanCreateFarm({ ...baseInput, formVersionId: v2.id })
+      ).resolves.toBeUndefined();
+    });
+
+    test('checks the form before the USDA farm ID, so both errors are reported the same way as createFarm', async () => {
+      await service.createFarm('owner-1', baseInput);
+      const staleAndTaken = { ...baseInput, formVersionId: 'v0' };
+
+      await expect(service.assertCanCreateFarm(staleAndTaken)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
+      await expect(service.createFarm('owner-2', staleAndTaken)).rejects.toThrow(
+        'The farm form has been updated since you opened it.'
+      );
     });
   });
 
@@ -210,6 +273,94 @@ describe('FarmService (Firestore)', () => {
       expect(rejection?.resolved_at).not.toBeNull();
       expect(rejection?.resolution_type).toBe(FarmRejectionResolutionType.RESUBMITTED);
       await expect(service.getLatestActiveRejection(farm.id)).resolves.toBeNull();
+    });
+
+    const resubmissionEmails = () =>
+      mockSendEmail.mock.calls.filter(([to]) => to === 'mfsn@uwblueprint.org');
+
+    test('saving an unchanged farm rejected before form answers existed keeps it rejected', async () => {
+      const farm = await service.createFarm('owner-1', {
+        ...baseInput,
+        answers: {
+          growing_practices: ['Conventional', 'Regenerative'],
+          food_safety_certifications: ['None of the above'],
+        },
+      });
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+
+      // A farm and snapshot from before this change: no answers, and checkbox
+      // picks stored in click order rather than option order.
+      const ref = mockFirestoreInstance.collection('farms').doc(farm.id);
+      const legacyFarm = (await ref.get()).data()!;
+      const snapshot = { ...(legacyFarm.rejection_snapshot as Record<string, unknown>) };
+      for (const doc of [legacyFarm, snapshot]) {
+        delete doc.answers;
+        delete doc.formVersionId;
+        doc.growing_practices = ['Regenerative', 'Conventional'];
+      }
+      await ref.set({ ...legacyFarm, rejection_snapshot: snapshot });
+
+      const updated = await service.updateFarm(
+        farm.id,
+        {
+          answers: {
+            growing_practices: ['Regenerative', 'Conventional'],
+            food_safety_certifications: ['None of the above'],
+          },
+        },
+        false
+      );
+
+      expect(updated.status).toBe(FarmStatus.REJECTED);
+      expect(resubmissionEmails()).toHaveLength(0);
+    });
+
+    test('a changed answer to an admin-added question is listed by its label', async () => {
+      const formService = new FormService();
+      const v1 = await formService.getPublishedForm();
+      const v2 = await formService.saveForm(
+        'admin-1',
+        v1.id,
+        DEFAULT_FORM_SECTIONS.map((section) =>
+          section.id === 'other_details'
+            ? {
+                ...section,
+                questions: [
+                  ...section.questions,
+                  {
+                    id: 'q_acreage',
+                    type: FormQuestionType.TEXT,
+                    label: 'Acres farmed',
+                    required: false,
+                    placeholder: null,
+                    helpText: null,
+                    options: [],
+                    exclusiveOptionId: null,
+                    showIf: null,
+                    lockedField: null,
+                  },
+                ],
+              }
+            : section
+        )
+      );
+      const answers = { ...baseInput.answers, q_acreage: '10' };
+      const farm = await service.createFarm('owner-1', {
+        ...baseInput,
+        formVersionId: v2.id,
+        answers,
+      });
+      await service.createFarmRejection(farm.id, 'admin-1', 'Missing details');
+
+      const updated = await service.updateFarm(
+        farm.id,
+        { answers: { ...answers, q_acreage: '25' } },
+        false
+      );
+
+      expect(updated.status).toBe(FarmStatus.PENDING_APPROVAL);
+      const [[, , body]] = resubmissionEmails();
+      expect(body.changes).toEqual([{ field: 'Acres farmed', previous: '10', current: '25' }]);
     });
 
     test('a non-admin cannot edit an archived farm', async () => {

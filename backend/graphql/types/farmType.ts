@@ -69,6 +69,11 @@ const farmType = gql`
     deletion_requested_at: String
     "Set when an admin approves the deletion; the farm is soft-deleted (status DELETED) then."
     deletion_approved_at: String
+    "The form version the farm was submitted with; edits keep using it."
+    formVersionId: ID!
+    formVersion: FormVersionDTO!
+    "Answers to the form's non-locked questions, keyed by question id."
+    answers: JSON!
     createdAt: String!
     updatedAt: String!
     """
@@ -79,34 +84,24 @@ const farmType = gql`
     primary_image_url: String
   }
 
+  """
+  The locked fields are typed; every other question's answer goes in answers,
+  keyed by question id, and is checked against formVersionId, which must be the
+  latest published form.
+  """
   input CreateFarmInput {
     usda_farm_id: String!
     farm_name: String!
     primary_phone: String!
     primary_email: String!
-    website: String
-    social_media: JSON
     farm_address: String!
     county: String!
     cities_served: [String!]
     location: LocationInput!
-    seasonal_products: [String!]!
-    meat_products: [String!]!
-    other_products: [String!]!
-    seasonal_products_detail: String
-    meat_products_detail: String
-    other_products_detail: String
-    growing_practices: [String!]!
-    food_safety_certifications: [String!]!
-    farm_experiences: [String!]
-    farm_characteristics: [String!]
-    farm_to_school_sales: [String!]
-    market_sales_data: [MarketSalesDataInput!]
-    f2s_experience: String
-    minimum_order: Int
-    delivery_details: String
     cover_photo: String
     carousel_photos: [String!]
+    formVersionId: ID!
+    answers: JSON!
   }
 
   input LocationInput {
@@ -158,6 +153,8 @@ const farmType = gql`
     delivery_details: String
     cover_photo: String
     carousel_photos: [String!]
+    "Checked against the farm's own form version, not the latest one."
+    answers: JSON
   }
 
   type Query {
