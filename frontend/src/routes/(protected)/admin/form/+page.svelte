@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { gqlClient } from '$lib/graphqlClient';
 	import { showToast } from '$lib/state/toast.svelte';
 	import type { FormQuestion, FormQuestionType, FormSection, FormVersion } from '$lib/types/form';
@@ -33,6 +33,7 @@
 	let error = $state<string | null>(null);
 	let saving = $state(false);
 	let selectedId = $state<string | null>(null);
+	let editorEl = $state<HTMLElement | null>(null);
 
 	// Questions already published keep their type: farms have answered them as that type.
 	const publishedIds = $derived(new Set(published ? allQuestions(published).map((q) => q.id) : []));
@@ -93,6 +94,16 @@
 		return Boolean(dependent);
 	}
 
+	// On phones the editor sits above the question list, so bring it into view.
+	async function selectQuestion(id: string) {
+		selectedId = id;
+		error = null;
+		await tick();
+		if (window.matchMedia('(max-width: 767px)').matches) {
+			editorEl?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+		}
+	}
+
 	function addQuestion(section: FormSection) {
 		const id = newId('q');
 		section.questions.push({
@@ -107,7 +118,7 @@
 			showIf: null,
 			lockedField: null
 		});
-		selectedId = id;
+		void selectQuestion(id);
 	}
 
 	function removeQuestion(question: FormQuestion) {
@@ -180,10 +191,7 @@
 									class="question-row"
 									class:question-row--selected={question.id === selectedId}
 									type="button"
-									onclick={() => {
-										selectedId = question.id;
-										error = null;
-									}}
+									onclick={() => selectQuestion(question.id)}
 								>
 									<span>{question.label}</span>
 									<span class="tag">
@@ -203,7 +211,7 @@
 					{/each}
 				</div>
 
-				<aside class="form-admin__editor" aria-label="Question editor">
+				<aside class="form-admin__editor" aria-label="Question editor" bind:this={editorEl}>
 					{#if !selected}
 						<p class="form-admin__hint">Select a question to edit it.</p>
 					{:else if selected.type === 'LOCKED'}
@@ -438,5 +446,43 @@
 
 	.link-btn--danger {
 		color: #c0341c;
+	}
+
+	/* Phones: one column, editor above the list (it's brought into view when a
+	   question is picked), 16px inputs so iOS doesn't zoom, 44px tap targets. */
+	@media (max-width: 767px) {
+		.form-admin__header {
+			flex-wrap: wrap;
+		}
+
+		.btn {
+			min-height: 44px;
+		}
+
+		.form-admin__columns {
+			grid-template-columns: minmax(0, 1fr);
+			gap: 1.25rem;
+		}
+
+		.form-admin__editor {
+			order: -1;
+			position: static;
+			padding: 1rem;
+			/* clear the fixed 56px phone top bar when scrolled into view */
+			scroll-margin-top: calc(56px + 1rem + env(safe-area-inset-top));
+		}
+
+		.editor__input {
+			min-height: 44px;
+			font-size: 16px;
+		}
+
+		.question-row {
+			min-height: 44px;
+		}
+
+		.link-btn {
+			min-height: 44px;
+		}
 	}
 </style>

@@ -1748,3 +1748,151 @@
 	opacity: 0.7;
 	cursor: default;
 }
+
+/* Phones (< 768px): MobileNavMenu replaces the sidebar. */
+@media (max-width: 47.9375rem) {
+	.admin-shell {
+		display: block;
+		min-height: 100dvh;
+		padding-top: calc(56px + env(safe-area-inset-top));
+	}
+
+	.admin-sidebar {
+		display: none;
+	}
+
+	.admin-page {
+		padding: 1.5rem 1rem calc(2.5rem + env(safe-area-inset-bottom));
+	}
+
+	.admin-page__inner {
+		gap: 1.25rem;
+	}
+
+	.admin-page__header {
+		gap: 0.75rem;
+	}
+
+	.admin-page__title {
+		font-size: 1.75rem;
+	}
+
+	.admin-page__count {
+		font-size: 1.125rem;
+	}
+
+	.admin-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.75rem;
+	}
+
+	.admin-toolbar__group {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.75rem;
+	}
+
+	.admin-search {
+		width: 100%;
+		box-sizing: border-box;
+		min-height: 44px;
+	}
+
+	.admin-search__input {
+		font-size: 16px; /* iOS Safari zooms on focus below 16px */
+	}
+
+	.admin-toolbar .admin-toolbar__group .filter-pill-group {
+		flex-wrap: nowrap;
+		overflow-x: auto;
+		margin: 0 -1rem;
+		padding: 0.125rem 1rem;
+		scrollbar-width: none;
+		-webkit-overflow-scrolling: touch;
+	}
+
+	.admin-toolbar .admin-toolbar__group .filter-pill-group::-webkit-scrollbar {
+		display: none;
+	}
+
+	.admin-toolbar .admin-toolbar__group .filter-pill {
+		flex-shrink: 0;
+		white-space: nowrap;
+	}
+
+	.admin-toolbar > .sort-dropdown {
+		align-self: flex-end;
+	}
+
+	.admin-request-list {
+		gap: 1rem;
+	}
+
+	.request-card {
+		box-sizing: border-box;
+		padding: 1rem;
+		border-radius: 0.75rem;
+	}
+
+	.request-card__meta {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.5rem;
+	}
+
+	.request-card__body {
+		align-items: center;
+	}
+
+	.request-card__farm-name {
+		font-size: 1.25rem;
+		overflow-wrap: anywhere;
+	}
+
+	.request-card__owner {
+		flex-basis: auto;
+		width: 100%;
+	}
+
+	.request-card__owner p {
+		white-space: nowrap;
+	}
+
+	.farm-request-overlay {
+		padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
+			max(0.75rem, env(safe-area-inset-bottom));
+	}
+
+	.farm-request-modal {
+		max-height: calc(100dvh - 1.5rem);
+		padding: 3.5rem 1rem 1.25rem;
+		border-radius: 1rem;
+	}
+
+	.farm-request-modal__toolbar {
+		top: 0.75rem;
+		right: 0.75rem;
+	}
+
+	.farm-request-modal__icon-btn {
+		min-width: 44px;
+		min-height: 44px;
+	}
+
+	.farm-request-modal__title {
+		font-size: 1.5rem;
+		overflow-wrap: anywhere;
+	}
+
+	.farms-btn {
+		min-height: 44px;
+	}
+
+	/* Unpin columns so the whole row scrolls together. */
+	.farms-table__cell--pin-check,
+	.farms-table__cell--pin-name {
+		position: static;
+		box-shadow: none;
+	}
+}

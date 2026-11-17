@@ -89,4 +89,26 @@
 		width: 13.67px;
 		height: 13.67px;
 	}
+
+	@media (max-width: 767px) {
+		.announcements-page {
+			min-height: auto;
+			padding: 1.5rem 1rem calc(2.5rem + env(safe-area-inset-bottom));
+		}
+
+		.page-heading {
+			font-size: 1.75rem;
+			line-height: 1.2;
+		}
+
+		.page-toolbar {
+			gap: 0.75rem;
+			flex-wrap: wrap;
+		}
+
+		.new-announcement-button {
+			min-height: 44px;
+			box-sizing: border-box;
+		}
+	}
 </style>
