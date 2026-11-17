@@ -1,6 +1,13 @@
 import { UserInputError } from 'apollo-server';
 import { LOCKED_QUESTIONS } from '@/constants/defaultForm';
-import { FormAnswers, FormAnswerValue, FormQuestion, FormQuestionType, FormSection } from '@/types';
+import {
+  FormAnswers,
+  FormAnswerValue,
+  FormQuestion,
+  FormQuestionType,
+  FormSection,
+  LockedFormField,
+} from '@/types';
 
 const ID_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
 const URL_PATTERN = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
@@ -68,8 +75,40 @@ function text(value: unknown, field: string, required = false): string | null {
  * questions are replaced by their fixed definitions, so they can never be
  * changed or dropped.
  */
-export function normalizeFormSections(sections: FormSection[]): FormSection[] {
-  if (!sections?.length) throw new UserInputError('The form needs at least one section.');
+const PHOTOS_QUESTION_ID = LOCKED_QUESTIONS[LockedFormField.PHOTOS].id;
+
+/**
+ * Puts the Photos question last, alone in its own section at the end of the form. Any
+ * other questions in its section move to the end of the section before it, so every
+ * other question keeps its order (and conditions still point at earlier questions).
+ * Must match photosLast in the frontend's form-answers.ts.
+ */
+export function photosLast(sections: FormSection[]): FormSection[] {
+  const index = sections.findIndex((section) =>
+    (section.questions ?? []).some((question) => question.id === PHOTOS_QUESTION_ID)
+  );
+  if (index === -1) return sections;
+
+  const photosSection = sections[index];
+  const photos = photosSection.questions.find((question) => question.id === PHOTOS_QUESTION_ID)!;
+  const others = photosSection.questions.filter((question) => question.id !== PHOTOS_QUESTION_ID);
+  const rest = sections.filter((_, i) => i !== index);
+
+  if (others.length > 0) {
+    if (rest.length === 0) {
+      // Photos shared the only section; give the other questions their own.
+      rest.push({ id: `${photosSection.id}_questions`, title: 'Other Details', questions: others });
+    } else {
+      const target = Math.max(index - 1, 0);
+      rest[target] = { ...rest[target], questions: [...(rest[target].questions ?? []), ...others] };
+    }
+  }
+  return [...rest, { ...photosSection, questions: [photos] }];
+}
+
+export function normalizeFormSections(input: FormSection[]): FormSection[] {
+  if (!input?.length) throw new UserInputError('The form needs at least one section.');
+  const sections = photosLast(input);
 
   const sectionIds = new Set<string>();
   const seen = new Map<string, FormQuestion>();

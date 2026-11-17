@@ -1,5 +1,11 @@
 // Client-side mirror of backend/utilities/formAnswers.ts, for showing errors as the farmer types.
-import type { FormAnswers, FormAnswerValue, FormQuestion, FormVersion } from '$lib/types/form';
+import type {
+	FormAnswers,
+	FormAnswerValue,
+	FormQuestion,
+	FormSection,
+	FormVersion
+} from '$lib/types/form';
 
 export const FORM_VERSION_FIELDS = `
 	id
@@ -36,6 +42,37 @@ export const PUBLISHED_FORM_QUERY = `
 		}
 	}
 `;
+
+/** True for the section that holds the Photos question. */
+export function isPhotosSection(section: FormSection): boolean {
+	return section.questions.some((question) => question.lockedField === 'PHOTOS');
+}
+
+/**
+ * Puts the Photos question last, alone in its own section at the end of the form. Any
+ * other questions in its section move to the end of the section before it, keeping their
+ * order. Mirrors photosLast in backend/utilities/formAnswers.ts, which applies it on save;
+ * this also fixes versions saved before that rule existed.
+ */
+export function photosLast(sections: FormSection[]): FormSection[] {
+	const index = sections.findIndex(isPhotosSection);
+	if (index === -1) return sections;
+
+	const photosSection = sections[index];
+	const photos = photosSection.questions.find((question) => question.lockedField === 'PHOTOS')!;
+	const others = photosSection.questions.filter((question) => question.lockedField !== 'PHOTOS');
+	const rest = sections.filter((_, i) => i !== index);
+
+	if (others.length > 0) {
+		if (rest.length === 0) {
+			rest.push({ id: `${photosSection.id}_questions`, title: 'Other Details', questions: others });
+		} else {
+			const target = Math.max(index - 1, 0);
+			rest[target] = { ...rest[target], questions: [...rest[target].questions, ...others] };
+		}
+	}
+	return [...rest, { ...photosSection, questions: [photos] }];
+}
 
 const URL_PATTERN = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[^\s]*)?$/i;
 

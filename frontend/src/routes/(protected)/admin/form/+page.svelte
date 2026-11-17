@@ -3,7 +3,13 @@
 	import { gqlClient } from '$lib/graphqlClient';
 	import { showToast } from '$lib/state/toast.svelte';
 	import type { FormQuestion, FormQuestionType, FormSection, FormVersion } from '$lib/types/form';
-	import { FORM_VERSION_FIELDS, PUBLISHED_FORM_QUERY, allQuestions } from '$lib/utils/form-answers';
+	import {
+		FORM_VERSION_FIELDS,
+		PUBLISHED_FORM_QUERY,
+		allQuestions,
+		isPhotosSection,
+		photosLast
+	} from '$lib/utils/form-answers';
 
 	const SAVE_FORM_MUTATION = `
 		mutation SaveForm($baseVersionId: ID!, $sections: [FormSectionInput!]!) {
@@ -30,8 +36,11 @@
 	const publishedIds = $derived(new Set(published ? allQuestions(published).map((q) => q.id) : []));
 	const questions = $derived(sections.flatMap((section) => section.questions));
 	const selected = $derived(questions.find((question) => question.id === selectedId) ?? null);
+	// Compared in the order the page shows: a version saved before Photos was kept last
+	// isn't an unsaved edit just because it's displayed with Photos last.
 	const isDirty = $derived(
-		published !== null && JSON.stringify(sections) !== JSON.stringify(published.sections)
+		published !== null &&
+			JSON.stringify(sections) !== JSON.stringify(photosLast(published.sections))
 	);
 
 	onMount(async () => {
@@ -40,7 +49,7 @@
 				PUBLISHED_FORM_QUERY
 			);
 			published = publishedForm;
-			sections = structuredClone(publishedForm.sections);
+			sections = structuredClone(photosLast(publishedForm.sections));
 		} catch (err) {
 			error = err instanceof Error ? err.message : 'Could not load the form.';
 		}
@@ -56,7 +65,7 @@
 				sections
 			});
 			published = saveForm;
-			sections = structuredClone(saveForm.sections);
+			sections = structuredClone(photosLast(saveForm.sections));
 			showToast(
 				'success',
 				'New farms will fill out this version.',
@@ -175,9 +184,12 @@
 									</span>
 								</button>
 							{/each}
-							<button class="link-btn" type="button" onclick={() => addQuestion(section)}>
-								+ Add question
-							</button>
+							<!-- Photos always stays last on the form, so nothing is added below it. -->
+							{#if !isPhotosSection(section)}
+								<button class="link-btn" type="button" onclick={() => addQuestion(section)}>
+									+ Add question
+								</button>
+							{/if}
 						</section>
 					{/each}
 				</div>

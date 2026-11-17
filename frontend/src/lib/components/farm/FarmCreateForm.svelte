@@ -19,6 +19,7 @@
 		displayLabel,
 		isEmptyAnswer,
 		isQuestionVisible,
+		photosLast,
 		toggleOption
 	} from '$lib/utils/form-answers';
 
@@ -914,7 +915,7 @@
 			<p class="field-help" role="status">Loading form…</p>
 		{/if}
 	{:else}
-		{#each form.sections as section (section.id)}
+		{#each photosLast(form.sections) as section (section.id)}
 			<h2 class="section-title">{section.title}</h2>
 
 			<div class="question-grid">
