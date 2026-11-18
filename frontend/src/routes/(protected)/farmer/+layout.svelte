@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import Sidebar from '$lib/components/Sidebar.svelte';
+	import FarmerMobileHeader from '$lib/components/FarmerMobileHeader.svelte';
 	import ToastHost from '$lib/components/ToastHost.svelte';
 	import { resolveUserRole } from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
@@ -32,8 +33,13 @@
 	});
 </script>
 
+<!-- Both navs are always rendered; CSS picks one at the md breakpoint (768px)
+     so nothing re-mounts on resize. -->
+<FarmerMobileHeader {profileName} {profileRole} />
 <div class="dashboard">
-	<Sidebar {profileName} {profileRole} />
+	<div class="dashboard__sidebar">
+		<Sidebar {profileName} {profileRole} />
+	</div>
 	<main class="dashboard__main">
 		{@render children()}
 	</main>
@@ -50,10 +56,32 @@
 		background: var(--mfsn-surface, #ffffff);
 	}
 
+	/* display: contents keeps the sidebar a direct flex child of .dashboard, so
+	   its position: sticky behaves exactly as before on desktop. */
+	.dashboard__sidebar {
+		display: contents;
+	}
+
 	.dashboard__main {
 		flex: 1;
 		min-width: 0;
 		/* establishes the sizing context for the cqi-based fluid spacing inside */
 		container-type: inline-size;
+	}
+
+	/* Below md: hide the persistent sidebar and clear the fixed mobile header
+	   (56px, see FarmerMobileHeader). */
+	@media (max-width: 767px) {
+		.dashboard {
+			display: block;
+		}
+
+		.dashboard__sidebar {
+			display: none;
+		}
+
+		.dashboard__main {
+			padding-top: calc(56px + env(safe-area-inset-top));
+		}
 	}
 </style>

@@ -17,7 +17,7 @@
 		/** Render a textarea instead of an input. */
 		multiline?: boolean;
 		rows?: number;
-		/** Render the value as plain text (no control), e.g. the Farm ID#. */
+		/** Render the value as plain text (no control), e.g. the Farm Number. */
 		readonly?: boolean;
 		/** 'md' is the auth-form spec; 'lg' is the farm edit form's Figma spec
 		 *  (larger light labels, Nunito input text, rounder corners). */
@@ -180,7 +180,7 @@
 		color: #131927;
 	}
 
-	/* Readonly label (Farm ID#) — heavier than the light field labels */
+	/* Readonly label (Farm Number) — heavier than the light field labels */
 	.field--lg.field--readonly .label {
 		font-weight: 400;
 	}
@@ -206,6 +206,14 @@
 		font-family: 'DM Sans', sans-serif;
 		font-size: 1.019375rem;
 		line-height: normal;
+	}
+
+	/* iOS Safari zooms the page on focus when input text is under 16px. */
+	@media (max-width: 767px) {
+		.input,
+		.field--lg .input {
+			font-size: max(16px, 1rem);
+		}
 	}
 
 	.input::placeholder {

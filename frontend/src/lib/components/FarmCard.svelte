@@ -23,6 +23,11 @@
 		status?: FarmDisplayStatus;
 		/** When set, the whole card becomes a link to this href (e.g. the edit page). */
 		href?: string;
+		/**
+		 * Without `href`, makes the whole card a button that runs this instead
+		 * (e.g. the dashboard opens the pending-approval modal for pending farms).
+		 */
+		onclick?: () => void;
 		/** Extra classes passed through to the card shell. */
 		class?: string;
 		/** Additional content rendered in the body. */
@@ -39,21 +44,37 @@
 		subtitle2 = '',
 		status,
 		href,
+		onclick,
 		class: className = '',
 		children,
 		...rest
 	}: Props = $props();
 
 	const statusStyle = $derived(status ? FARM_STATUS_STYLES[status] : undefined);
+	const isButton = $derived(!href && !!onclick);
+
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === 'Enter' || event.key === ' ') {
+			event.preventDefault();
+			onclick?.();
+		}
+	}
 </script>
 
 <!-- The action buttons were removed from the design; when `href` is provided the
-     whole card is the click target (link), otherwise it renders as a plain div. -->
+     whole card is the click target (link). With `onclick` instead it's a
+     role="button" div (a real <button> can't hold the card's block content);
+     otherwise a plain div. -->
 <svelte:element
 	this={href ? 'a' : 'div'}
 	class="farm-card {className}"
+	class:farm-card--button={isButton}
 	data-farm-id={id}
 	href={href || undefined}
+	role={isButton ? 'button' : undefined}
+	tabindex={isButton ? 0 : undefined}
+	onclick={isButton ? onclick : undefined}
+	onkeydown={isButton ? handleKeydown : undefined}
 	{...rest}
 >
 	{#if statusStyle}
@@ -97,16 +118,25 @@
 		text-decoration: none;
 	}
 
-	/* Hover affordance only when the card is an actual link. */
-	a.farm-card {
+	/* Hover affordance only when the card is clickable (link or button). */
+	a.farm-card,
+	.farm-card--button {
 		transition:
 			border-color 0.15s ease,
 			box-shadow 0.15s ease;
+		cursor: pointer;
 	}
 
-	a.farm-card:hover {
+	a.farm-card:hover,
+	.farm-card--button:hover {
 		border-color: #b9b9b9;
 		box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+	}
+
+	a.farm-card:focus-visible,
+	.farm-card--button:focus-visible {
+		outline: 2px solid var(--mfsn-primary, #587244);
+		outline-offset: 2px;
 	}
 
 	.farm-card__status {
@@ -124,6 +154,21 @@
 		line-height: normal;
 		white-space: nowrap;
 		/* background + color set inline per status (see farmStatus.ts) */
+	}
+
+	/* Smaller badge inset on phones so it stays tucked in the image corner. */
+	@media (max-width: 767px) {
+		.farm-card__status {
+			top: 12px;
+			right: 12px;
+			padding: 6px 12px;
+			font-size: 14px;
+		}
+
+		.farm-card__title {
+			font-size: 20px;
+			line-height: 28px;
+		}
 	}
 
 	.farm-card__image {

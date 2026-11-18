@@ -6,6 +6,7 @@
 	import RequestedChangesCard from '$lib/components/RequestedChangesCard.svelte';
 	import ApprovedCard from '$lib/components/ApprovedCard.svelte';
 	import DeletionApprovedCard from '$lib/components/DeletionApprovedCard.svelte';
+	import PendingApprovalCard from '$lib/components/PendingApprovalCard.svelte';
 	import OnboardingFlow from '$lib/components/OnboardingFlow.svelte';
 	import { gqlClient } from '$lib/graphqlClient';
 	import { getFirebaseAuth } from '$lib/firebase';
@@ -53,6 +54,11 @@
 	`;
 
 	let farms = $state<FarmListItem[]>([]);
+	// A pending farm can't be edited until it's reviewed: tapping its card opens
+	// the pending-approval modal instead of the edit form.
+	// The pending farm whose popup is open; it still offers editing, so farmers can
+	// update it or request its deletion while it waits for review.
+	let pendingFarmId = $state<string | null>(null);
 	let loading = $state(true);
 	let errorMessage = $state('');
 
@@ -196,6 +202,7 @@
 	{:else}
 		<div class="farm-grid">
 			{#each farms as farm (farm.id)}
+				{@const status = farmDisplayStatus(farm)}
 				<FarmCard
 					id={farm.id}
 					imageUrl={farm.primary_image_url}
@@ -203,8 +210,9 @@
 					title={farm.farm_name}
 					subtitle={farm.farm_address}
 					subtitle2={farm.county}
-					status={farmDisplayStatus(farm)}
-					href={`/farmer/farms/${farm.id}/edit`}
+					{status}
+					href={status === 'PENDING_APPROVAL' ? undefined : `/farmer/farms/${farm.id}/edit`}
+					onclick={status === 'PENDING_APPROVAL' ? () => (pendingFarmId = farm.id) : undefined}
 				/>
 			{/each}
 		</div>
@@ -220,7 +228,19 @@
 	/>
 {/if}
 
-{#if statusPopup?.kind === 'rejected'}
+{#if pendingFarmId}
+	{@const farmId = pendingFarmId}
+	<Modal label="Application pending approval" onClose={() => (pendingFarmId = null)}>
+		<PendingApprovalCard>
+			{#snippet actions()}
+				<ActionButton variant="outline" href={`/farmer/farms/${farmId}/edit`}
+					>Edit farm</ActionButton
+				>
+				<ActionButton variant="primary" onclick={() => (pendingFarmId = null)}>Close</ActionButton>
+			{/snippet}
+		</PendingApprovalCard>
+	</Modal>
+{:else if statusPopup?.kind === 'rejected'}
 	{@const popup = statusPopup}
 	<Modal label="Changes requested" onClose={closePopup}>
 		<RequestedChangesCard
@@ -296,5 +316,36 @@
 		   width, easing to 24px on small screens (6.8cqi ≈ 92px when main ≈ 1350px). */
 		gap: clamp(24px, 6.8cqi, 92px);
 		align-items: start; /* don't stretch shorter cards to match a taller one */
+	}
+
+	/* Phones: 16px gutters, heading + "Add farm" stay on one row, cards stack
+	   full width (the grid's min(100%, 320px) already gives one column). */
+	@media (max-width: 767px) {
+		.farms-page {
+			padding: 24px 16px calc(32px + env(safe-area-inset-bottom));
+			gap: 20px;
+		}
+
+		.farms-header {
+			flex-wrap: nowrap;
+		}
+
+		.farms-title {
+			margin: 0;
+			font-size: 26px;
+		}
+
+		.farms-header :global(.action-btn) {
+			flex-shrink: 0;
+			min-height: 44px;
+		}
+
+		.farm-grid {
+			gap: 16px;
+		}
+
+		.farm-grid :global(.farm-card) {
+			max-width: none;
+		}
 	}
 </style>
