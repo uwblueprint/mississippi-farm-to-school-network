@@ -103,9 +103,6 @@
 
 	<header class="farm-map-mobile__top" bind:offsetHeight={topBarHeight}>
 		<div class="farm-map-mobile__search-card">
-			<a href="/" class="farm-map-mobile__back" aria-label="Back to home">
-				<span aria-hidden="true">‹</span>
-			</a>
 			<div class="farm-map-mobile__search">
 				<FarmSearch {map} />
 			</div>
@@ -158,9 +155,12 @@
 		label="Farm results"
 	>
 		{#snippet header()}
-			<p class="farm-map-mobile__count">
-				{loading ? 'Loading…' : `${farms.length} ${farms.length === 1 ? 'Result' : 'Results'}`}
-			</p>
+			<div class="farm-map-mobile__sheet-header">
+				<p class="farm-map-mobile__count">
+					{loading ? 'Loading…' : `${farms.length} ${farms.length === 1 ? 'Result' : 'Results'}`}
+				</p>
+				<a class="farm-map__create-farm" href="/login?redirectTo=/new-farm">Create a Farm</a>
+			</div>
 		{/snippet}
 
 		{#if selectedFarm && selectedFarmIndex >= 0}

@@ -51,26 +51,6 @@
 	min-width: 0;
 }
 
-.farm-map-sidebar__back {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: 2.25rem;
-	height: 2.25rem;
-	margin-right: -1rem;
-	border-radius: 50%;
-	font-size: 1.75rem;
-	line-height: 1;
-	color: #111;
-	text-decoration: none;
-}
-
-.farm-map-sidebar__back:hover {
-	color: #587244;
-	background: #f3f6f0;
-}
-
 .farm-map-sidebar__title {
 	margin: 0;
 	font-family: 'Figtree', 'DM Sans', sans-serif;
@@ -184,6 +164,38 @@
 	position: relative;
 	flex: 1;
 	min-width: 0;
+}
+
+.farm-map-sidebar__title-actions {
+	display: flex;
+	align-items: center;
+	flex-shrink: 0;
+	gap: 0.75rem;
+}
+
+.farm-map__create-farm {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.55rem 1rem;
+	border-radius: 999px;
+	background: #587244;
+	color: #fff;
+	font-family: 'DM Sans', 'Figtree', sans-serif;
+	font-size: 0.875rem;
+	font-weight: 600;
+	line-height: 1.2;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+.farm-map__create-farm:hover {
+	background: #4a6339;
+}
+
+.farm-map__create-farm:focus-visible {
+	outline: 2px solid #93a883;
+	outline-offset: 2px;
 }
 
 .farm-map-canvas {
@@ -859,6 +871,15 @@
 	.farm-map-legend__popup {
 		right: -12px;
 	}
+
+	.farm-map-sidebar__title-row {
+		flex-wrap: wrap;
+	}
+
+	.farm-map-sidebar__title-actions {
+		width: 100%;
+		justify-content: space-between;
+	}
 }
 
 .farm-map-mobile {
@@ -905,24 +926,6 @@
 	border-radius: 0.75rem;
 	background: #fff;
 	box-shadow: 0 2px 8px rgba(19, 25, 39, 0.18);
-}
-
-.farm-map-mobile__back {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex-shrink: 0;
-	width: 2.75rem;
-	height: 2.75rem;
-	border-radius: 50%;
-	font-size: 1.75rem;
-	line-height: 1;
-	color: #111;
-	text-decoration: none;
-}
-
-.farm-map-mobile__back:active {
-	background: #f3f6f0;
 }
 
 .farm-map-mobile__search {
@@ -973,11 +976,17 @@
 	white-space: nowrap;
 }
 
+.farm-map-mobile__sheet-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+}
+
 .farm-map-mobile__count {
 	margin: 0;
 	font-size: 0.9375rem;
 	font-weight: 500;
-	text-align: center;
 	color: #131927;
 }
 

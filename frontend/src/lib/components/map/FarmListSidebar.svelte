@@ -104,21 +104,21 @@
 
 			<div class="farm-map-sidebar__title-row">
 				<div class="farm-map-sidebar__title-group">
-					<a href="/" class="farm-map-sidebar__back" aria-label="Back to home">
-						<span aria-hidden="true">‹</span>
-					</a>
 					<h1 class="farm-map-sidebar__title">Farms</h1>
 					<span class="farm-map-sidebar__count">
 						{loading ? 'Loading…' : `${farms.length} ${farms.length === 1 ? 'Result' : 'Results'}`}
 					</span>
 				</div>
 
-				<SortDropdown
-					items={SORT_OPTIONS}
-					bind:selected={getSortBy, setSortBy}
-					showSelectedLabel
-					ariaLabel="Sort farms by"
-				/>
+				<div class="farm-map-sidebar__title-actions">
+					<a class="farm-map__create-farm" href="/login?redirectTo=/new-farm">Create a Farm</a>
+					<SortDropdown
+						items={SORT_OPTIONS}
+						bind:selected={getSortBy, setSortBy}
+						showSelectedLabel
+						ariaLabel="Sort farms by"
+					/>
+				</div>
 			</div>
 
 			<div class="farm-map-sidebar__filters" role="group" aria-label="Farm filters">
