@@ -19,17 +19,19 @@
 	} from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
 
-	/** Same-origin paths only, so `?redirectTo=` can't send users to another site. */
+	/** Same-origin only, so `?redirectTo=` can't send users to another site. */
 	function getFarmerRedirect(): string | null {
 		const redirectTo = page.url.searchParams.get('redirectTo');
-		if (
-			!redirectTo?.startsWith('/') ||
-			redirectTo.startsWith('//') ||
-			redirectTo.startsWith('/\\')
-		) {
+		if (!redirectTo) return null;
+
+		try {
+			const target = new URL(redirectTo, page.url.origin);
+			return target.origin === page.url.origin
+				? target.pathname + target.search + target.hash
+				: null;
+		} catch {
 			return null;
 		}
-		return redirectTo;
 	}
 
 	/** `?redirectTo=` applies to farmers only; admins always land on their dashboard. */
