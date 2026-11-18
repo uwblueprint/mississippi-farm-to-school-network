@@ -7,14 +7,39 @@
 	import TextInput from '$lib/components/TextInput.svelte';
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import type { User } from 'firebase/auth';
 	import {
 		getAuthErrorMessage,
 		getLoginFieldError,
 		getPostAuthDestination,
 		loginWithEmail,
+		resolveUserRole,
 		syncAuthTokenCookie
 	} from '$lib/auth';
 	import { getFirebaseAuth } from '$lib/firebase';
+
+	/** Same-origin paths only, so `?redirectTo=` can't send users to another site. */
+	function getFarmerRedirect(): string | null {
+		const redirectTo = page.url.searchParams.get('redirectTo');
+		if (
+			!redirectTo?.startsWith('/') ||
+			redirectTo.startsWith('//') ||
+			redirectTo.startsWith('/\\')
+		) {
+			return null;
+		}
+		return redirectTo;
+	}
+
+	/** `?redirectTo=` applies to farmers only; admins always land on their dashboard. */
+	async function getDestination(user: User): Promise<string> {
+		const farmerRedirect = getFarmerRedirect();
+		if (farmerRedirect && (await resolveUserRole(user)) === 'FARMER') {
+			return farmerRedirect;
+		}
+		return getPostAuthDestination(user);
+	}
 
 	let email = $state('');
 	let password = $state('');
@@ -30,7 +55,7 @@
 
 		if (user?.emailVerified) {
 			await syncAuthTokenCookie(user);
-			await goto(await getPostAuthDestination(user), { replaceState: true });
+			await goto(await getDestination(user), { replaceState: true });
 		}
 	});
 
@@ -56,7 +81,7 @@
 			}
 
 			await syncAuthTokenCookie(credential.user);
-			await goto(await getPostAuthDestination(credential.user));
+			await goto(await getDestination(credential.user));
 		} catch (error) {
 			const fieldError = getLoginFieldError(error);
 
