@@ -129,7 +129,7 @@
 				</div>
 
 				<div class="farm-map-sidebar__title-actions">
-					<a class="farm-map-sidebar__create-farm" href="/signup">Create a Farm</a>
+					<a class="farm-map-sidebar__create-farm" href="/login">Create a Farm</a>
 					<SortDropdown
 						items={MAP_SORT_ITEMS}
 						bind:selected={getSortBy, setSortBy}

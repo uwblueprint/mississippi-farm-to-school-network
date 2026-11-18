@@ -5,6 +5,7 @@
 	import ActionButton from '$lib/components/ActionButton.svelte';
 	import Link from '$lib/components/Link.svelte';
 	import TextInput from '$lib/components/TextInput.svelte';
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import {
 		getAuthErrorMessage,
@@ -13,6 +14,7 @@
 		loginWithEmail,
 		syncAuthTokenCookie
 	} from '$lib/auth';
+	import { getFirebaseAuth } from '$lib/firebase';
 
 	let email = $state('');
 	let password = $state('');
@@ -20,6 +22,17 @@
 	let passwordError = $state('');
 	let errorMessage = $state('');
 	let isSubmitting = $state(false);
+
+	onMount(async () => {
+		const auth = getFirebaseAuth();
+		await auth.authStateReady();
+		const user = auth.currentUser;
+
+		if (user?.emailVerified) {
+			await syncAuthTokenCookie(user);
+			await goto(await getPostAuthDestination(user), { replaceState: true });
+		}
+	});
 
 	function clearErrors() {
 		emailError = '';
