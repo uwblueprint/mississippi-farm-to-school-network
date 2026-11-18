@@ -128,12 +128,15 @@
 					</span>
 				</div>
 
-				<SortDropdown
-					items={MAP_SORT_ITEMS}
-					bind:selected={getSortBy, setSortBy}
-					showSelectedLabel
-					ariaLabel="Sort farms by"
-				/>
+				<div class="farm-map-sidebar__title-actions">
+					<a class="farm-map-sidebar__create-farm" href="/signup">Create a Farm</a>
+					<SortDropdown
+						items={MAP_SORT_ITEMS}
+						bind:selected={getSortBy, setSortBy}
+						showSelectedLabel
+						ariaLabel="Sort farms by"
+					/>
+				</div>
 			</div>
 
 			<div class="farm-map-sidebar__filters" role="group" aria-label="Farm filters">
