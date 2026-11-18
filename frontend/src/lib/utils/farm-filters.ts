@@ -6,9 +6,11 @@ import type { FarmLocation, FarmTag, FoodCategorySection, MapFarm } from '$lib/t
 
 export type FarmFilters = {
 	maxDistance: number | null;
-	institutionTypes: string[];
+	/** Activity tags. Shown under the Institution Type menu. */
+	institutionTypes: FarmTag[];
 	products: FoodCategorySection[];
-	tags: FarmTag[];
+	/** School and early-care interests. Shown under the Tags menu. */
+	tags: string[];
 };
 
 export type FarmSortKey = 'name-asc' | 'name-desc' | 'distance';
@@ -27,7 +29,12 @@ export const DISTANCE_OPTIONS: FilterOption<number>[] = [10, 25, 50, 100].map((m
 	label: `Within ${miles} miles`
 }));
 
-export const INSTITUTION_TYPE_OPTIONS: FilterOption[] = [
+/** Institution Type opens the activity tags. Tags opens school and ECE interest. */
+export const INSTITUTION_TYPE_OPTIONS: FilterOption<FarmTag>[] = (
+	['Processing', 'Pickup Location', 'CSA Farm', 'Farmers Market', 'Field Trips'] as FarmTag[]
+).map((tag) => ({ value: tag, label: tag }));
+
+export const TAG_OPTIONS: FilterOption[] = [
 	{ value: INTEREST_K12, label: 'K-12 Schools' },
 	{ value: INTEREST_ECE, label: 'Early Care and Education' }
 ];
@@ -45,10 +52,6 @@ export const SORT_OPTIONS: FilterOption<FarmSortKey>[] = [
 	{ value: 'name-asc', label: 'Name (A–Z)' },
 	{ value: 'name-desc', label: 'Name (Z–A)' }
 ];
-
-export const TAG_OPTIONS: FilterOption<FarmTag>[] = (
-	['Processing', 'Pickup Location', 'CSA Farm', 'Farmers Market', 'Field Trips'] as FarmTag[]
-).map((tag) => ({ value: tag, label: tag }));
 
 export function getLocationNote(status: GeolocationStatus): string | undefined {
 	switch (status) {
@@ -96,12 +99,12 @@ export function filterFarms(
 		}
 
 		return (
-			matchesAny(filters.institutionTypes, farm.farm_to_school_sales ?? []) &&
+			matchesAny(filters.institutionTypes, getFarmTags(farm)) &&
 			matchesAny(
 				filters.products,
 				getFarmProducts(farm).map((row) => row.section)
 			) &&
-			matchesAny(filters.tags, getFarmTags(farm))
+			matchesAny(filters.tags, farm.farm_to_school_sales ?? [])
 		);
 	});
 }
