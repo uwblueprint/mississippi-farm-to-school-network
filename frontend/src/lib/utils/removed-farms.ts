@@ -39,6 +39,9 @@ const REMOVED_FARMS_QUERY = `
 			}
 			f2s_experience
 			delivery_details
+			csa_pickup_spots
+			csa_pickup_hours
+			processing_abilities
 			minimum_order
 			cover_photo
 			carousel_photos

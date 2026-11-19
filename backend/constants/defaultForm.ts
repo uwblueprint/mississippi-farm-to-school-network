@@ -77,6 +77,63 @@ export const LOCKED_QUESTIONS: Record<LockedFormField, FormQuestion> = {
 };
 
 const DELIVERY_AVAILABLE = 'Delivery Available';
+const CSA_AVAILABLE = 'CSA (Community Supported Agriculture) Available';
+
+/** CSA pick-up follow-ups and processing — kept in sync with map tags / Institution Type. */
+export const MAP_TAG_FOLLOW_UP_QUESTIONS: FormQuestion[] = [
+  question({
+    id: 'csa_pickup_spots',
+    type: FormQuestionType.TEXT,
+    label: 'Pick-up Locations:',
+    placeholder: 'e.g. farm stand, Jackson Farmers Market (including spots not at the farm)',
+    showIf: { questionId: 'farm_experiences', optionIds: [CSA_AVAILABLE] },
+  }),
+  question({
+    id: 'csa_pickup_hours',
+    type: FormQuestionType.TEXT,
+    label: 'Pick-up Hours',
+    placeholder: 'e.g. Tuesdays 3–6pm',
+    showIf: { questionId: 'farm_experiences', optionIds: [CSA_AVAILABLE] },
+  }),
+  question({
+    id: 'processing_abilities',
+    type: FormQuestionType.CHECKBOX,
+    label: 'Do you provide any processing abilities?',
+    options: options(['Yes', 'No']),
+    exclusiveOptionId: 'No',
+  }),
+];
+
+/**
+ * Makes sure a published form (including admin-edited ones) has the CSA pick-up
+ * free-text fields and the processing Yes/No question, with current labels.
+ */
+export function withMapTagQuestions(sections: FormSection[]): FormSection[] {
+  const needed = new Map(MAP_TAG_FOLLOW_UP_QUESTIONS.map((q) => [q.id, q]));
+  const updated = sections.map((section) => ({
+    ...section,
+    questions: section.questions.map((q) => {
+      const replacement = needed.get(q.id);
+      if (!replacement) return q;
+      needed.delete(q.id);
+      return replacement;
+    }),
+  }));
+
+  if (needed.size === 0) return updated;
+
+  const toInsert = [...needed.values()];
+  let inserted = false;
+  return updated.map((section) => {
+    if (inserted) return section;
+    const idx = section.questions.findIndex((q) => q.id === 'farm_experiences');
+    if (idx === -1) return section;
+    inserted = true;
+    const questions = [...section.questions];
+    questions.splice(idx + 1, 0, ...toInsert);
+    return { ...section, questions };
+  });
+}
 
 export const DEFAULT_FORM_SECTIONS: FormSection[] = [
   {
@@ -198,6 +255,7 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
         label: 'Farm Experiences & Services',
         options: options(FARM_EXPERIENCES),
       }),
+      ...MAP_TAG_FOLLOW_UP_QUESTIONS,
       question({
         id: 'farm_characteristics',
         type: FormQuestionType.CHECKBOX,

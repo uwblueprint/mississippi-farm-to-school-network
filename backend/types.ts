@@ -173,6 +173,9 @@ export type FarmDTO = {
   f2s_experience: string | null;
   minimum_order: number | null;
   delivery_details: string | null;
+  csa_pickup_spots: string | null;
+  csa_pickup_hours: string | null;
+  processing_abilities: string | null;
   cover_photo: string | null;
   carousel_photos: string[];
   status: FarmStatus;
@@ -324,6 +327,9 @@ export type UpdateFarmInput = {
   f2s_experience?: string;
   minimum_order?: number;
   delivery_details?: string;
+  csa_pickup_spots?: string;
+  csa_pickup_hours?: string;
+  processing_abilities?: string;
   cover_photo?: string;
   carousel_photos?: string[];
   answers?: FormAnswers;

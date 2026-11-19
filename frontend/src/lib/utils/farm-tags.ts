@@ -1,9 +1,11 @@
 import type { FarmMarkerType, FarmTag, FoodCategorySection, MapFarm } from '$lib/types/farm';
 
+const CSA_EXPERIENCE = 'CSA (Community Supported Agriculture) Available';
+
 const TAG_COLOR_CLASS: Partial<Record<FarmTag, string>> = {
 	Processing: 'blue',
-	'Pickup Location': 'pink',
-	'CSA Farm': 'purple',
+	'CSA Pickup Location': 'pink',
+	'CSA Available': 'purple',
 	'Field Trips': 'tan'
 };
 
@@ -15,13 +17,15 @@ function hasOption(list: string[] | null | undefined, value: string): boolean {
 	return (list ?? []).includes(value);
 }
 
+function filled(value: string | null | undefined): boolean {
+	return Boolean(value?.trim());
+}
+
 const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
 	Processing: (farm) =>
-		hasOption(farm.food_safety_certifications, 'GAP Certified') ||
-		hasOption(farm.food_safety_certifications, 'Food Safety Plan in Place'),
-	'Pickup Location': (farm) => hasOption(farm.farm_to_school_sales, 'Delivery Available'),
-	'CSA Farm': (farm) =>
-		hasOption(farm.farm_experiences, 'CSA (Community Supported Agriculture) Available'),
+		filled(farm.processing_abilities) && farm.processing_abilities!.trim().toLowerCase() !== 'no',
+	'CSA Pickup Location': (farm) => filled(farm.csa_pickup_spots),
+	'CSA Available': (farm) => hasOption(farm.farm_experiences, CSA_EXPERIENCE),
 	'Farmers Market': (farm) =>
 		hasOption(farm.farm_experiences, 'Farm Stand On-Site') ||
 		(farm.market_sales_data?.length ?? 0) > 0,
@@ -30,8 +34,8 @@ const TAG_PREDICATES: Partial<Record<FarmTag, (farm: MapFarm) => boolean>> = {
 
 const TAG_ORDER: FarmTag[] = [
 	'Processing',
-	'Pickup Location',
-	'CSA Farm',
+	'CSA Pickup Location',
+	'CSA Available',
 	'Farmers Market',
 	'Field Trips'
 ];
@@ -39,7 +43,7 @@ const TAG_ORDER: FarmTag[] = [
 export function getFarmTags(
 	farm: Pick<
 		MapFarm,
-		'food_safety_certifications' | 'farm_to_school_sales' | 'farm_experiences' | 'market_sales_data'
+		'farm_experiences' | 'market_sales_data' | 'csa_pickup_spots' | 'processing_abilities'
 	>
 ): FarmTag[] {
 	// Every listed tag has an explicit predicate; default to excluding any tag
@@ -51,13 +55,13 @@ export function getFarmTags(
 export function getMarkerType(
 	farm: Pick<
 		MapFarm,
-		'farm_experiences' | 'farm_to_school_sales' | 'food_safety_certifications' | 'market_sales_data'
+		'farm_experiences' | 'market_sales_data' | 'csa_pickup_spots' | 'processing_abilities'
 	>
 ): FarmMarkerType {
-	if (hasOption(farm.farm_experiences, 'CSA (Community Supported Agriculture) Available')) {
+	if (hasOption(farm.farm_experiences, CSA_EXPERIENCE)) {
 		return 'csa';
 	}
-	if (hasOption(farm.farm_to_school_sales, 'Delivery Available')) {
+	if (filled(farm.csa_pickup_spots)) {
 		return 'pickup';
 	}
 	if (
@@ -66,7 +70,7 @@ export function getMarkerType(
 	) {
 		return 'market';
 	}
-	if (hasOption(farm.food_safety_certifications, 'GAP Certified')) {
+	if (TAG_PREDICATES.Processing?.(farm as MapFarm)) {
 		return 'processing';
 	}
 	return 'farm';

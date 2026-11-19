@@ -121,6 +121,28 @@ export function isQuestionVisible(question: FormQuestion, answers: FormAnswers):
 	);
 }
 
+/**
+ * True when a question should render under a specific checkbox option (e.g. CSA
+ * pick-up fields under "CSA Available") instead of as its own top-level field.
+ * `showIf.optionIds: []` means "any selection" and stays top-level.
+ */
+export function isOptionFollowUp(question: FormQuestion): boolean {
+	return Boolean(question.showIf && question.showIf.optionIds.length > 0);
+}
+
+/** Follow-up questions that belong under one option of a parent checkbox question. */
+export function optionFollowUps(
+	form: FormVersion,
+	parentQuestionId: string,
+	optionId: string
+): FormQuestion[] {
+	return answerableQuestions(form).filter(
+		(question) =>
+			question.showIf?.questionId === parentQuestionId &&
+			question.showIf.optionIds.includes(optionId)
+	);
+}
+
 /** Checks or unchecks a choice, keeping the exclusive choice (e.g. "None of the above") on its own. */
 export function toggleOption(
 	question: FormQuestion,

@@ -106,6 +106,9 @@ type FarmDoc = {
   f2s_experience: string | null;
   minimum_order: number | null;
   delivery_details: string | null;
+  csa_pickup_spots: string | null;
+  csa_pickup_hours: string | null;
+  processing_abilities: string | null;
   cover_photo: string | null;
   carousel_photos: string[];
   status: FarmStatus;
@@ -761,6 +764,9 @@ class FarmService implements IFarmService {
       f2s_experience: data.f2s_experience ?? null,
       minimum_order: data.minimum_order ?? null,
       delivery_details: data.delivery_details ?? null,
+      csa_pickup_spots: data.csa_pickup_spots ?? null,
+      csa_pickup_hours: data.csa_pickup_hours ?? null,
+      processing_abilities: data.processing_abilities ?? null,
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
@@ -828,6 +834,9 @@ class FarmService implements IFarmService {
       f2s_experience: data.f2s_experience ?? null,
       minimum_order: data.minimum_order ?? null,
       delivery_details: data.delivery_details ?? null,
+      csa_pickup_spots: data.csa_pickup_spots ?? null,
+      csa_pickup_hours: data.csa_pickup_hours ?? null,
+      processing_abilities: data.processing_abilities ?? null,
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos ?? [],
       status: data.status,
