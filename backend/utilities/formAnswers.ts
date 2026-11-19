@@ -33,7 +33,11 @@ const TEXT_FIELDS = [
   'f2s_experience',
   'delivery_details',
   'website',
+  'csa_pickup_spots',
+  'csa_pickup_hours',
 ] as const;
+/** Stored as farm text "Yes" when the farmer checks Yes; cleared otherwise. */
+const PROCESSING_ABILITIES_YES = 'Yes';
 const SOCIAL_QUESTIONS = {
   social_instagram: 'instagram',
   social_facebook: 'facebook',
@@ -44,12 +48,14 @@ const SOCIAL_QUESTIONS = {
 export const LEGACY_QUESTION_IDS: ReadonlySet<string> = new Set([
   ...CHECKBOX_FIELDS,
   ...TEXT_FIELDS,
+  'processing_abilities',
   'minimum_order',
   ...Object.keys(SOCIAL_QUESTIONS),
 ]);
 
 export type LegacyFarmFields = Record<(typeof CHECKBOX_FIELDS)[number], string[]> &
   Record<(typeof TEXT_FIELDS)[number], string | null> & {
+    processing_abilities: string | null;
     minimum_order: number | null;
     // Only the keys the form manages; callers merge it into any existing social_media.
     social_media: Record<string, string>;
@@ -289,6 +295,11 @@ export function legacyFarmFields(sections: FormSection[], answers: FormAnswers):
     if (value) social_media[key] = value;
   }
 
+  const processingSelected = labelsOf('processing_abilities');
+  const processing_abilities = processingSelected.includes(PROCESSING_ABILITIES_YES)
+    ? PROCESSING_ABILITIES_YES
+    : null;
+
   return {
     ...(Object.fromEntries(CHECKBOX_FIELDS.map((id) => [id, labelsOf(id)])) as Record<
       (typeof CHECKBOX_FIELDS)[number],
@@ -298,6 +309,7 @@ export function legacyFarmFields(sections: FormSection[], answers: FormAnswers):
       (typeof TEXT_FIELDS)[number],
       string | null
     >),
+    processing_abilities,
     minimum_order: typeof answers.minimum_order === 'number' ? answers.minimum_order : null,
     social_media,
   };
@@ -312,6 +324,10 @@ export function answersFromLegacyFields(farm: {
   for (const id of [...CHECKBOX_FIELDS, ...TEXT_FIELDS, 'minimum_order']) {
     const value = farm[id] as FormAnswerValue | undefined;
     if (!isEmptyAnswer(value)) answers[id] = value!;
+  }
+  if (typeof farm.processing_abilities === 'string' && farm.processing_abilities.trim()) {
+    // Older free-text answers and the Yes checkbox both count as providing processing.
+    answers.processing_abilities = [PROCESSING_ABILITIES_YES];
   }
   for (const [questionId, key] of Object.entries(SOCIAL_QUESTIONS)) {
     const value = farm.social_media?.[key];

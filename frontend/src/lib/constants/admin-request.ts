@@ -21,8 +21,8 @@ export const REQUEST_TYPE_MODIFIER: Record<PendingRequestType, string> = {
 export const MAP_TAG_MODIFIER: Record<FarmTag, string> = {
 	'Farmers Market': 'farmers-market',
 	Processing: 'processing',
-	'CSA Farm': 'csa-farm',
-	'Pickup Location': 'pickup-location',
+	'CSA Available': 'csa-farm',
+	'CSA Pickup Location': 'pickup-location',
 	'Field Trips': 'field-trips'
 };
 

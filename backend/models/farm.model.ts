@@ -100,6 +100,15 @@ export default class Farm extends Model {
   @Column({ type: DataType.TEXT, allowNull: true })
   delivery_details!: string | null;
 
+  @Column({ type: DataType.TEXT, allowNull: true })
+  csa_pickup_spots!: string | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  csa_pickup_hours!: string | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  processing_abilities!: string | null;
+
   @Column({ type: DataType.STRING, allowNull: true })
   cover_photo!: string | null;
 

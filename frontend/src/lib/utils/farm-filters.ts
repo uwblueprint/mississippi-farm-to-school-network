@@ -6,11 +6,9 @@ import type { FarmLocation, FarmTag, FoodCategorySection, MapFarm } from '$lib/t
 
 export type FarmFilters = {
 	maxDistance: number | null;
-	/** Activity tags. Shown under the Institution Type menu. */
-	institutionTypes: FarmTag[];
+	institutionTypes: string[];
 	products: FoodCategorySection[];
-	/** School and early-care interests. Shown under the Tags menu. */
-	tags: string[];
+	tags: FarmTag[];
 };
 
 export type FarmSortKey = 'name-asc' | 'name-desc' | 'distance';
@@ -29,14 +27,12 @@ export const DISTANCE_OPTIONS: FilterOption<number>[] = [10, 25, 50, 100].map((m
 	label: `Within ${miles} miles`
 }));
 
-/** Institution Type opens the activity tags. Tags opens school and ECE interest. */
-export const INSTITUTION_TYPE_OPTIONS: FilterOption<FarmTag>[] = (
-	['Processing', 'Pickup Location', 'CSA Farm', 'Farmers Market', 'Field Trips'] as FarmTag[]
-).map((tag) => ({ value: tag, label: tag }));
+export const PROCESSING_INSTITUTION = 'Processing';
 
-export const TAG_OPTIONS: FilterOption[] = [
+export const INSTITUTION_TYPE_OPTIONS: FilterOption[] = [
 	{ value: INTEREST_K12, label: 'K-12 Schools' },
-	{ value: INTEREST_ECE, label: 'Early Care and Education' }
+	{ value: INTEREST_ECE, label: 'Early Care and Education' },
+	{ value: PROCESSING_INSTITUTION, label: 'Processing' }
 ];
 
 export const PRODUCT_OPTIONS: FilterOption<FoodCategorySection>[] = [
@@ -46,6 +42,10 @@ export const PRODUCT_OPTIONS: FilterOption<FoodCategorySection>[] = [
 	{ value: 'Meat', label: 'Meat' },
 	{ value: 'Other', label: 'Other Products' }
 ];
+
+export const TAG_OPTIONS: FilterOption<FarmTag>[] = (
+	['CSA Pickup Location', 'CSA Available', 'Farmers Market', 'Field Trips'] as FarmTag[]
+).map((tag) => ({ value: tag, label: tag }));
 
 export const SORT_OPTIONS: FilterOption<FarmSortKey>[] = [
 	{ value: 'distance', label: 'Distance' },
@@ -98,13 +98,18 @@ export function filterFarms(
 			return false;
 		}
 
+		const institutionValues = [
+			...(farm.farm_to_school_sales ?? []),
+			...(getFarmTags(farm).includes('Processing') ? [PROCESSING_INSTITUTION] : [])
+		];
+
 		return (
-			matchesAny(filters.institutionTypes, getFarmTags(farm)) &&
+			matchesAny(filters.institutionTypes, institutionValues) &&
 			matchesAny(
 				filters.products,
 				getFarmProducts(farm).map((row) => row.section)
 			) &&
-			matchesAny(filters.tags, farm.farm_to_school_sales ?? [])
+			matchesAny(filters.tags, getFarmTags(farm))
 		);
 	});
 }

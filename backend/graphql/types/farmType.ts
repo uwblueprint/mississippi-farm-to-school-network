@@ -49,6 +49,9 @@ const farmType = gql`
     f2s_experience: String
     minimum_order: String
     delivery_details: String
+    csa_pickup_spots: String
+    csa_pickup_hours: String
+    processing_abilities: String
     cover_photo: String
     carousel_photos: [String!]!
     status: FarmStatus!
@@ -151,6 +154,9 @@ const farmType = gql`
     f2s_experience: String
     minimum_order: Int
     delivery_details: String
+    csa_pickup_spots: String
+    csa_pickup_hours: String
+    processing_abilities: String
     cover_photo: String
     carousel_photos: [String!]
     "Checked against the farm's own form version, not the latest one."

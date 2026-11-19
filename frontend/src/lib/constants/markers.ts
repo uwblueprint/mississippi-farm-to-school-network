@@ -24,12 +24,12 @@ export const MARKER_META: Record<FarmMarkerType, MarkerMeta> = {
 	},
 	csa: {
 		color: '#7c3aed',
-		label: 'CSA Farms',
+		label: 'CSA Available',
 		icon: '/images/map/mapMarkers/CSAFarmsIcon.svg'
 	},
 	pickup: {
 		color: '#db2777',
-		label: 'Pickup',
+		label: 'CSA Pickup Location',
 		icon: '/images/map/mapMarkers/pickupIcon.svg'
 	}
 };

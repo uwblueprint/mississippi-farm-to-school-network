@@ -18,7 +18,9 @@
 		answersPayload,
 		displayLabel,
 		isEmptyAnswer,
+		isOptionFollowUp,
 		isQuestionVisible,
+		optionFollowUps,
 		photosLast,
 		placeholderFor,
 		toggleOption
@@ -518,22 +520,33 @@
 			{/if}
 			<div class="choice-list" class:group-error={invalid}>
 				{#each question.options as option (option.id)}
-					<label class="choice">
-						<input
-							type="checkbox"
-							checked={checkedOptions(question).includes(option.id)}
-							onchange={(e) => {
-								answers[question.id] = toggleOption(
-									question,
-									answers[question.id],
-									option.id,
-									e.currentTarget.checked
-								);
-								touched[question.id] = true;
-							}}
-						/>
-						<span>{option.label}</span>
-					</label>
+					{@const checked = checkedOptions(question).includes(option.id)}
+					{@const followUps = form ? optionFollowUps(form, question.id, option.id) : []}
+					<div class="choice-block">
+						<label class="choice">
+							<input
+								type="checkbox"
+								{checked}
+								onchange={(e) => {
+									answers[question.id] = toggleOption(
+										question,
+										answers[question.id],
+										option.id,
+										e.currentTarget.checked
+									);
+									touched[question.id] = true;
+								}}
+							/>
+							<span>{option.label}</span>
+						</label>
+						{#if checked && followUps.length > 0}
+							<div class="choice-followups">
+								{#each followUps as followUp (followUp.id)}
+									{@render answerField(followUp)}
+								{/each}
+							</div>
+						{/if}
+					</div>
 				{/each}
 			</div>
 		{:else}
@@ -923,7 +936,7 @@
 				{#each section.questions as question (question.id)}
 					{#if question.type === 'LOCKED'}
 						{@render lockedQuestion(question)}
-					{:else if isQuestionVisible(question, submittedAnswers)}
+					{:else if isQuestionVisible(question, submittedAnswers) && !isOptionFollowUp(question)}
 						{@render answerField(question)}
 					{/if}
 				{/each}
@@ -1214,6 +1227,23 @@
 		flex-direction: column;
 		gap: 10px;
 		margin-top: 4px;
+	}
+
+	.choice-block {
+		display: flex;
+		flex-direction: column;
+		gap: 8px;
+	}
+
+	.choice-followups {
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		margin-left: 26px;
+	}
+
+	.choice-followups > .form-group {
+		margin: 0;
 	}
 
 	.choice {

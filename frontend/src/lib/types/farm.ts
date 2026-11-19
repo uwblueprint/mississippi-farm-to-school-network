@@ -50,6 +50,9 @@ export type MapFarm = {
 	market_sales_data: MarketSalesData[] | null;
 	f2s_experience: string | null;
 	delivery_details: string | null;
+	csa_pickup_spots: string | null;
+	csa_pickup_hours: string | null;
+	processing_abilities: string | null;
 	cover_photo: string | null;
 	carousel_photos: string[];
 	status: FarmStatus;
@@ -64,7 +67,7 @@ export type MapFarm = {
 
 export type FarmTag =
 	| 'Processing'
-	| 'Pickup Location'
-	| 'CSA Farm'
+	| 'CSA Pickup Location'
+	| 'CSA Available'
 	| 'Farmers Market'
 	| 'Field Trips';

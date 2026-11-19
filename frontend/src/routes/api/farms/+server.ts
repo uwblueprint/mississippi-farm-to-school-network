@@ -29,6 +29,9 @@ const FARM_FIELDS = `
 	market_sales_data { market times }
 	f2s_experience
 	delivery_details
+	csa_pickup_spots
+	csa_pickup_hours
+	processing_abilities
 	cover_photo
 	carousel_photos
 	status

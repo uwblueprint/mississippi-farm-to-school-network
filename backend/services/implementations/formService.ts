@@ -1,6 +1,10 @@
 import { UserInputError } from 'apollo-server';
 import type { Transaction } from 'firebase-admin/firestore';
-import { DEFAULT_FORM_SECTIONS, INITIAL_FORM_VERSION_ID } from '@/constants/defaultForm';
+import {
+  DEFAULT_FORM_SECTIONS,
+  INITIAL_FORM_VERSION_ID,
+  withMapTagQuestions,
+} from '@/constants/defaultForm';
 import IFormService from '@/services/interfaces/formService';
 import { FormSection, FormVersionDTO } from '@/types';
 import { getErrorMessage } from '@/utilities/errorUtils';
@@ -35,18 +39,48 @@ class FormService implements IFormService {
     };
   }
 
-  /** Writes version 1 (the form farmers filled before it was editable) if it doesn't exist yet. */
+  /**
+   * Writes version 1 (the form farmers filled before it was editable) if it doesn't exist yet.
+   * While that seed is still the published form, refresh its questions so new default
+   * questions reach farmers without an admin republish.
+   * Also injects CSA pick-up / processing questions into whatever form is currently
+   * published (including admin-edited versions) so map tags stay in sync.
+   */
   private async ensureSeeded(): Promise<void> {
     const ref = this.versions().doc(INITIAL_FORM_VERSION_ID);
     await getFirestore().runTransaction(async (tx) => {
-      if ((await tx.get(ref)).exists) return;
-      tx.create(ref, {
-        version: 1,
-        sections: DEFAULT_FORM_SECTIONS,
-        created_by: null,
-        created_at: new Date().toISOString(),
-      });
+      const snap = await tx.get(ref);
+      if (!snap.exists) {
+        tx.create(ref, {
+          version: 1,
+          sections: DEFAULT_FORM_SECTIONS,
+          created_by: null,
+          created_at: new Date().toISOString(),
+        });
+        return;
+      }
+
+      const data = snap.data() as FormVersionDoc;
+      if (data.created_by != null) return;
+      if (JSON.stringify(data.sections) === JSON.stringify(DEFAULT_FORM_SECTIONS)) return;
+
+      const published = await tx.get(this.versions());
+      const replaced = published.docs.some(
+        (doc) => (doc.data() as FormVersionDoc).version > data.version
+      );
+      if (replaced) return;
+      tx.update(ref, { sections: DEFAULT_FORM_SECTIONS });
     });
+
+    const all = await this.versions().get();
+    const [latest] = all.docs.sort(
+      (a, b) => (b.data() as FormVersionDoc).version - (a.data() as FormVersionDoc).version
+    );
+    if (!latest) return;
+    const latestData = latest.data() as FormVersionDoc;
+    const sections = withMapTagQuestions(latestData.sections);
+    if (JSON.stringify(sections) === JSON.stringify(latestData.sections)) return;
+    await latest.ref.update({ sections });
   }
 
   async getPublishedForm(tx?: Transaction): Promise<FormVersionDTO> {

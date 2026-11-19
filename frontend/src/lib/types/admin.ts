@@ -31,6 +31,9 @@ export type PendingFarmDto = {
 	market_sales_data: { market: string; times: string }[] | null;
 	f2s_experience: string | null;
 	delivery_details: string | null;
+	csa_pickup_spots: string | null;
+	csa_pickup_hours: string | null;
+	processing_abilities: string | null;
 	minimum_order: string | number | null;
 	cover_photo: string | null;
 	carousel_photos: string[];
