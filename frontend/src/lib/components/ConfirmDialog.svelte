@@ -52,7 +52,7 @@
 
 		<div class="confirm-content">
 			<h2 class="confirm-title">{title}</h2>
-			<p class="confirm-body">{@render body()}</p>
+			<div class="confirm-body">{@render body()}</div>
 		</div>
 
 		<div class="confirm-actions">

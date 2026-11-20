@@ -32,6 +32,9 @@
 			<p class="farm-list-item__distance">{distanceLabel}</p>
 		{/if}
 		<h3 class="farm-list-item__name">{farm.farm_name}</h3>
+		{#if farm.about_us}
+			<p class="farm-list-item__about">{farm.about_us}</p>
+		{/if}
 		<p class="farm-list-item__address">{farm.farm_address}</p>
 		<div class="farm-list-item__tags">
 			{#each tags as tag (tag)}

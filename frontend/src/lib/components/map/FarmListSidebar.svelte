@@ -3,24 +3,28 @@
 
 	import AnnouncementLauncher from '$lib/components/map/AnnouncementLauncher.svelte';
 	import FarmDetailPanel from '$lib/components/map/FarmDetailPanel.svelte';
-	import FarmResultsList from '$lib/components/map/FarmResultsList.svelte';
+	import FarmListItem from '$lib/components/map/FarmListItem.svelte';
 	import FarmSearch from '$lib/components/map/FarmSearch.svelte';
 	import FilterMenu from '$lib/components/map/FilterMenu.svelte';
 	import SortDropdown from '$lib/components/SortDropdown.svelte';
-	import { userLocation } from '$lib/state/geolocation.svelte';
+	import { requestUserLocation, userLocation } from '$lib/state/geolocation.svelte';
+	import type { MapFarm } from '$lib/types/farm';
 	import {
 		DISTANCE_OPTIONS,
-		EMPTY_FARM_FILTERS,
 		INSTITUTION_TYPE_OPTIONS,
 		PRODUCT_OPTIONS,
-		SORT_OPTIONS,
 		TAG_OPTIONS,
-		getLocationNote,
+		emptyFarmFilters,
 		hasActiveFilters,
 		type FarmFilters,
 		type FarmSortKey
 	} from '$lib/utils/farm-filters';
-	import type { MapFarm } from '$lib/types/farm';
+
+	const MAP_SORT_ITEMS = [
+		{ value: 'distance', label: 'Distance' },
+		{ value: 'name-asc', label: 'Name (A–Z)' },
+		{ value: 'name-desc', label: 'Name (Z–A)' }
+	];
 
 	interface Props {
 		farms: MapFarm[];
@@ -46,16 +50,33 @@
 		error = null
 	}: Props = $props();
 
-	const locationNote = $derived(getLocationNote(userLocation.status));
+	const locationNote = $derived.by(() => {
+		switch (userLocation.status) {
+			case 'granted':
+				return undefined;
+			case 'denied':
+				return 'Allow location access in your browser to filter and sort by distance.';
+			case 'unavailable':
+				return "Your browser doesn't support location, so distance can't be used.";
+			default:
+				return 'Waiting for your location…';
+		}
+	});
 
 	const getDistanceSelection = () => (filters.maxDistance === null ? [] : [filters.maxDistance]);
-	const setDistanceSelection = (next: number[]) => (filters.maxDistance = next[0] ?? null);
+	const setDistanceSelection = (next: number[]) => {
+		filters.maxDistance = next[0] ?? null;
+		if (filters.maxDistance !== null) requestUserLocation();
+	};
 
 	const getSortBy = () => sortBy;
-	const setSortBy = (next: string | null) => (sortBy = next as FarmSortKey | null);
+	const setSortBy = (next: string | null) => {
+		sortBy = next as FarmSortKey | null;
+		if (sortBy === 'distance') requestUserLocation();
+	};
 
 	function clearFilters() {
-		filters = { ...EMPTY_FARM_FILTERS };
+		filters = emptyFarmFilters();
 	}
 
 	const selectedFarm = $derived(farms.find((farm) => farm.id === selectedFarmId) ?? null);
@@ -114,7 +135,7 @@
 				</div>
 
 				<SortDropdown
-					items={SORT_OPTIONS}
+					items={MAP_SORT_ITEMS}
 					bind:selected={getSortBy, setSortBy}
 					showSelectedLabel
 					ariaLabel="Sort farms by"
@@ -149,15 +170,24 @@
 		</div>
 
 		<div class="farm-map-sidebar__list">
-			<FarmResultsList
-				{farms}
-				{totalCount}
-				{selectedFarmId}
-				{loading}
-				{error}
-				onSelect={handleSelect}
-				onClearFilters={clearFilters}
-			/>
+			{#if loading}
+				<p class="farm-map-sidebar__status">Loading farms…</p>
+			{:else if error}
+				<p class="farm-map-sidebar__status farm-map-sidebar__status--error">{error}</p>
+			{:else if totalCount === 0}
+				<p class="farm-map-sidebar__status">No approved farms to show yet.</p>
+			{:else if farms.length === 0}
+				<div class="farm-map-sidebar__status">
+					<p>No farms match these filters.</p>
+					<button type="button" class="farm-map-sidebar__clear" onclick={clearFilters}>
+						Clear filters
+					</button>
+				</div>
+			{:else}
+				{#each farms as farm (farm.id)}
+					<FarmListItem {farm} selected={selectedFarmId === farm.id} onSelect={handleSelect} />
+				{/each}
+			{/if}
 		</div>
 	{/if}
 </aside>

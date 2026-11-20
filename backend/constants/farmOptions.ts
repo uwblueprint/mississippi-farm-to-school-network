@@ -1,5 +1,8 @@
 export const NONE_OF_THE_ABOVE = 'None of the above';
 
+/** Short fill-in option on growing practices and food safety certifications. */
+export const OTHER = 'Other';
+
 export const GROWING_PRACTICES = [
   'Organic Practices',
   'Conventional',
@@ -7,11 +10,11 @@ export const GROWING_PRACTICES = [
   'Hydroponic',
   'Aquaponic',
   'Biodynamic',
-  NONE_OF_THE_ABOVE,
+  OTHER,
 ] as const;
 export type GrowingPractice = (typeof GROWING_PRACTICES)[number];
 
-export const SEASONAL_PRODUCTS = ['Fruits and Vegetables', 'Dairy and Eggs', 'Herbs'] as const;
+export const SEASONAL_PRODUCTS = ['Fruits', 'Vegetables', 'Dairy', 'Eggs', 'Herbs'] as const;
 export type SeasonalProduct = (typeof SEASONAL_PRODUCTS)[number];
 
 export const MEAT_PRODUCTS = ['Beef', 'Poultry', 'Fish', 'Other'] as const;
@@ -33,7 +36,7 @@ export const FOOD_SAFETY_CERTIFICATIONS = [
   'GAP Certified',
   'Certified Organic',
   'Certified Naturally Grown',
-  NONE_OF_THE_ABOVE,
+  OTHER,
 ] as const;
 export type FoodSafetyCertification = (typeof FOOD_SAFETY_CERTIFICATIONS)[number];
 

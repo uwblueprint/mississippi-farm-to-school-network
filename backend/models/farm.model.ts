@@ -31,6 +31,12 @@ export default class Farm extends Model {
   @Column({ type: DataType.STRING, allowNull: false })
   farm_name!: string;
 
+  @Column({ type: DataType.TEXT, allowNull: true })
+  about_us!: string | null;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  primary_contact_name!: string | null;
+
   @Column({ type: DataType.STRING, allowNull: false })
   primary_phone!: string;
 
@@ -76,8 +82,14 @@ export default class Farm extends Model {
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
   growing_practices!: GrowingPractice[];
 
+  @Column({ type: DataType.TEXT, allowNull: true })
+  growing_practices_other!: string | null;
+
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
   food_safety_certifications!: FoodSafetyCertification[];
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  food_safety_other!: string | null;
 
   @Column({ type: DataType.ARRAY(DataType.STRING), allowNull: false, defaultValue: [] })
   farm_experiences!: FarmExperience[];
@@ -94,8 +106,11 @@ export default class Farm extends Model {
   @Column({ type: DataType.TEXT, allowNull: true })
   f2s_experience!: string | null;
 
-  @Column({ type: DataType.INTEGER, allowNull: true })
-  minimum_order!: number | null;
+  @Column({ type: DataType.TEXT, allowNull: true })
+  minimum_order!: string | null;
+
+  @Column({ type: DataType.TEXT, allowNull: true })
+  farmers_markets!: string | null;
 
   @Column({ type: DataType.TEXT, allowNull: true })
   delivery_details!: string | null;

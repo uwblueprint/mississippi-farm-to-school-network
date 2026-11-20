@@ -206,14 +206,6 @@
 	outline-offset: 2px;
 }
 
-.request-card--static {
-	cursor: default;
-}
-
-.request-card--static:hover {
-	border-color: var(--color-neutral-300, #d3d5de);
-}
-
 .request-card__meta {
 	display: flex;
 	align-items: center;
@@ -340,11 +332,6 @@
 .request-pill--updated-application {
 	background: #feeed5;
 	color: #c07505;
-}
-
-.request-pill--archived {
-	background: #f5f6f8;
-	color: #61636d;
 }
 
 .request-pill--deleted,
@@ -1005,8 +992,7 @@
 }
 
 .review-application-card__approve,
-.review-application-card__changes,
-.review-application-card__danger {
+.review-application-card__changes {
 	flex: 1 1 0;
 	display: inline-flex;
 	align-items: center;
@@ -1025,8 +1011,7 @@
 }
 
 .review-application-card__approve:disabled,
-.review-application-card__changes:disabled,
-.review-application-card__danger:disabled {
+.review-application-card__changes:disabled {
 	opacity: 0.55;
 	cursor: not-allowed;
 }
@@ -1049,16 +1034,6 @@
 
 .review-application-card__changes:hover {
 	background: var(--mfsn-primary-tint, rgba(88, 114, 68, 0.08));
-}
-
-.review-application-card__danger {
-	border: none;
-	background: var(--mfsn-secondary-500, #d9544c);
-	color: #ffffff;
-}
-
-.review-application-card__danger:hover:not(:disabled) {
-	background: var(--mfsn-secondary-600, #b8443d);
 }
 
 .review-application-card__approve img,
@@ -1302,8 +1277,8 @@
 .farms-table__scroll {
 	position: relative;
 	width: 100%;
-	overflow-x: auto;
-	overflow-y: visible;
+	max-height: calc(100vh - 16rem);
+	overflow: auto;
 }
 
 .farms-table__grid {
@@ -1312,15 +1287,6 @@
 
 .farms-table__row {
 	display: grid;
-	grid-template-columns:
-		4rem
-		13rem
-		16rem
-		18rem
-		10rem
-		repeat(3, 11rem)
-		repeat(4, 9.5rem)
-		repeat(4, 12rem);
 	align-items: stretch;
 	min-height: 3.75rem;
 	border-bottom: 1px solid var(--color-neutral-200, #f5f6f8);
@@ -1341,14 +1307,17 @@
 	box-shadow: 4px 0 8px rgba(19, 25, 39, 0.04);
 }
 
-.farms-table__row--header .farms-table__cell--pin-check,
-.farms-table__row--header .farms-table__cell--pin-name {
+.farms-table__row--header {
+	position: sticky;
+	top: 0;
 	z-index: 3;
+	min-height: 3rem;
+	align-items: stretch;
 }
 
-.farms-table__row--header {
-	min-height: 3rem;
-	align-items: flex-end;
+.farms-table__row--header .farms-table__cell--pin-check,
+.farms-table__row--header .farms-table__cell--pin-name {
+	z-index: 4;
 }
 
 .farms-table__row--zebra {
@@ -1390,6 +1359,7 @@
 }
 
 .farms-table__cell--header {
+	align-items: flex-end;
 	gap: 0.5rem;
 }
 
@@ -1397,19 +1367,20 @@
 .farms-table__header-label {
 	font-size: 0.875rem;
 	font-weight: 600;
-	line-height: 1.5rem;
+	line-height: 1.25rem;
 	color: #131927;
-	white-space: nowrap;
+	white-space: normal;
 }
 
 .farms-table__header-btn {
 	display: inline-flex;
-	align-items: center;
+	align-items: flex-end;
 	gap: 0.5rem;
 	padding: 0;
 	border: none;
 	background: none;
 	cursor: pointer;
+	text-align: left;
 }
 
 .farms-table__header-icon {
@@ -1688,6 +1659,26 @@
 	color: #131927;
 }
 
+.farms-export-options {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin: 1rem 0 0;
+	padding: 0;
+	border: none;
+}
+
+.farms-export-options label {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.5rem;
+	cursor: pointer;
+}
+
+.farms-export-options input {
+	margin-top: 0.2rem;
+}
+
 @media (max-width: 56rem) {
 	.admin-page {
 		padding-left: 1rem;
@@ -1704,7 +1695,7 @@
 	}
 }
 
-/* Deleted & Archived Farms: Restore sits on the card, left of the chevron. */
+/* Deleted & Pending Farms: Restore sits on the card, left of the chevron. */
 .inactive-card {
 	position: relative;
 }

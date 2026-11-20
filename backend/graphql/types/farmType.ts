@@ -26,6 +26,8 @@ const farmType = gql`
     owner: UserDTO
     usda_farm_id: String
     farm_name: String!
+    about_us: String
+    primary_contact_name: String
     primary_phone: String!
     primary_email: String!
     website: String
@@ -41,13 +43,16 @@ const farmType = gql`
     meat_products_detail: String
     other_products_detail: String
     growing_practices: [String!]!
+    growing_practices_other: String
     food_safety_certifications: [String!]!
+    food_safety_other: String
     farm_experiences: [String!]!
     farm_characteristics: [String!]!
     farm_to_school_sales: [String!]!
     market_sales_data: [MarketSalesData!]
     f2s_experience: String
     minimum_order: String
+    farmers_markets: String
     delivery_details: String
     cover_photo: String
     carousel_photos: [String!]!
@@ -128,6 +133,8 @@ const farmType = gql`
   input UpdateFarmInput {
     usda_farm_id: String
     farm_name: String
+    about_us: String
+    primary_contact_name: String
     primary_phone: String
     primary_email: String
     website: String
@@ -143,13 +150,16 @@ const farmType = gql`
     meat_products_detail: String
     other_products_detail: String
     growing_practices: [String!]
+    growing_practices_other: String
     food_safety_certifications: [String!]
+    food_safety_other: String
     farm_experiences: [String!]
     farm_characteristics: [String!]
     farm_to_school_sales: [String!]
     market_sales_data: [MarketSalesDataInput!]
     f2s_experience: String
-    minimum_order: Int
+    minimum_order: String
+    farmers_markets: String
     delivery_details: String
     cover_photo: String
     carousel_photos: [String!]

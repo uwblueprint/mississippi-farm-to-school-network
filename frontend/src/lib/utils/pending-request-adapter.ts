@@ -11,6 +11,8 @@ const QUEUE_FARM_FIELDS = `
 			id
 			owner_user_id
 			farm_name
+			about_us
+			primary_contact_name
 			farm_address
 			county
 			primary_email
@@ -25,7 +27,9 @@ const QUEUE_FARM_FIELDS = `
 			meat_products_detail
 			other_products_detail
 			growing_practices
+			growing_practices_other
 			food_safety_certifications
+			food_safety_other
 			farm_experiences
 			farm_characteristics
 			farm_to_school_sales
@@ -36,6 +40,7 @@ const QUEUE_FARM_FIELDS = `
 			f2s_experience
 			delivery_details
 			minimum_order
+			farmers_markets
 			cover_photo
 			carousel_photos
 			status

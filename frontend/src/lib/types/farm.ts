@@ -28,6 +28,7 @@ export type MapFarm = {
 	owner_user_id: string;
 	usda_farm_id: string | null;
 	farm_name: string;
+	about_us: string | null;
 	primary_phone: string;
 	primary_email: string;
 	website: string | null;
@@ -43,10 +44,15 @@ export type MapFarm = {
 	meat_products_detail: string | null;
 	other_products_detail: string | null;
 	growing_practices: string[];
+	growing_practices_other: string | null;
 	food_safety_certifications: string[];
+	food_safety_other: string | null;
 	farm_experiences: string[];
 	farm_characteristics: string[];
 	farm_to_school_sales: string[];
+	farmers_markets: string | null;
+	primary_contact_name: string | null;
+	minimum_order: string | null;
 	market_sales_data: MarketSalesData[] | null;
 	f2s_experience: string | null;
 	delivery_details: string | null;

@@ -2,14 +2,12 @@
 	import ColumnFilterDropdown from '$lib/components/admin/farms/ColumnFilterDropdown.svelte';
 	import FarmsTableRow from '$lib/components/admin/farms/FarmsTableRow.svelte';
 	import {
-		FILTER_LABELS,
 		FILTER_OPTIONS,
-		type AdminFarmRow,
 		type FarmColumnFilters,
-		type FilterableColumn,
-		type SortState,
-		type SortableColumn
+		type FilterableColumn
 	} from '$lib/utils/admin-farms';
+	import type { AdminFarmRow, SortState, SortableColumn } from '$lib/utils/admin-farms';
+	import { FARM_TABLE_COLUMNS, FARM_TABLE_GRID } from '$lib/utils/farm-table-columns';
 
 	interface Props {
 		farms: AdminFarmRow[];
@@ -61,98 +59,67 @@
 >
 	<div class="farms-table__scroll">
 		<div class="farms-table__grid">
-			<div class="farms-table__row farms-table__row--header">
-				<div class="farms-table__cell farms-table__cell--check farms-table__cell--pin-check">
-					<button
-						class="farms-checkbox"
-						class:farms-checkbox--checked={allSelected}
-						class:farms-checkbox--indeterminate={!allSelected && someSelected}
-						type="button"
-						aria-label="Select all farms"
-						aria-checked={allSelected ? 'true' : someSelected ? 'mixed' : 'false'}
-						role="checkbox"
-						onclick={onToggleSelectAll}
+			<div
+				class="farms-table__row farms-table__row--header"
+				style:grid-template-columns={FARM_TABLE_GRID}
+			>
+				{#each FARM_TABLE_COLUMNS as column (column.key)}
+					<div
+						class="farms-table__cell"
+						class:farms-table__cell--header={column.key !== 'check'}
+						class:farms-table__cell--check={column.pin === 'check'}
+						class:farms-table__cell--pin-check={column.pin === 'check'}
+						class:farms-table__cell--pin-name={column.pin === 'name'}
+						role={column.sortable ? 'columnheader' : undefined}
+						aria-sort={column.sortable
+							? sortDirection(column.sortable) === 'asc'
+								? 'ascending'
+								: sortDirection(column.sortable) === 'desc'
+									? 'descending'
+									: 'none'
+							: undefined}
 					>
-						{#if allSelected}
-							<img src="/images/admin/checkboxCheckIcon.svg" alt="" />
-						{:else if someSelected}
-							<span class="farms-checkbox__dash"></span>
+						{#if column.pin === 'check'}
+							<button
+								class="farms-checkbox"
+								class:farms-checkbox--checked={allSelected}
+								class:farms-checkbox--indeterminate={!allSelected && someSelected}
+								type="button"
+								aria-label="Select all farms on every page"
+								aria-checked={allSelected ? 'true' : someSelected ? 'mixed' : 'false'}
+								role="checkbox"
+								onclick={onToggleSelectAll}
+							>
+								{#if allSelected}
+									<img src="/images/admin/checkboxCheckIcon.svg" alt="" />
+								{:else if someSelected}
+									<span class="farms-checkbox__dash"></span>
+								{/if}
+							</button>
+						{:else if column.filter}
+							<ColumnFilterDropdown
+								column={column.filter}
+								label={column.label}
+								options={FILTER_OPTIONS[column.filter]}
+								selected={filters[column.filter]}
+								open={openFilter === column.filter}
+								onToggle={() => (openFilter = openFilter === column.filter ? null : column.filter!)}
+								onChange={(next) => setFilter(column.filter!, next)}
+							/>
+						{:else if column.sortable}
+							<button
+								class="farms-table__header-btn"
+								type="button"
+								onclick={() => onToggleSort(column.sortable!)}
+							>
+								<span>{column.label}</span>
+								<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
+							</button>
+						{:else}
+							<span class="farms-table__header-label">{column.label}</span>
 						{/if}
-					</button>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header farms-table__cell--pin-name">
-					<button
-						class="farms-table__header-btn"
-						type="button"
-						aria-sort={sortDirection('farm_name') === 'asc'
-							? 'ascending'
-							: sortDirection('farm_name') === 'desc'
-								? 'descending'
-								: 'none'}
-						onclick={() => onToggleSort('farm_name')}
-					>
-						<span>Farm Name</span>
-						<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
-					</button>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<button
-						class="farms-table__header-btn"
-						type="button"
-						onclick={() => onToggleSort('primary_email')}
-					>
-						<span>Email</span>
-						<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
-					</button>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<button
-						class="farms-table__header-btn"
-						type="button"
-						onclick={() => onToggleSort('farm_address')}
-					>
-						<span>Address</span>
-						<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
-					</button>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<button
-						class="farms-table__header-btn"
-						type="button"
-						onclick={() => onToggleSort('primary_phone')}
-					>
-						<span>Phone Number</span>
-						<img class="farms-table__header-icon" src="/images/admin/sortIcon.svg" alt="" />
-					</button>
-				</div>
-
-				{#each Object.keys(FILTER_OPTIONS) as key (key)}
-					{@const column = key as FilterableColumn}
-					<div class="farms-table__cell farms-table__cell--header">
-						<ColumnFilterDropdown
-							{column}
-							label={FILTER_LABELS[column]}
-							options={FILTER_OPTIONS[column]}
-							selected={filters[column]}
-							open={openFilter === column}
-							onToggle={() => (openFilter = openFilter === column ? null : column)}
-							onChange={(next) => setFilter(column, next)}
-						/>
 					</div>
 				{/each}
-
-				<div class="farms-table__cell farms-table__cell--header">
-					<span class="farms-table__header-label">Seasonal Produce</span>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<span class="farms-table__header-label">Agritourism</span>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<span class="farms-table__header-label">Farmers Markets</span>
-				</div>
-				<div class="farms-table__cell farms-table__cell--header">
-					<span class="farms-table__header-label">Experience</span>
-				</div>
 			</div>
 
 			{#each farms as farm, index (farm.id)}

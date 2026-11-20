@@ -7,6 +7,8 @@ const FARM_FIELDS = `
 	owner_user_id
 	usda_farm_id
 	farm_name
+	about_us
+	primary_contact_name
 	primary_phone
 	primary_email
 	website
@@ -22,10 +24,14 @@ const FARM_FIELDS = `
 	meat_products_detail
 	other_products_detail
 	growing_practices
+	growing_practices_other
 	food_safety_certifications
+	food_safety_other
 	farm_experiences
 	farm_characteristics
 	farm_to_school_sales
+	farmers_markets
+	minimum_order
 	market_sales_data { market times }
 	f2s_experience
 	delivery_details

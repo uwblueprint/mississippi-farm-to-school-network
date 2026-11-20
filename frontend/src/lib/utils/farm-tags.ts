@@ -1,4 +1,5 @@
-import type { FarmMarkerType, FarmTag, FoodCategorySection, MapFarm } from '$lib/types/farm';
+import type { FarmMarkerType, FarmTag, MapFarm } from '$lib/types/farm';
+import { decodeCategoryDetails, expandProductCategories } from '$lib/utils/product-details';
 
 const TAG_COLOR_CLASS: Partial<Record<FarmTag, string>> = {
 	Processing: 'blue',
@@ -74,62 +75,52 @@ export function getMarkerType(
 
 export type ProductRow = {
 	icon: string;
-	section: FoodCategorySection;
+	section: string;
 	items: string[];
 };
 
-const FOOD_CATEGORY_ICONS: Record<FoodCategorySection, string> = {
-	'Fruits and Vegetables': '/images/map/foodIcons/fruitIcon.svg',
-	'Dairy and Eggs': '/images/map/foodIcons/dairyIcon.svg',
+const PRODUCT_ICONS: Record<string, string> = {
+	Fruits: '/images/map/foodIcons/fruitIcon.svg',
+	Vegetables: '/images/map/foodIcons/vegetableIcon.svg',
+	Dairy: '/images/map/foodIcons/dairyIcon.svg',
+	Eggs: '/images/map/foodIcons/eggIcon.svg',
 	Herbs: '/images/map/foodIcons/herbsIcon.svg',
-	Meat: '/images/map/foodIcons/meatIcon.svg',
+	Beef: '/images/map/foodIcons/meatIcon.svg',
+	Poultry: '/images/map/foodIcons/meatIcon.svg',
+	Fish: '/images/map/foodIcons/meatIcon.svg',
+	Honey: '/images/map/foodIcons/otherIcon.svg',
+	Mushrooms: '/images/map/foodIcons/otherIcon.svg',
+	Flowers: '/images/map/foodIcons/otherIcon.svg',
+	'Seedlings & Plants': '/images/map/foodIcons/otherIcon.svg',
+	Grains: '/images/map/foodIcons/otherIcon.svg',
+	'Value-Added Products': '/images/map/foodIcons/otherIcon.svg',
 	Other: '/images/map/foodIcons/otherIcon.svg'
 };
 
-function splitDetail(detail: string | null | undefined): string[] {
-	if (!detail?.trim()) return [];
-	return detail
-		.split(/[,;\n]/)
-		.map((part) => part.trim())
-		.filter(Boolean);
+function productRows(
+	categories: string[] | null | undefined,
+	detail: string | null | undefined,
+	iconFor: (category: string) => string
+): ProductRow[] {
+	const selected = expandProductCategories(categories);
+	const notes = decodeCategoryDetails(detail, selected);
+	return selected.map((section) => ({
+		icon: iconFor(section),
+		section,
+		items: [notes[section]?.trim() || section]
+	}));
 }
 
-const SEASONAL_SECTIONS: FoodCategorySection[] = [
-	'Fruits and Vegetables',
-	'Dairy and Eggs',
-	'Herbs'
-];
-
 export function getFarmProducts(farm: MapFarm): ProductRow[] {
-	const rows: ProductRow[] = [];
-
-	for (const section of SEASONAL_SECTIONS) {
-		if (!farm.seasonal_products.includes(section)) continue;
-		const detail = splitDetail(farm.seasonal_products_detail);
-		rows.push({
-			icon: FOOD_CATEGORY_ICONS[section],
-			section,
-			items: detail.length > 0 ? detail : [section]
-		});
-	}
-
-	if (farm.meat_products.length > 0 && !farm.meat_products.includes('None of the above')) {
-		const detail = splitDetail(farm.meat_products_detail);
-		rows.push({
-			icon: FOOD_CATEGORY_ICONS.Meat,
-			section: 'Meat',
-			items: detail.length > 0 ? detail : [...farm.meat_products]
-		});
-	}
-
-	if (farm.other_products.length > 0 && !farm.other_products.includes('None of the above')) {
-		const detail = splitDetail(farm.other_products_detail);
-		rows.push({
-			icon: FOOD_CATEGORY_ICONS.Other,
-			section: 'Other',
-			items: detail.length > 0 ? detail : [...farm.other_products]
-		});
-	}
-
-	return rows;
+	const iconFor = (otherIcon: string) => (section: string) =>
+		section === 'Other' ? otherIcon : (PRODUCT_ICONS[section] ?? otherIcon);
+	return [
+		...productRows(
+			farm.seasonal_products,
+			farm.seasonal_products_detail,
+			iconFor(PRODUCT_ICONS.Other)
+		),
+		...productRows(farm.meat_products, farm.meat_products_detail, iconFor(PRODUCT_ICONS.Beef)),
+		...productRows(farm.other_products, farm.other_products_detail, iconFor(PRODUCT_ICONS.Other))
+	];
 }
