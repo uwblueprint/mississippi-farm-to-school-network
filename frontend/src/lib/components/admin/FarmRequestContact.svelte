@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PendingFarmDto } from '$lib/types/admin';
+	import { toAbsoluteUrl } from '$lib/utils/external-url';
 	import { pendingFarmOwner } from '$lib/utils/pending-request-adapter';
 
 	interface Props {
@@ -15,6 +16,7 @@
 	const instagram = $derived(
 		typeof farm.social_media?.instagram === 'string' ? farm.social_media.instagram : null
 	);
+	const websiteHref = $derived(toAbsoluteUrl(farm.website));
 
 	function joinList(values: string[]): string {
 		return values.join(', ');
@@ -63,7 +65,11 @@
 			<img src="/images/admin/emailIcon.svg" alt="" />
 			<span class="farm-request-modal__contact-label">Website</span>
 			<span class="farm-request-modal__contact-value">
-				<a href={farm.website} target="_blank" rel="noopener noreferrer">{farm.website}</a>
+				{#if websiteHref}
+					<a href={websiteHref} target="_blank" rel="noopener noreferrer">{farm.website}</a>
+				{:else}
+					{farm.website}
+				{/if}
 			</span>
 		</div>
 	{/if}

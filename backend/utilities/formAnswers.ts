@@ -27,12 +27,18 @@ const CHECKBOX_FIELDS = [
   'farm_to_school_sales',
 ] as const;
 const TEXT_FIELDS = [
+  'about_us',
+  'primary_contact_name',
   'seasonal_products_detail',
   'meat_products_detail',
   'other_products_detail',
+  'growing_practices_other',
+  'food_safety_other',
   'f2s_experience',
   'delivery_details',
   'website',
+  'farmers_markets',
+  'minimum_order',
 ] as const;
 const SOCIAL_QUESTIONS = {
   social_instagram: 'instagram',
@@ -44,13 +50,11 @@ const SOCIAL_QUESTIONS = {
 export const LEGACY_QUESTION_IDS: ReadonlySet<string> = new Set([
   ...CHECKBOX_FIELDS,
   ...TEXT_FIELDS,
-  'minimum_order',
   ...Object.keys(SOCIAL_QUESTIONS),
 ]);
 
 export type LegacyFarmFields = Record<(typeof CHECKBOX_FIELDS)[number], string[]> &
   Record<(typeof TEXT_FIELDS)[number], string | null> & {
-    minimum_order: number | null;
     // Only the keys the form manages; callers merge it into any existing social_media.
     social_media: Record<string, string>;
   };
@@ -298,7 +302,6 @@ export function legacyFarmFields(sections: FormSection[], answers: FormAnswers):
       (typeof TEXT_FIELDS)[number],
       string | null
     >),
-    minimum_order: typeof answers.minimum_order === 'number' ? answers.minimum_order : null,
     social_media,
   };
 }
@@ -309,7 +312,7 @@ export function answersFromLegacyFields(farm: {
   social_media?: Record<string, unknown> | null;
 }): FormAnswers {
   const answers: FormAnswers = {};
-  for (const id of [...CHECKBOX_FIELDS, ...TEXT_FIELDS, 'minimum_order']) {
+  for (const id of [...CHECKBOX_FIELDS, ...TEXT_FIELDS]) {
     const value = farm[id] as FormAnswerValue | undefined;
     if (!isEmptyAnswer(value)) answers[id] = value!;
   }

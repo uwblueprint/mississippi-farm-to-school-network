@@ -83,6 +83,8 @@ type FarmDoc = {
   owner_user_id: string;
   usda_farm_id: string;
   farm_name: string;
+  about_us?: string | null;
+  primary_contact_name?: string | null;
   primary_phone: string;
   primary_email: string;
   website: string | null;
@@ -99,12 +101,15 @@ type FarmDoc = {
   other_products_detail: string | null;
   market_sales_data: { market: string; times: string }[] | null;
   growing_practices: string[];
+  growing_practices_other?: string | null;
   food_safety_certifications: string[];
+  food_safety_other?: string | null;
   farm_experiences: string[];
   farm_characteristics: string[];
   farm_to_school_sales: string[];
   f2s_experience: string | null;
-  minimum_order: number | null;
+  minimum_order: string | number | null;
+  farmers_markets?: string | null;
   delivery_details: string | null;
   cover_photo: string | null;
   carousel_photos: string[];
@@ -734,6 +739,8 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
+      about_us: data.about_us ?? null,
+      primary_contact_name: data.primary_contact_name ?? null,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
@@ -753,13 +760,19 @@ class FarmService implements IFarmService {
       other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
       growing_practices: data.growing_practices as FarmSnapshotDTO['growing_practices'],
+      growing_practices_other: data.growing_practices_other ?? null,
       food_safety_certifications:
         data.food_safety_certifications as FarmSnapshotDTO['food_safety_certifications'],
+      food_safety_other: data.food_safety_other ?? null,
       farm_experiences: data.farm_experiences as FarmSnapshotDTO['farm_experiences'],
       farm_characteristics: data.farm_characteristics as FarmSnapshotDTO['farm_characteristics'],
       farm_to_school_sales: data.farm_to_school_sales as FarmSnapshotDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
-      minimum_order: data.minimum_order ?? null,
+      minimum_order:
+        data.minimum_order == null || data.minimum_order === ''
+          ? null
+          : String(data.minimum_order),
+      farmers_markets: data.farmers_markets ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos ?? [],
@@ -804,6 +817,8 @@ class FarmService implements IFarmService {
       owner_user_id: data.owner_user_id,
       usda_farm_id: data.usda_farm_id,
       farm_name: data.farm_name,
+      about_us: data.about_us ?? null,
+      primary_contact_name: data.primary_contact_name ?? null,
       primary_phone: data.primary_phone,
       primary_email: data.primary_email,
       website: data.website ?? null,
@@ -820,13 +835,19 @@ class FarmService implements IFarmService {
       other_products_detail: data.other_products_detail ?? null,
       market_sales_data: data.market_sales_data ?? null,
       growing_practices: data.growing_practices as FarmDTO['growing_practices'],
+      growing_practices_other: data.growing_practices_other ?? null,
       food_safety_certifications:
         data.food_safety_certifications as FarmDTO['food_safety_certifications'],
+      food_safety_other: data.food_safety_other ?? null,
       farm_experiences: data.farm_experiences as FarmDTO['farm_experiences'],
       farm_characteristics: data.farm_characteristics as FarmDTO['farm_characteristics'],
       farm_to_school_sales: data.farm_to_school_sales as FarmDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
-      minimum_order: data.minimum_order ?? null,
+      minimum_order:
+        data.minimum_order == null || data.minimum_order === ''
+          ? null
+          : String(data.minimum_order),
+      farmers_markets: data.farmers_markets ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
       carousel_photos: data.carousel_photos ?? [],

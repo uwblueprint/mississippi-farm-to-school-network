@@ -150,6 +150,8 @@ export type FarmDTO = {
   owner_user_id: string;
   usda_farm_id: string | null;
   farm_name: string;
+  about_us: string | null;
+  primary_contact_name: string | null;
   primary_phone: string;
   primary_email: string;
   website: string | null;
@@ -165,13 +167,16 @@ export type FarmDTO = {
   meat_products_detail: string | null;
   other_products_detail: string | null;
   growing_practices: GrowingPractice[];
+  growing_practices_other: string | null;
   food_safety_certifications: FoodSafetyCertification[];
+  food_safety_other: string | null;
   farm_experiences: FarmExperience[];
   farm_characteristics: FarmCharacteristic[];
   farm_to_school_sales: FarmToSchoolSale[];
   market_sales_data: { market: string; times: string }[] | null;
   f2s_experience: string | null;
-  minimum_order: number | null;
+  minimum_order: string | null;
+  farmers_markets: string | null;
   delivery_details: string | null;
   cover_photo: string | null;
   carousel_photos: string[];
@@ -316,17 +321,22 @@ export type UpdateFarmInput = {
   meat_products_detail?: string;
   other_products_detail?: string;
   growing_practices?: GrowingPractice[];
+  growing_practices_other?: string | null;
   food_safety_certifications?: FoodSafetyCertification[];
+  food_safety_other?: string | null;
   farm_experiences?: FarmExperience[];
   farm_characteristics?: FarmCharacteristic[];
   farm_to_school_sales?: FarmToSchoolSale[];
   market_sales_data?: { market: string; times: string }[];
   f2s_experience?: string;
-  minimum_order?: number;
+  minimum_order?: string | null;
+  farmers_markets?: string | null;
   delivery_details?: string;
   cover_photo?: string;
   carousel_photos?: string[];
   answers?: FormAnswers;
+  about_us?: string | null;
+  primary_contact_name?: string;
 };
 
 export interface FarmFilter {

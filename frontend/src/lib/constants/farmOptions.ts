@@ -2,11 +2,13 @@
 // the farm string-array fields. The backend validates submissions against its
 // copy (assertAllowedValues), so these lists must stay character-identical.
 //
-// NONE_OF_THE_ABOVE is kept separate: the backend accepts it for
-// growing_practices and food_safety_certifications, and the forms append it
-// with mutual-exclusion handling rather than treating it as a normal option.
+// OTHER on growing practices and food safety is a normal choice. The forms
+// collect the description in growing_practices_other / food_safety_other.
+// NONE_OF_THE_ABOVE is the retired label; the backend rewrites stored values
+// to OTHER on read and write.
 
 export const NONE_OF_THE_ABOVE = 'None of the above';
+export const OTHER = 'Other';
 
 export const GROWING_PRACTICES = [
 	'Organic Practices',
@@ -14,10 +16,11 @@ export const GROWING_PRACTICES = [
 	'Regenerative',
 	'Hydroponic',
 	'Aquaponic',
-	'Biodynamic'
+	'Biodynamic',
+	OTHER
 ];
 
-export const SEASONAL_PRODUCTS = ['Fruits and Vegetables', 'Dairy and Eggs', 'Herbs'];
+export const SEASONAL_PRODUCTS = ['Fruits', 'Vegetables', 'Dairy', 'Eggs', 'Herbs'];
 
 export const MEAT_PRODUCTS = ['Beef', 'Poultry', 'Fish', 'Other'];
 
@@ -35,7 +38,8 @@ export const FOOD_SAFETY_CERTIFICATIONS = [
 	'Food Safety Plan in Place',
 	'GAP Certified',
 	'Certified Organic',
-	'Certified Naturally Grown'
+	'Certified Naturally Grown',
+	OTHER
 ];
 
 export const FARM_EXPERIENCES = [

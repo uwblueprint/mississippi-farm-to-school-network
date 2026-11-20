@@ -30,4 +30,7 @@
 	{/if}
 	<h2 class="farm-map-popup__title">{farm.farm_name}</h2>
 	<p class="farm-map-popup__address">{farm.farm_address}</p>
+	{#if farm.about_us}
+		<p class="farm-map-popup__about">{farm.about_us}</p>
+	{/if}
 </article>

@@ -1,17 +1,15 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import { MediaQuery } from 'svelte/reactivity';
 	import type { Map as MapboxMap } from 'mapbox-gl';
 
 	import FarmListSidebar from '$lib/components/map/FarmListSidebar.svelte';
 	import FarmMap from '$lib/components/map/FarmMap.svelte';
-	import FarmsMobileLayout from '$lib/components/map/FarmsMobileLayout.svelte';
 	import AnnouncementBar from '$lib/components/map/AnnouncementBar.svelte';
 	import { setAnnouncements } from '$lib/state/announcementBar.svelte';
 	import { requestUserLocation, userLocation } from '$lib/state/geolocation.svelte';
 	import { farmDtoToMapFarm, type FarmDto } from '$lib/utils/farm-adapter';
 	import {
-		EMPTY_FARM_FILTERS,
+		emptyFarmFilters,
 		filterFarms,
 		sortFarms,
 		type FarmFilters,
@@ -21,15 +19,13 @@
 	import type { MapFarm } from '$lib/types/farm';
 	import '$lib/styles/map/farm-map.css';
 
-	const isMobile = new MediaQuery('(width < 48rem)');
-
 	let map = $state<MapboxMap | null>(null);
 	let selectedFarmId = $state<string | null>(null);
 	let farms = $state<MapFarm[]>([]);
+	let filters = $state<FarmFilters>(emptyFarmFilters());
+	let sortBy = $state<FarmSortKey | null>(null);
 	let loading = $state(true);
 	let loadError = $state<string | null>(null);
-	let filters = $state<FarmFilters>({ ...EMPTY_FARM_FILTERS });
-	let sortBy = $state<FarmSortKey | null>(null);
 
 	// Filter first, then sort; both the list and the map show this subset.
 	const visibleFarms = $derived(
@@ -75,6 +71,12 @@
 		}
 	}
 
+	$effect(() => {
+		if (selectedFarmId && !visibleFarms.some((farm) => farm.id === selectedFarmId)) {
+			selectedFarmId = null;
+		}
+	});
+
 	onMount(() => {
 		requestUserLocation();
 		void loadFarms();
@@ -86,37 +88,25 @@
 	<title>Farms | Mississippi Farm to School Network</title>
 </svelte:head>
 
-{#if isMobile.current}
-	<FarmsMobileLayout
-		farms={visibleFarms}
-		totalCount={farms.length}
-		bind:filters
-		bind:sortBy
-		bind:selectedFarmId
-		{loading}
-		error={loadError}
-	/>
-{:else}
-	<div class="farm-map-shell">
-		<AnnouncementBar onLayoutChange={() => map?.resize()} />
-		<div class="farm-map-page">
-			<FarmListSidebar
+<div class="farm-map-shell">
+	<AnnouncementBar onLayoutChange={() => map?.resize()} />
+	<div class="farm-map-page">
+		<FarmListSidebar
+			farms={visibleFarms}
+			totalCount={farms.length}
+			bind:filters
+			bind:sortBy
+			bind:selectedFarmId
+			{map}
+			{loading}
+			error={loadError}
+		/>
+		<div class="farm-map-panel">
+			<FarmMap
 				farms={visibleFarms}
-				totalCount={farms.length}
-				bind:filters
-				bind:sortBy
 				bind:selectedFarmId
-				{map}
-				{loading}
-				error={loadError}
+				onMapReady={(instance) => (map = instance)}
 			/>
-			<div class="farm-map-panel">
-				<FarmMap
-					farms={visibleFarms}
-					bind:selectedFarmId
-					onMapReady={(instance) => (map = instance)}
-				/>
-			</div>
 		</div>
 	</div>
-{/if}
+</div>

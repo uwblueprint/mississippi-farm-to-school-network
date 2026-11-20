@@ -13,7 +13,7 @@
 </script>
 
 {#if primary}
-	<div class="farm-value-pills">
+	<div class="farm-value-pills" title={visible.map(formatLabel).join(', ')}>
 		<span class="farm-value-pills__tag farm-value-pills__tag--{tone}">{primary}</span>
 		{#if extra > 0}
 			<span class="farm-value-pills__extra">+{extra}</span>

@@ -10,6 +10,8 @@ export type PendingFarmDto = {
 	id: string;
 	owner_user_id: string;
 	farm_name: string;
+	about_us: string | null;
+	primary_contact_name: string | null;
 	farm_address: string;
 	county: string;
 	primary_email: string;
@@ -24,7 +26,9 @@ export type PendingFarmDto = {
 	meat_products_detail: string | null;
 	other_products_detail: string | null;
 	growing_practices: string[];
+	growing_practices_other: string | null;
 	food_safety_certifications: string[];
+	food_safety_other: string | null;
 	farm_experiences: string[];
 	farm_characteristics: string[];
 	farm_to_school_sales: string[];
@@ -32,6 +36,7 @@ export type PendingFarmDto = {
 	f2s_experience: string | null;
 	delivery_details: string | null;
 	minimum_order: string | number | null;
+	farmers_markets: string | null;
 	cover_photo: string | null;
 	carousel_photos: string[];
 	status: FarmStatus;

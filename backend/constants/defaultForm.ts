@@ -5,7 +5,7 @@ import {
   FOOD_SAFETY_CERTIFICATIONS,
   GROWING_PRACTICES,
   MEAT_PRODUCTS,
-  NONE_OF_THE_ABOVE,
+  OTHER,
   OTHER_PRODUCTS,
   SEASONAL_PRODUCTS,
 } from '@/constants/farmOptions';
@@ -85,6 +85,12 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
     questions: [
       LOCKED_QUESTIONS[LockedFormField.USDA_FARM_ID],
       LOCKED_QUESTIONS[LockedFormField.FARM_NAME],
+      question({
+        id: 'about_us',
+        type: FormQuestionType.TEXTAREA,
+        label: 'About Us',
+        placeholder: 'A sentence or two about your farm',
+      }),
       LOCKED_QUESTIONS[LockedFormField.FARM_ADDRESS],
       LOCKED_QUESTIONS[LockedFormField.COUNTY],
     ],
@@ -93,6 +99,13 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
     id: 'primary_contact',
     title: 'Primary Contact Information',
     questions: [
+      question({
+        id: 'primary_contact_name',
+        type: FormQuestionType.TEXT,
+        label: 'Name',
+        required: true,
+        placeholder: 'e.g. Jane Smith',
+      }),
       LOCKED_QUESTIONS[LockedFormField.PRIMARY_PHONE],
       LOCKED_QUESTIONS[LockedFormField.PRIMARY_EMAIL],
       question({
@@ -131,7 +144,13 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
         label: 'Growing Practices',
         required: true,
         options: options(GROWING_PRACTICES),
-        exclusiveOptionId: NONE_OF_THE_ABOVE,
+      }),
+      question({
+        id: 'growing_practices_other',
+        type: FormQuestionType.TEXT,
+        label: 'Other growing practice',
+        placeholder: 'e.g. Korean natural farming',
+        showIf: { questionId: 'growing_practices', optionIds: [OTHER] },
       }),
     ],
   },
@@ -142,13 +161,13 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
       question({
         id: 'seasonal_products',
         type: FormQuestionType.CHECKBOX,
-        label: 'Seasonal product and products offered',
+        label: 'Seasonal products offered',
         options: options(SEASONAL_PRODUCTS),
       }),
       question({
         id: 'seasonal_products_detail',
         type: FormQuestionType.TEXTAREA,
-        label: 'List each fruit, vegetable, herb, or dairy product offered',
+        label: 'List each fruit, vegetable, herb, dairy, or egg product offered',
         placeholder: 'Example: tomatoes, zucchini, basil, kale, strawberries, eggs',
         showIf: { questionId: 'seasonal_products', optionIds: [] },
       }),
@@ -190,13 +209,25 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
         label: 'Food Safety & Certifications',
         required: true,
         options: options(FOOD_SAFETY_CERTIFICATIONS),
-        exclusiveOptionId: NONE_OF_THE_ABOVE,
+      }),
+      question({
+        id: 'food_safety_other',
+        type: FormQuestionType.TEXT,
+        label: 'Other certification',
+        placeholder: 'e.g. state kitchen inspection',
+        showIf: { questionId: 'food_safety_certifications', optionIds: [OTHER] },
       }),
       question({
         id: 'farm_experiences',
         type: FormQuestionType.CHECKBOX,
         label: 'Farm Experiences & Services',
         options: options(FARM_EXPERIENCES),
+      }),
+      question({
+        id: 'farmers_markets',
+        type: FormQuestionType.TEXT,
+        label: 'Do you sell at any local farmers markets? If so, which ones',
+        placeholder: 'e.g. Jackson Farmers Market, Fondren',
       }),
       question({
         id: 'farm_characteristics',
@@ -220,10 +251,10 @@ export const DEFAULT_FORM_SECTIONS: FormSection[] = [
       }),
       question({
         id: 'minimum_order',
-        type: FormQuestionType.NUMBER,
+        type: FormQuestionType.TEXT,
         label: 'Minimum order for schools/ECEs',
         required: true,
-        placeholder: '30',
+        placeholder: 'e.g. 30 cases',
         showIf: { questionId: 'farm_to_school_sales', optionIds: [] },
       }),
       question({
