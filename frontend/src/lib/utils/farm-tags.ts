@@ -120,15 +120,7 @@ export function getFarmProducts(farm: MapFarm): ProductRow[] {
 			farm.seasonal_products_detail,
 			iconFor(PRODUCT_ICONS.Other)
 		),
-		...productRows(
-			farm.meat_products,
-			farm.meat_products_detail,
-			iconFor(PRODUCT_ICONS.Beef)
-		),
-		...productRows(
-			farm.other_products,
-			farm.other_products_detail,
-			iconFor(PRODUCT_ICONS.Other)
-		)
+		...productRows(farm.meat_products, farm.meat_products_detail, iconFor(PRODUCT_ICONS.Beef)),
+		...productRows(farm.other_products, farm.other_products_detail, iconFor(PRODUCT_ICONS.Other))
 	];
 }
