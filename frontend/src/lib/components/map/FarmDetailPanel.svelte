@@ -146,7 +146,7 @@
 
 	function readOtherSocial(value: string): SocialLink {
 		const prefixed = value.match(
-			/^(instagram|facebook|x|twitter|tiktok|youtube|linkedin)\s*[:\-]\s*(.+)$/i
+			/^(instagram|facebook|x|twitter|tiktok|youtube|linkedin)\s*[:-]\s*(.+)$/i
 		);
 		const body = (prefixed?.[2] ?? value).trim();
 		const named = prefixed?.[1]?.toLowerCase();

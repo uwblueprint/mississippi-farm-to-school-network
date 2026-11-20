@@ -769,9 +769,7 @@ class FarmService implements IFarmService {
       farm_to_school_sales: data.farm_to_school_sales as FarmSnapshotDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
       minimum_order:
-        data.minimum_order == null || data.minimum_order === ''
-          ? null
-          : String(data.minimum_order),
+        data.minimum_order == null || data.minimum_order === '' ? null : String(data.minimum_order),
       farmers_markets: data.farmers_markets ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
@@ -844,9 +842,7 @@ class FarmService implements IFarmService {
       farm_to_school_sales: data.farm_to_school_sales as FarmDTO['farm_to_school_sales'],
       f2s_experience: data.f2s_experience ?? null,
       minimum_order:
-        data.minimum_order == null || data.minimum_order === ''
-          ? null
-          : String(data.minimum_order),
+        data.minimum_order == null || data.minimum_order === '' ? null : String(data.minimum_order),
       farmers_markets: data.farmers_markets ?? null,
       delivery_details: data.delivery_details ?? null,
       cover_photo: data.cover_photo ?? null,
